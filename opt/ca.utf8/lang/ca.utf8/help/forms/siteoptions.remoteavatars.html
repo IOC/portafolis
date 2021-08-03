@@ -1,0 +1,15 @@
+<h3>Mostra avatars remots</h3>
+
+<p>Si aquesta opció està activada s'utilitzarà el servei en línia <a href="http://www.gravatar.com">Gravatar</a> per mostrar les imatges dels usuaris que no n'hagin posada cap a Mahara. Això permet als usuaris determinar al lloc Gravatar quina serà la seva imatge del perfil en lloc de fer-ho a cada Mahara i cada servei individualment. Si Gravatar no té cap imatge d'aquest usuari aleshores es mostarà la imatge per defecte que hi ha a Mahara.</p>
+
+<h4>Raons per desactivar-ho</h4>
+
+<p>Val la pena desactivar-ho en instal·lacions del tipus intranets on els <b>usuaris no tenen ple accés a internet</b>. Utilitzar Gravatar en aquests condicions simplement afegirà retards extres.</p>
+
+<p>En els llocs servits sobre https l'activació de Gravatar pot provocar l'aparició d'avisos de seguretat en alguns navegadors. Això és degut al fet que les imatges de Gravatar es serveixen a través d'http normal, sense encriptar.</p>
+
+<h4>Servidor personalitzat d'avatars</h4>
+
+<p>Si disposeu d'un servidor personalitzat d'avatars que implementa el proptocol Gravatar podeu especificar la seva URL al vostre fitxer de configuració config.php: </p>
+
+<p><code>$cfg->remoteavatarbaseurl = 'http://exemple.cat/avatar/';</code></p>

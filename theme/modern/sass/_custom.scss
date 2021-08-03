@@ -1,0 +1,19 @@
+.icon {
+  &.text-danger,
+  &.text-success,
+  &.text-warning {
+    color: $text-color;
+  }
+}
+
+// Makes the label red when a form error is shown
+.has-error {
+  label {
+    color: $state-danger-text;
+  }
+}
+
+// Lighten the Administration link in the menu bar in the admin area
+div.admin-title a {
+  color:#4DB1D6;
+}

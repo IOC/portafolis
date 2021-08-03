@@ -1,0 +1,11 @@
+<h3>Sincronització dels grups emmagatzemats com objectes LDAP</h3>
+<p>Activeu aquesta opció si els grups estan emmagatzemats com a registres independents a l'LDAP.</p>
+<p>Exemple:</p>
+<pre>
+dn: cn=languagestudents,ou=groups,dc=mahara,dc=org
+objectClass: groupOfUniqueNames
+cn: languagestudents
+uniqueMember: uid=user1,dc=mahara,dc=org
+uniqueMember: uid=user2,dc=mahara,dc=org
+uniqueMember: cn=frenchclass,ou=groups,dc=mahara,dc=org
+</pre>

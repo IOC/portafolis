@@ -1,0 +1,43 @@
+.footer {
+    background: #799152;
+    color: #2e3a1c;
+
+    .footer-inner {
+        padding: 20px 10px;
+
+        .footer-nav {
+            > li {
+                > a {
+                    color: #2e3a1c;
+                    font-weight: 700;
+
+                    &:hover {
+                        background-color: transparent;
+                        color: #FFFFFF;
+                    }
+                }
+            }
+        }
+
+        .metadata {
+            color: #2e3a1c;
+        }
+    }
+    &.upgrade-footer a {
+        font-weight: 700;
+        color: #2e3a1c;
+    }
+}
+
+
+// admin footer
+.admin {
+    .footer {
+        .footer-inner {
+            padding: 20px 10px;
+            background: none;
+            border: 0;
+            border-radius: 0;
+        }
+    }
+}

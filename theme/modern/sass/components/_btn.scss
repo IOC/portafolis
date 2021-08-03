@@ -1,0 +1,61 @@
+#close_site_submit {
+    &.btn {
+        border-color: $brand-danger;
+        color: $brand-danger;
+        background-color: lighten($brand-danger, 35%);
+        &:hover,
+        &:focus {
+          color:#FFFFFF;
+          background-color: $brand-danger;
+        }
+    }
+}
+
+.btn-group {
+  &.btn-toolbar {
+    &.btn-group-top{
+      .active {
+        background-color: $brand-primary;
+        color: #FFF;
+      }
+    }
+  }
+}
+
+// Tinymce primary button
+.mce-container,
+.mce-widget,
+.mce-reset {
+    .mce-primary {
+        background-color: $btn-primary-bg;
+        border-color: $btn-primary-border;
+        font-family: $font-family-sans-serif;
+
+        &:hover {
+            background-color: darken($btn-primary-bg, 5%);
+        }
+
+        .mce-txt {
+            color: $btn-primary-color;
+        }
+    }
+    // Vertically center Raleway font
+    .mce-abs-layout-item button .mce-txt {
+        vertical-align: baseline;
+    }
+}
+
+.modal-tinymce {
+    .pieform {
+        button.btn-default {
+            background-color: $btn-primary-bg;
+            border-color: $btn-primary-border;
+            font-family: $font-family-sans-serif;
+            color: $btn-primary-color;
+
+            &:hover {
+                background-color: darken($btn-primary-bg, 5%);
+            }
+        }
+    }
+}

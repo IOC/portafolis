@@ -1,0 +1,15 @@
+.header {
+    top: 0;
+
+    .admin-title {
+        .admin-site {
+            color: #FFFFFF;
+            font-family: $font-family-serif;
+            font-size: 18px;
+            &:focus,
+            &:hover {
+                color: $brand-primary-light;
+            }
+        }
+    }
+}

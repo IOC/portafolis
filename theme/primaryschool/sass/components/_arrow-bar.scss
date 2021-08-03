@@ -1,0 +1,74 @@
+.arrow-bar {
+    // to theme the Résumé nav red
+    &.resume {
+        background-color: lighten($arrow-link-color, 5%);
+
+        .arrow {
+            background-color: $arrow-link-color;
+            &:after {
+                border-left-color: $arrow-link-color;
+            }
+        }
+        .nav-inpage {
+            &.nav > li {
+                & > a {
+                    color: $arrow-text-color;
+                }
+                &.active > a,
+                &.active > button  {
+                    color: $arrow-link-color;
+                    background-color: $arrow-link-background-color;
+                }
+                & > a:hover {
+                    color: $arrow-link-hover-color;
+                    background-color: $arrow-link-background-color;
+                }
+            }
+        }
+    }
+
+    // to theme the Groups nav green
+    &.group {
+        background-color: lighten($arrow-link-group-color, 5%);
+
+        .arrow {
+            background-color: $arrow-link-group-color;
+            &:after {
+                border-left-color: $arrow-link-group-color;
+            }
+        }
+        .nav-inpage {
+            &.nav > li {
+                & > a {
+                    color: $arrow-text-color;
+                }
+                &.active > a,
+                &.active > button  {
+                    color: $arrow-link-group-color;
+                    background-color: $arrow-link-background-color;
+                }
+                & > a:hover {
+                    color: $arrow-link-hover-color;
+                    background-color:$arrow-link-background-color;
+                }
+            }
+        }
+    }
+
+    .nav-inpage {
+        &.nav > li {
+            & > a {
+                color: $arrow-text-color;
+            }
+            &.active > a,
+            &.active > button  {
+                color: $link-color;
+                background-color: $arrow-link-background-color;
+            }
+            & > a:hover {
+                color: $arrow-link-hover-color;
+                background-color:$arrow-link-background-color;
+            }
+        }
+    }
+}
