@@ -1,1 +1,1 @@
-../config-mahara.php
+../../config-mahara.php
