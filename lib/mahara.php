@@ -552,9 +552,11 @@ function get_string_location($identifier, $section, $variables, $replacefunc='fo
 
     // Then check the default location for the string in the current language
     $result = get_string_local($langstringroot . $langdirectory, $lang . '/' . $section . '.php', $identifier);
+    //PATCH IOC007
     if ($result === false) {
         $result = get_string_local(get_config('docroot') . $langdirectory, $lang . '/' . $section . '.php', $identifier);
     }
+    //Fi
     if ($result !== false) {
         return $replacefunc($result, $variables, $lang);
     }
@@ -679,7 +681,9 @@ function language_get_searchpaths() {
 
         // langpacksearchpaths configuration variable - for experts :)
         $lpsearchpaths = (array)get_config('langpacksearchpaths');
+        //PATCH IOC007
         $langpacksearchpaths = (array)glob(get_config('docroot') . 'langpacks/*', GLOB_MARK | GLOB_ONLYDIR);
+        //Fi
         foreach ($lpsearchpaths as $path) {
             if (is_dir($path)) {
                 $langpacksearchpaths[] = (substr($path, -1) == '/') ? $path : "$path/";

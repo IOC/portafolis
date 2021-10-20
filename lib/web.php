@@ -169,8 +169,10 @@ function smarty($javascript = array(), $headers = array(), $pagestrings = array(
         $langselectform = language_select_form();
     }
     // Now that password element can set headdata we need to call the login form before smarty_core()
+    //PATCH IOC010
     $isloginblockvisible = !$USER->is_logged_in() && !get_config('siteclosedforupgrade')
         && get_config('showloginsideblock') && ($_SERVER['SCRIPT_FILENAME'] === get_config('docroot') . 'about.php');
+    //Fi
     if ($isloginblockvisible) {
         $authgenerateloginform = auth_generate_login_form();
     }

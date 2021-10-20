@@ -44,9 +44,11 @@ if (php_sapi_name() != 'cli' && get_config('urlsecret') !== null) {
     }
 }
 
+//PATCH IOC006
 if (ini_get('max_execution_time')) {
     set_time_limit(3600);
 }
+//Fi
 
 // This is here for debugging purposes, it allows us to fake the time to test
 // cron behaviour

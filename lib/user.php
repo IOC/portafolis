@@ -830,7 +830,8 @@ function email_user($userto, $userfrom, $subject, $messagetext, $messagehtml='',
         // If there's a phpmailer error already, assume it's an invalid address
         throw new InvalidEmailException("Cannot send email to $usertoname with subject $subject. Error from phpmailer was: " . $mail->ErrorInfo);
     }
-
+    
+    //PATCH IOC008
     if (get_config('local_xtecmail_app')) {
         require_once(get_config('docroot') . 'opt/xtecmail/lib.php');
         $xtecmail = new xtecmail(get_config('local_xtecmail_app'),
@@ -845,7 +846,7 @@ function email_user($userto, $userfrom, $subject, $messagetext, $messagehtml='',
         }
         return true;
     }
-
+    //Fi
     $mail->WordWrap = 79;
 
     if ($messagehtml) {

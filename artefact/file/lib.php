@@ -57,8 +57,10 @@ class PluginArtefactFile extends PluginArtefact {
             'files' => array(
                 'path' => 'groups/files',
                 'url' => 'artefact/file/groupfiles.php?group='.$groupid,
+                //PATCH IOC002
                 'title' => get_string('Files', 'group'),
                 'weight' => 70,
+                //fi
             ),
         );
     }

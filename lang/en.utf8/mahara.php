@@ -946,7 +946,9 @@ $string['country.kh'] = 'Cambodia';
 $string['country.cm'] = 'Cameroon';
 $string['country.ca'] = 'Canada';
 $string['country.cv'] = 'Cape Verde';
+//PATCH IOC004
 $string['country.ct'] = 'Catalonia';
+//Fi
 $string['country.ky'] = 'Cayman Islands';
 $string['country.cf'] = 'Central African Republic';
 $string['country.td'] = 'Chad';

@@ -46279,8 +46279,9 @@ define("tinymce/ui/FormatControls", [
 				'Verdana=verdana,geneva,sans-serif;' +
 				'Webdings=webdings;' +
 				'Wingdings=wingdings,zapf dingbats;' +
+				//PATCH IOC003
 				'IPA Fonts=Charis SIL,Doulos SIL,Gentium Plus,Andika,sans-serif';
-
+				//Fi
 			var items = [], fonts = createFormats(editor.settings.font_formats || defaultFontsFormats);
 
 			each(fonts, function(font) {

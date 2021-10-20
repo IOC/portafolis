@@ -2973,12 +2973,13 @@ class View {
         }
 
         // get all valid possible layout records
+        //PATCH IOC009
         $validlayouts = get_records_sql_assoc('
                 SELECT * FROM {view_layout} vl
                 JOIN {usr_custom_layout} ucl
                 ON ((vl.id = ucl.layout) AND ' . $andclause . ')
                 WHERE vl.rows = ?', $queryarray);
-
+        //Fi
         if ($layoutid) {
             $layout->id = $layoutid;
             $layoutsrowscols = get_records_select_array('view_layout_rows_columns', 'viewlayout = ?', array($layoutid));

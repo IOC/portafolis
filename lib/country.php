@@ -269,11 +269,13 @@ class Country {
             '3' => 'cri',
             'match' => "^Costa Rica\$",
         ),
+        //PATCH IOC004
         array(
             '2' => 'ct',
             '3' => 'cat',
             'match' => "^Catalunya\$",
         ),
+        //Fi
         array(
             '2' => 'cu',
             '3' => 'cub',
