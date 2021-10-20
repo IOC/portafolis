@@ -38,7 +38,11 @@ class PluginBlocktypeText extends MaharaCoreBlocktype {
         return $artefacts;
     }
 
-    public static function render_instance(BlockInstance $instance, $editing=false) {
+    public static function get_blocktype_type_content_types() {
+        return array('text' => array('text'));
+    }
+
+    public static function render_instance(BlockInstance $instance, $editing=false, $versioning=false) {
         safe_require('artefact', 'file');
         $configdata = $instance->get('configdata');
         $smarty = smarty_core();
@@ -77,8 +81,15 @@ class PluginBlocktypeText extends MaharaCoreBlocktype {
                 'width' => '100%',
                 'height' => $height . 'px',
                 'defaultvalue' => $text,
-                'rules' => array('maxlength' => 65536),
+                'rules' => array('maxlength' => 1000000),
             ),
+            'tags'  => array(
+                'type'         => 'tags',
+                'title'        => get_string('tags'),
+                'description'  => get_string('tagsdescblock'),
+                'defaultvalue' => $instance->get('tags'),
+                'help'         => false,
+            )
         );
         return $elements;
     }
@@ -144,7 +155,8 @@ class PluginBlocktypeText extends MaharaCoreBlocktype {
      */
     public static function export_blockinstance_config_leap(BlockInstance $bi) {
         $configdata = $bi->get('configdata');
-        $result = array('text' => json_encode(array($configdata['text'])));
+        $text = !empty($configdata['text']) ? json_encode(array($configdata['text'])) : '';
+        $result = array('text' => $text);
         return $result;
     }
 

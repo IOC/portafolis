@@ -15,9 +15,9 @@
                 </span>
 
                 {if !$post->locked && $post->canedit}
-                <span id="changepoststatus{$post->id}" class="changepoststatus text-inline">
+                <div id="changepoststatus{$post->id}" class="changepoststatus text-inline">
                     {$post->changepoststatus|safe}
-                </span>
+                </div>
                 {/if}
 
                 {if $post->locked}
@@ -27,11 +27,11 @@
                 </span>
                 {elseif $post->canedit}
                 <div class="btn-group postcontrols">
-                    <form name="edit_{$post->id}" action="{$WWWROOT}artefact/blog/post.php" class="form-as-button pull-left">
+                    <form name="edit_{$post->id}" action="{$WWWROOT}artefact/blog/post.php" class="form-as-button float-left">
                         <input type="hidden" name="id" value="{$post->id}">
                         <div class="first">
-                            <button type="submit" class="submit btn btn-default btn-sm" title="{str(tag=edit)|escape:html|safe}">
-                                <span class="icon icon-pencil icon-lg" role="presentation" aria-hidden="true"></span>
+                            <button type="submit" class="submit btn btn-secondary btn-sm" title="{str(tag=edit)|escape:html|safe}">
+                                <span class="icon icon-pencil-alt icon-lg" role="presentation" aria-hidden="true"></span>
                                 <span class="sr-only">{str tag=editspecific arg1=$post->title |escape:html|safe}</span>
                             </button>
                         </div>
@@ -42,14 +42,14 @@
             </div>
         </div>
         <div id="postdetails_{$post->id}" class="postdetails postdate">
-            <span class="icon icon-calendar left" role="presentation" aria-hidden="true"></span>
+            <span class="icon icon-regular icon-calendar-alt left" role="presentation" aria-hidden="true"></span>
             <strong>
                 {str tag=postedon section=artefact.blog}:
             </strong>
             {$post->ctime}
             {if $post->lastupdated}
                 <br>
-                <span class="icon icon-calendar left" role="presentation" aria-hidden="true"></span>
+                <span class="icon icon-regular icon-calendar-alt left" role="presentation" aria-hidden="true"></span>
                 <strong>
                     {str tag=updatedon section=artefact.blog}:
                 </strong>
@@ -69,17 +69,17 @@
         </p>
 
         {if $post->files}
-        <div class="has-attachment panel panel-default collapsible" id="postfiles_{$post->id}">
-            <h5 class="panel-heading">
+        <div class="has-attachment card collapsible" id="postfiles_{$post->id}">
+            <div class="card-header has-link">
                 <a class="text-left collapsed" data-toggle="collapse" href="#attach_{$post->id}" aria-expanded="false">
-                    <span class="icon left icon-paperclip" role="presentation" aria-hidden="true"></span>
+                    <span class="icon left icon-paperclip icon-sm" role="presentation" aria-hidden="true"></span>
                     <span class="text-small"> {str tag=attachedfiles section=artefact.blog} </span>
                      <span class="metadata">
                         ({$post->files|count})
                     </span>
-                    <span class="icon icon-chevron-down collapse-indicator pull-right" role="presentation" aria-hidden="true"></span>
+                    <span class="icon icon-chevron-down collapse-indicator float-right" role="presentation" aria-hidden="true"></span>
                 </a>
-            </h5>
+            </div>
             <div class="collapse" id="attach_{$post->id}">
                 <ul class="list-group list-unstyled">
                 {foreach from=$post->files item=file}

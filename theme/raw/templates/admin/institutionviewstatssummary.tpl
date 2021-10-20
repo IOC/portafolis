@@ -11,10 +11,10 @@
     </p>
 {/if}
 {if $viewtypes}
-    <h4>{str tag=viewsbytype section=admin}</h4>
-    <div class="panel-body">
+    <div class="card-body">
+        <h4>{str tag=viewsbytype section=admin}</h4>
         <canvas class="graphcanvas" id="sitestatsviewtypesgraph" width="300" height="200"></canvas>
-        <script type="application/javascript">
+        <script>
         {literal}
         jQuery(function() {
             fetch_graph_data({'id':'sitestatsviewtypesgraph',

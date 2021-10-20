@@ -16,7 +16,7 @@ define('SECTION_PLUGINNAME', 'account');
 define('SECTION_PAGE', 'preferences');
 
 require(dirname(dirname(__FILE__)) . '/init.php');
-define('TITLE', get_string('account'));
+define('TITLE', get_string('preferences'));
 
 // load up user preferences
 $prefs = (object) load_account_preferences($USER->id);
@@ -36,7 +36,7 @@ if (method_exists($authobj, 'change_password')) {
         'password' => array(
             'type' => 'password',
             'title' => '',
-            'class' => 'hidden',
+            'class' => 'd-none',
             'value' => 'decoypassword',
         ),
         'oldpassword' => array(
@@ -236,7 +236,7 @@ function accountprefs_submit(Pieform $form, $values) {
     if ($values['maildisabled'] == 0 && get_account_preference($USER->get('id'), 'maildisabled') == 1) {
         // Reset the sent and bounce counts otherwise mail will be disabled
         // on the next send attempt
-        $u = new StdClass;
+        $u = new stdClass();
         $u->email = $USER->get('email');
         $u->id = $USER->get('id');
         update_bounce_count($u,true);
@@ -346,6 +346,7 @@ EOF;
 $request = get_record('usr_pendingdeletion', 'usr', $USER->id);
 
 $smarty = smarty();
+setpageicon($smarty, 'icon-cogs');
 $smarty->assign('form', $prefsform);
 $smarty->assign('candeleteself', $USER->can_delete_self());
 $smarty->assign('deletionsent', !empty($request));

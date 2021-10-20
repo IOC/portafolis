@@ -63,8 +63,8 @@ jQuery(function($) {
                 hastinymce = true;
             }
             function show_se_desc(id) {
-                $("#instconf_smartevidencedesc_container div:not(.description)").addClass('hidden');
-                $("#option_" + id).removeClass('hidden');
+                $("#instconf_smartevidencedesc_container div:not(.description)").addClass('d-none');
+                $("#option_" + id).removeClass('d-none');
             }
 
             dock.show($('#configureblock'), true, false);
@@ -79,7 +79,7 @@ jQuery(function($) {
                 });
                 deletebutton = newpagemodal.find('.deletebutton');
                 // Lock focus to the newly opened dialog
-                deletebutton.focus();
+                deletebutton.trigger("focus");
                 deletebutton.off('click'); // Remove any previous click event
                 deletebutton.on('click', function(e) {
                     e.stopPropagation();
@@ -104,7 +104,7 @@ jQuery(function($) {
                         }
                         hide_dock();
                         //focus on matrix annotation
-                        $('#tablematrix tr:eq(' + celly + ') td:eq(' + cellx + ') span.icon').find('a').focus();
+                        $('#tablematrix tr:eq(' + celly + ') td:eq(' + cellx + ') span.icon').find('a').trigger("focus");
                     }
                 });
                 cancelbutton = newpagemodal.find('.submitcancel.cancel');
@@ -131,7 +131,7 @@ jQuery(function($) {
                         }
                         hide_dock();
                         //focus on matrix annotation
-                        $('#tablematrix tr:eq(' + celly + ') td:eq(' + cellx + ') span.icon').find('a').focus();
+                        $('#tablematrix tr:eq(' + celly + ') td:eq(' + cellx + ') span.icon').find('a').trigger("focus");
                     }
                 });
                 if (hastinymce) {
@@ -192,7 +192,7 @@ jQuery(function($) {
                         editmatrix_update(values);
                         hide_dock();
                         //focus on matrix annotation
-                        $('#tablematrix tr:eq(' + celly + ') td:eq(' + cellx + ') span.icon').find('a').focus();
+                        $('#tablematrix tr:eq(' + celly + ') td:eq(' + cellx + ') span.icon').find('a').trigger("focus");
                     }
                 });
                 // When we are saving the annotation feedback form - changing the evidence status
@@ -222,7 +222,11 @@ jQuery(function($) {
                         }
                         hide_dock();
                         //focus on matrix annotation
-                        $('#tablematrix tr:eq(' + celly + ') td:eq(' + cellx + ') span.icon').find('a').focus();
+                        $('#tablematrix tr:eq(' + celly + ') td:eq(' + cellx + ') span.icon').find('a').trigger("focus");
+                    }
+                    else {
+                        se.stopPropagation();
+                        se.processingStop();
                     }
                 });
                 // When we are saving the annotation feedback form - adding new feedback
@@ -327,14 +331,11 @@ jQuery(function($) {
     carousel_matrix();
 
     // show / hide tooltips for standard elements
-    $('tr.standard div').hover(
-        function() {
-            $(this).find('.popover').removeClass('hidden');
-        },
-        function() {
-            $(this).find('.popover').addClass('hidden');
-        }
-    );
+    $('tr.standard div').on('mouseenter', function() {
+        $(this).find('.popover').removeClass('d-none');
+    }).on('mouseleave', function() {
+        $(this).find('.popover').addClass('d-none');
+    });
 
     // Make each standard (row heading description) show when
     // clicking the name or pressing enter key
@@ -342,26 +343,26 @@ jQuery(function($) {
 
     $('td.code div').on({
         click: function () {
-            if ($(this).find('.popover').hasClass('hidden')) {
-                $(this).find('.popover').removeClass('hidden');
+            if ($(this).find('.popover').hasClass('d-none')) {
+                $(this).find('.popover').removeClass('d-none');
             }
             else {
-                $(this).find('.popover').addClass('hidden');
+                $(this).find('.popover').addClass('d-none');
             }
         },
         mouseenter: function() {
-            $(this).find('.popover').removeClass('hidden');
+            $(this).find('.popover').removeClass('d-none');
         },
         mouseleave: function() {
-            $(this).find('.popover').addClass('hidden');
+            $(this).find('.popover').addClass('d-none');
         },
         keyup: function(event) {
             if (event.keyCode == 13) {
-                $(this).click();
+                $(this).trigger("click");
             }
         },
         focusout: function() {
-            $(this).closest('div').find('.popover').addClass('hidden');
+            $(this).closest('div').find('.popover').addClass('d-none');
         }
     });
 
@@ -401,6 +402,6 @@ jQuery(function($) {
                 container.find('.sr-only.status').html('');
             }
         });
-        $('tr.examplefor' + id).toggle('600', 'swing').removeClass('hidden');
+        $('tr.examplefor' + id).toggle('600', 'swing').removeClass('d-none');
     });
 });

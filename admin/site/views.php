@@ -37,11 +37,12 @@ else {
 $js = <<< EOF
 jQuery(function() {
     {$pagination['javascript']}
+    showmatchall();
 EOF;
 if ($offset > 0) {
     $js .= <<< EOF
     if ($('#myviews')) {
-        $('#myviews a:first').focus();
+        $('#myviews a:first').trigger("focus");
     }
 EOF;
 }
@@ -51,7 +52,7 @@ else {
       $('#searchresultsheading')
       .addClass('hidefocus')
       .prop('tabIndex', -1)
-      .focus();
+      .trigger("focus");
     }
 EOF;
 }
@@ -61,7 +62,7 @@ $urlparams['institution'] = 'mahara';
 $urlparamsstr = '&' . http_build_query($urlparams);
 
 $smarty = smarty(array('paginator'));
-setpageicon($smarty, 'icon-file-text');
+setpageicon($smarty, 'icon-file-alt');
 
 $smarty->assign('INLINEJAVASCRIPT', $js);
 $smarty->assign('views', $views);

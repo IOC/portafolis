@@ -4,12 +4,19 @@
     .user-icon {
         padding: 0;
         position: absolute;
-        margin: 4px 0 5px 9px;
+        margin: 4px 0 4px 7px;
         z-index: 3;
-        left: 45px;
+        left: 90px;
         display: block;
-        @media (min-width: $screen-sm-min) {
-            left: 0;
+        width: 27px;
+        height: 27px;
+        @include media-breakpoint-up(md) {
+            left: 45px;
+        }
+        &:hover,
+        &:focus {
+            color: $navbar-toggle-hover-color;
+            background-color: $navbar-toggle-hover-bg;
         }
     }
 }
@@ -17,41 +24,54 @@
 .navbar-toggle {
     display: block;
     margin: 0;
-    border-color: $navbar-default-toggle-border-color;
+    border-color: transparent;
     border-left-width: 0;
-    border-radius: 3px;
+    border-radius: $border-radius;
     min-width: 45px;
-    color: $navbar-default-toggle-icon-bar-bg;
+    color: $navbar-toggle-color;
     padding: 6px 10px;
-    background-color: $navbar-default-toggle-hover-bg;
+    background-color: $navbar-toggle-bg;
+    position: relative;
+    float: right;
+    background-image: none;
+    border: 1px solid transparent;
+    cursor: pointer;
 
     &:hover,
     &:focus {
-        background-color: $navbar-default-toggle-hover-bg;
+        color: $navbar-toggle-hover-color;
+        background-color: $navbar-toggle-hover-bg;
     }
 
     &.collapsed {
         background-color: transparent;
         &:hover,
         &:focus {
-            background-color: $navbar-default-toggle-hover-bg;
+            color: $navbar-toggle-hover-color;
+            background-color: $navbar-toggle-hover-bg;
         }
     }
 
     &.search-toggle {
-        @media (min-width: $screen-sm-min) {
+        @include media-breakpoint-up(md) {
             display: none;
         }
         .icon {
-            color: $navbar-default-link-color;
+            color: $navbar-toggle-color;
         }
     }
 
     &.user-toggle {
         padding-left: 40px;
-        background-color: transparent;
-        @media (min-width: $screen-sm-min) {
+        color: $navbar-toggle-color;
+        background-color: $navbar-toggle-bg;
+        @include media-breakpoint-up(md) {
             border-left-width: 1px;
+        }
+        &:hover,
+        &:focus {
+            color: $navbar-toggle-hover-color;
+            background-color: $navbar-toggle-hover-bg;
         }
     }
 
@@ -60,38 +80,44 @@
     }
 }
 
-.navbar-showchildren {
-    color: $navbar-inverse-toggle-icon-bar-bg;
-    border-radius: 0;
-    border: 0;
-    position: absolute;
-    right: 10px;
-    top: 6px;
-    height: 37px;
-    width:42px;
-    margin: 0;
-    transition-duration: 0.3s;
-    &:hover,
-    &:focus {
-        background-color: $navbar-inverse-toggle-hover-bg;
-        .icon {
-            color: $navbar-inverse-link-hover-color;
-        }
-    }
-    .icon {
-        transform: rotate(-180deg);
+// navbar menu children toggles
+.nav {
+    .navbar-showchildren {
+        color: $navbar-inverse-toggle-color;
+        background: $navbar-inverse-toggle-bg;
+        border-radius: 0;
+        border: 0;
+        position: absolute;
+        right: 10px;
+        top: 5px;
+        height: 37px;
+        width:42px;
+        margin: 0;
         transition-duration: 0.3s;
-    }
-    &.collapsed {
+        cursor: pointer;
+
+        &:hover,
+        &:focus {
+            background: $navbar-inverse-toggle-hover-bg;
+            .icon {
+                color: $navbar-inverse-toggle-hover-color;
+            }
+        }
         .icon {
-            transform: rotate(0deg);
+            transform: rotate(-180deg);
             transition-duration: 0.3s;
         }
-    }
-    .active & {
-        background-color: $navbar-inverse-toggle-hover-bg;
-        .icon {
-            color: $navbar-inverse-link-hover-color;
+        &.collapsed {
+            .icon {
+                transform: rotate(0deg);
+                transition-duration: 0.3s;
+            }
+        }
+        .active & {
+            background-color: $navbar-inverse-toggle-active-bg;
+            .icon {
+                color: $navbar-inverse-toggle-active-color;
+            }
         }
     }
 }

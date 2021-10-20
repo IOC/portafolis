@@ -11,8 +11,8 @@
 
 define('INTERNAL', 1);
 define('PUBLIC', 1);
-define('MENUITEM', 'groups/views');
-
+define('MENUITEM', 'engage/index');
+define('MENUITEM_SUBPAGE', 'views');
 define('SECTION_PLUGINTYPE', 'core');
 define('SECTION_PLUGINNAME', 'view');
 define('SECTION_PAGE', 'groupviews');
@@ -81,7 +81,7 @@ if (!$can_edit) {
         'count' => $data->count,
         'limit' => $limit,
         'offset' => $offset,
-        'group' => $group->id,
+        'extra' => array('group' => $group->id),
         'databutton' => 'showmorebtn',
         'jsonscript' => 'json/viewlist.php',
         'orderby' => 'atoz',
@@ -94,14 +94,15 @@ else {
 $js = <<< EOF
 jQuery(function ($) {
     {$pagination['javascript']}
+    showmatchall();
 EOF;
 if ($offset > 0) {
     $js .= <<< EOF
     if ($('#groupviews').length) {
-        $('#groupviews a:first').focus();
+        $('#groupviews a:first').trigger("focus");
     }
     if ($('#myviews').length) {
-        $('#myviews a:first').focus();
+        $('#myviews a:first').trigger("focus");
     }
 EOF;
 }
@@ -110,7 +111,7 @@ else {
     if ($('#searchresultsheading').length) {
         $('#searchresultsheading').addClass('hidefocus')
             .prop('tabIndex', -1)
-            .focus();
+            .trigger("focus");
     }
 EOF;
 }
@@ -123,6 +124,7 @@ if (!empty($group->id)) {
 }
 
 $smarty = smarty(array('paginator'));
+setpageicon($smarty, 'icon-regular icon-file-alt');
 $smarty->assign('INLINEJAVASCRIPT', $js);
 $smarty->assign('views', $data->data);
 $smarty->assign('headingclass', 'page-header');

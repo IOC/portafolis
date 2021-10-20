@@ -46,6 +46,10 @@ $users = get_records_sql_assoc('
     $ph
 );
 
+if (empty($users)) {
+    // None of the userids are valid
+    throw new InvalidArgumentException("Trying to access invalid user(s)");
+}
 // Display the number of users filtered out due to institution permissions.  This is not an
 // exception, because the logged in user might be an admin in one institution, and staff in
 // another.
@@ -59,7 +63,7 @@ $userids = array_keys($users);
 // Used in all three forms
 $userelement = array(
     'type'     => 'select',
-    'class'    => 'hidden',
+    'class'    => 'd-none',
     'multiple' => 'true',
     'options'  => array_combine($userids, $userids),
     'value'    => $userids,
@@ -102,7 +106,7 @@ $suspendform = pieform(array(
                 'suspend' => array(
                     'type'        => 'button',
                     'usebuttontag' => true,
-                    'class'       => 'btn-default input-group-btn no-label',
+                    'class'       => 'btn-secondary input-group-append no-label',
                     'value'       => get_string('Suspend', 'admin'),
                 )
             )
@@ -132,7 +136,7 @@ if (count($options) > 1) {
                     'changeauth' => array(
                         'type'        => 'button',
                         'usebuttontag' => true,
-                        'class'       => 'btn-default input-group-btn',
+                        'class'       => 'btn-secondary input-group-append',
                         'value'        => get_string('changeauthmethod', 'admin')
                     )
                 )
@@ -163,7 +167,7 @@ if (is_using_probation()) {
                     'setprobation' => array(
                         'type' => 'button',
                         'usebuttontag' => true,
-                        'class'       => 'btn-default input-group-btn no-label',
+                        'class'       => 'btn-secondary input-group-append no-label',
                         'confirm' => get_string('probationbulkconfirm', 'admin'),
                         'value' => get_string('probationbulkset', 'admin'),
                     )
@@ -183,7 +187,7 @@ $deleteform = pieform(array(
         'delete' => array(
             'type'        => 'button',
             'usebuttontag' => true,
-            'class'       => 'btn-default',
+            'class'       => 'btn-secondary',
             'confirm'     => get_string('confirmdeleteusers', 'admin'),
             'value'       => '<span class="icon icon-lg icon-user-times left text-danger" role="presentation" aria-hidden="true"></span>' . get_string('deleteusers', 'admin'),
         ),
@@ -307,8 +311,8 @@ function delete_validate(Pieform $form, $values) {
         $form->set_error(null, get_string('unabletodeleteself1', 'admin'));
     }
     // Not allowed to remove all site admins
-    $siteadmins = count_records_sql("SELECT COUNT(admin) FROM {usr}
-                           WHERE id NOT IN (" . join(',', array_map('db_quote', $users)) . ") AND admin = 1", array());
+    $siteadmins = count_records_sql("SELECT COUNT(\"admin\") FROM {usr}
+                           WHERE id NOT IN (" . join(',', array_map('db_quote', $users)) . ") AND \"admin\" = 1", array());
     if (!$siteadmins) {
         $form->set_error(null, get_string('unabletodeletealladmins1', 'admin'));
     }

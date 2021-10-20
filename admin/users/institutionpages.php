@@ -49,6 +49,7 @@ else if (!empty($institutionelement['options']) && sizeof($institutionelement['o
 else if (empty($institutionelement['options'])) {
     // Only the 'no institution' institution exists so we need to display this fact
     $smarty = smarty();
+    setpageicon($smarty, 'icon-pencil-alt');
     $smarty->assign('noinstitutionsadmin', (($USER->admin) ? get_string('noinstitutionstaticpagesadmin', 'admin', get_config('wwwroot') . 'admin/site/pages.php') : false));
     $smarty->assign('noinstitutions', get_string('noinstitutionstaticpages', 'admin'));
     $smarty->display('admin/site/pages.tpl');
@@ -91,7 +92,7 @@ $form = pieform(array(
             'title'       => get_string('pagetext', 'admin'),
             'defaultvalue' => $pagecontents[DEFAULTPAGE],
             'rules'       => array(
-                'maxlength' => 65536,
+                'maxlength' => 1000000,
                 'required' => true
             )
         ),
@@ -112,7 +113,7 @@ function editsitepage_validate(Pieform $form, $values) {
 
 function editsitepage_submit(Pieform $form, $values) {
     global $USER;
-    $data = new StdClass;
+    $data = new stdClass();
     $data->name    = $values['pagename'];
     if (empty($values['pageusedefault'])) {
         $id = get_field('site_content', 'id', 'name', $values['pagename'], 'institution', $values['pageinstitution']);
@@ -126,7 +127,7 @@ function editsitepage_submit(Pieform $form, $values) {
     $data->institution = $values['pageinstitution'];
     // update the institution config if needed
     if (isset($values['pageusedefault'])) {
-        $configdata = new StdClass;
+        $configdata = new stdClass();
         $configdata->institution = $data->institution;
         $configdata->field = 'sitepages_' . $data->name;
         $whereobj = clone $configdata;
@@ -155,7 +156,7 @@ function editsitepage_submit(Pieform $form, $values) {
 }
 
 $smarty = smarty(array('adminsitepages'), array(), array('admin' => array('discardpageedits')));
-setpageicon($smarty, 'icon-university');
+setpageicon($smarty, 'icon-pencil-alt');
 
 $smarty->assign('noinstitutionsadmin', (($USER->admin) ? get_string('noinstitutionstaticpagesadmin', 'admin', get_config('wwwroot') . 'admin/site/pages.php') : false));
 $smarty->assign('pageeditform', $form);

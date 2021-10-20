@@ -4,11 +4,15 @@
     border-color: {$data.background};
 }
 
+.navbar-default .navbar-toggle:not(.collapsed) {
+    background-color: transparent;
+}
 .navbar-toggle .icon {
     color: {$data.backgroundfg};
 }
 .navbar-default .navbar-toggle {
     border-color: transparent;
+    background-color: transparent;
 }
 .navbar-default .navbar-collapse {
     border-color: transparent;
@@ -123,8 +127,20 @@
     border-top-color: {$data.headings};
 }
 
+.dashboard-widget-container .thumbnail-widget .widget-heading {
+    border-top-color: {$data.headings};
+}
+
+.dashboard-widget-container .thumbnail-widget .widget-heading .circle-bg {
+    background-color: {$data.headings};
+}
+
+.dashboard-widget-container .widget-detail {
+    background-color: {$data.headings} !important;
+}
+
 .dashboard-widget-container .logged-in .widget-heading p,
-a.panel-footer:hover .icon.pull-right,
+a.card-footer:hover .icon.float-right,
 .modal-docked .modal-header .close:hover .times,
 .modal-docked .modal-header .close:focus .times {
     color: #767676;
@@ -213,7 +229,7 @@ a:focus, a:hover {
   text-decoration-color: {$data.link};
 }
 
-.btn-default, a.btn-default {
+.btn-secondary, a.btn-secondary {
   color: #333;
 }
 
@@ -278,5 +294,65 @@ a.admin-site {
 }
 
 .custom-dropdown > ul > li > span {
-    background-color: #767676;
+    background-color: {$data.background};
+    color: {$data.backgroundfg};
+}
+/* this is for the timeline */
+.jtline .filling-line {
+    background-color: {$data.background};
+}
+
+.no-touch .jtline .events a:hover::after,
+.jtline .events a.selected::after {
+    background-color: {$data.background};
+    border-color: {$data.background};
+}
+
+.jtline .events a.older-event::after,
+.no-touch .cd-timeline-navigation a:hover,
+.no-touch .cd-timeline-navigation-second a:hover {
+    border-color: {$data.background};
+}
+
+.cd-timeline-navigation a::after,
+.cd-timeline-navigation-second a::after {
+    color: {$data.background};
+}
+
+.progress-bar {
+    background-color: {$data.background};
+    color: {$data.backgroundfg};
+}
+
+.card.collapsible.collapsible-small legend h4 a,
+.pieform-fieldset.collapsible.collapsible-small legend h4 a {
+    color: {$data.link};
+}
+
+.form-group.multisubmit .cancel,
+.form-group.submitcancel .cancel {
+    color: {$data.link};
+}
+
+.page-item.active .page-link {
+    background-color: {$data.background};
+    border-color: {$data.background};
+}
+
+.footer .footer-nav .nav-link {
+    color: {$data.link};
+}
+
+.footer .metadata {
+    color: {$data.link};
+}
+
+.dropdown-item.active,
+.dropdown-item:active {
+    background-color: {$data.background};
+}
+
+.dropdown-item.active a,
+.dropdown-item:active a {
+    color: #fff;
 }

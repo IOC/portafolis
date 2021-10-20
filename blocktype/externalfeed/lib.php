@@ -60,7 +60,11 @@ class PluginBlocktypeExternalfeed extends MaharaCoreBlocktype {
         }
     }
 
-    public static function render_instance(BlockInstance $instance, $editing=false) {
+    public static function get_blocktype_type_content_types() {
+        return array('externalfeed' => array('media'));
+    }
+
+    public static function render_instance(BlockInstance $instance, $editing=false, $versioning=false) {
         $configdata = $instance->get('configdata');
         if (!empty($configdata['feedid'])) {
 
@@ -203,6 +207,13 @@ class PluginBlocktypeExternalfeed extends MaharaCoreBlocktype {
                 'description'  => get_string('showfeeditemsinfulldesc', 'blocktype.externalfeed'),
                 'defaultvalue' => (bool)$full,
             ),
+            'tags'  => array(
+                'type'         => 'tags',
+                'title'        => get_string('tags'),
+                'description'  => get_string('tagsdescblock'),
+                'defaultvalue' => $instance->get('tags'),
+                'help'         => false,
+            )
         );
     }
 
@@ -299,12 +310,12 @@ class PluginBlocktypeExternalfeed extends MaharaCoreBlocktype {
     }
 
     public static function get_cron() {
-        $refresh = new StdClass;
+        $refresh = new stdClass();
         $refresh->callfunction = 'refresh_feeds';
         $refresh->hour = '*';
         $refresh->minute = '0';
 
-        $cleanup = new StdClass;
+        $cleanup = new stdClass();
         $cleanup->callfunction = 'cleanup_feeds';
         $cleanup->hour = '3';
         $cleanup->minute = '30';
@@ -437,7 +448,7 @@ class PluginBlocktypeExternalfeed extends MaharaCoreBlocktype {
             // really bad happened
         }
 
-        $data = new StdClass;
+        $data = new stdClass();
         $data->title = $reader->get_channel_title();
         $data->url = $source;
         $data->authuser = $authuser;

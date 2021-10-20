@@ -38,6 +38,31 @@ function xmldb_auth_saml_upgrade($oldversion=0) {
         // Set library version to download
         set_config_plugin('auth', 'saml', 'version', '1.15.1');
     }
-
+    if ($oldversion < 2018080300) {
+        set_config_plugin('auth', 'saml', 'version', '1.16.1');
+    }
+    if ($oldversion < 2019011100) {
+        set_config_plugin('auth', 'saml', 'version', '1.16.3');
+    }
+    if ($oldversion < 2019091600) {
+        set_config_plugin('auth', 'saml', 'version', '1.17.6');
+    }
+    if ($oldversion < 2019110700) {
+        set_config_plugin('auth', 'saml', 'version', '1.17.7');
+    }
+    if ($oldversion < 2020030100) {
+        set_config_plugin('auth', 'saml', 'version', '1.18.4');
+    }
+    if ($oldversion < 2020030101) {
+        set_config_plugin('auth', 'saml', 'version', '1.18.7');
+    }
+    if ($oldversion < 2021021700) {
+        set_config_plugin('auth', 'saml', 'version', '1.19.0');
+        // delete the external/composer.phar so on next make ssphp it will download composer v2
+        if (file_exists(get_config('docroot') . '../external/composer.phar') && !@unlink(get_config('docroot') . '../external/composer.phar')) {
+            $extroot = preg_replace('/\/htdocs/', '', get_config('docroot'));
+            log_warn(get_string('samlneedtoremovephar', 'auth.saml', $extroot . 'external/composer.phar'), true, false);
+        }
+    }
     return $status;
 }

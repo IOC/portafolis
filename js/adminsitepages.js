@@ -45,7 +45,7 @@ function updateWYSIWYGText() {
 
 function updateSiteDefault(changed) {
     changedCheckbox = (changed) ? true : false;
-    var editor = jQuery('#editsitepage_pagetext_container .mce-tinymce');
+    var editor = jQuery('#editsitepage_pagetext_container');
     if (jQuery('#editsitepage_pageusedefault')[0] && jQuery('#editsitepage_pageusedefault').prop('checked') === true) {
         tinyMCE.activeEditor.getBody().setAttribute('contenteditable', false);
         jQuery('#changecheckboxdiv').css({
@@ -75,7 +75,7 @@ function connectElements() {
         jQuery('#editsitepage_pageusedefault').on('change', updateSiteDefault);
     }
     // create hidden div to place over tinymce to 'show' when it is disabled from editing
-    var changeboxdiv = jQuery('<div />', {'id':'changecheckboxdiv','style':'display:none;background-color: rgba(200,200,200,0.5)'});
+    var changeboxdiv = jQuery('<div></div>', {'id':'changecheckboxdiv','style':'display:none;background-color: rgba(200,200,200,0.5)'});
     jQuery(document.body).append(changeboxdiv);
 }
 
@@ -95,7 +95,7 @@ function contentSaved(form, data) {
     updateSiteDefault(false);
 }
 
-jQuery(window).load(function() {
+jQuery(window).on('load', function() {
   connectElements();
   // need to wait until tinyMCE editor is loaded before updating editor's text
   var checkExists = setInterval(function() {

@@ -21,6 +21,10 @@ class PluginBlocktypeComment extends MaharaCoreBlocktype {
         return true;
     }
 
+    public static function single_artefact_per_block() {
+        return false;
+    }
+
     public static function get_title() {
 
         return get_string('title', 'blocktype.comment/comment');
@@ -38,12 +42,13 @@ class PluginBlocktypeComment extends MaharaCoreBlocktype {
         return array('portfolio');
     }
 
-    public static function render_instance(BlockInstance $instance, $editing=false) {
+    public static function render_instance(BlockInstance $instance, $editing=false, $versioning=false) {
         global $USER;
 
         if ($editing) {
             $smarty = smarty_core();
             $smarty->assign('editing', get_string('ineditordescription1', 'blocktype.comment/comment'));
+            $smarty->assign('blockid', $instance->get('id'));
             $html = $smarty->fetch('blocktype:comment:comment.tpl');
             return $html;
         }
@@ -69,7 +74,7 @@ class PluginBlocktypeComment extends MaharaCoreBlocktype {
         }
         // If the view has comments turned off, tutors can still leave
         // comments if the view is submitted to their group.
-        if (!empty($releaseform) || ($view->user_comments_allowed($USER))) {
+        if ((!empty($releaseform) || ($view->user_comments_allowed($USER))) && !$versioning) {
             $addfeedbackpopup = true;
         }
         safe_require('artefact', 'comment');
@@ -77,6 +82,7 @@ class PluginBlocktypeComment extends MaharaCoreBlocktype {
         $commentoptions->limit = $limit;
         $commentoptions->offset = $offset;
         $commentoptions->showcomment = $showcomment;
+        $commentoptions->versioning = $versioning;
         $commentoptions->view = $instance->get_view();
         $feedback = ArtefactTypeComment::get_comments($commentoptions);
         $smarty = smarty_core();

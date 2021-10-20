@@ -38,13 +38,19 @@ class PluginBlocktypeNavigation extends MaharaCoreBlocktype {
         return '';
     }
 
-    public static function render_instance(BlockInstance $instance, $editing=false) {
+    public static function render_instance(BlockInstance $instance, $editing=false, $versioning=false) {
         $configdata = $instance->get('configdata');
         $smarty = smarty_core();
 
         if (!empty($configdata['collection'])) {
-            $views = $instance->get_data('collection', (int) $configdata['collection'])->views();
+            $collection = $instance->get_data('collection', (int) $configdata['collection']);
+            $views = $collection->get('views');
             if (!empty($views)) {
+                if ($collection->has_framework()) {
+                    // Add the framework link to start of list
+                    $framework = $collection->collection_nav_framework_option();
+                    array_unshift($views['views'], $framework);
+                }
                 $smarty->assign('views', $views['views']);
             }
         }
@@ -97,8 +103,7 @@ class PluginBlocktypeNavigation extends MaharaCoreBlocktype {
                 }
                 $options[$collection->id] = $collection->name;
             }
-
-            return array(
+            $elements = array(
                 'collection' => array(
                     'type' => 'select',
                     'title' => get_string('collection','blocktype.navigation'),
@@ -107,6 +112,15 @@ class PluginBlocktypeNavigation extends MaharaCoreBlocktype {
                     'defaultvalue' => !empty($configdata['collection']) ? $configdata['collection'] : $default,
                 ),
             );
+            if ($pageincollection = $view->get_collection()) {
+                $elements['copytoall'] = array(
+                    'type' => 'switchbox',
+                    'title' => get_string('copytoall', 'blocktype.navigation'),
+                    'description' => get_string('copytoalldesc', 'blocktype.navigation'),
+                    'defaultvalue' => false,
+                );
+            }
+            return $elements;
         }
         else {
             $baseurl = get_config('wwwroot') . 'collection/edit.php';
@@ -123,6 +137,59 @@ class PluginBlocktypeNavigation extends MaharaCoreBlocktype {
             );
         }
 
+    }
+
+    public static function instance_config_save($values, $instance) {
+        if (!empty($values['copytoall'])) {
+            $view = $instance->get('view_obj');
+            if ($collection = $view->get_collection()) {
+                foreach ($viewids = $collection->get_viewids() as $vid) {
+                    if ($vid !== (int)$view->get('id')) {
+                        $needsblock = true;
+                        if ($blocks = get_records_sql_array("SELECT id FROM {block_instance} WHERE blocktype = ? AND view = ?", array('navigation', $vid))) {
+                            foreach ($blocks as $block) {
+                                // need to check the block to see if it's for this navigation
+                                $bi = new BlockInstance($block->id);
+                                $configdata = $bi->get('configdata');
+                                if (!empty($configdata['collection']) && $configdata['collection'] == $values['collection']) {
+                                    $needsblock = false;
+                                }
+                            }
+                        }
+                        if ($needsblock) {
+                            // need to add new navigation block
+                            $otherview = new View($vid);
+                            $bidata = array(
+                                'blocktype'  => 'navigation',
+                                'title'      => $values['title'],
+                                'configdata' => array(
+                                    'collection' => $values['collection'],
+                                    'retractable' => $values['retractable'],
+                                    'retractedonload' => $values['retractedonload'],
+                                ),
+                            );
+                            if ($otherview->uses_new_layout()) {
+                                // Save block with dimensions
+                                $bidata['positionx'] = 0;
+                                $bidata['positiony'] = 0;
+                                $bidata['width'] = 4;
+                                $bidata['height'] = 3;
+                            }
+                            else {
+                                // Save block in old layout
+                                $bidata['row'] = 1;
+                                $bidata['column'] = 1;
+                                $bidata['order'] = get_field_sql("SELECT MAX(bi.order) + 1 FROM {block_instance} bi WHERE bi.view = ?", array($vid));
+                            }
+                            $bi = new BlockInstance(0, $bidata);
+                            $otherview->addblockinstance($bi);
+                        }
+                    }
+                }
+            }
+        }
+        unset($values['copytoall']);
+        return $values;
     }
 
     public static function default_copy_type() {

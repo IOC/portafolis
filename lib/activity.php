@@ -20,6 +20,8 @@ defined('INTERNAL') || die();
  * @param string $plugintype
  * @param string $pluginname
  * @param bool $delay
+ *
+ * NOTE: If the $data object contains an 'id' property this needs to be the id of the activitytype
  */
 function activity_occurred($activitytype, $data, $plugintype=null, $pluginname=null, $delay=null) {
     try {
@@ -32,7 +34,7 @@ function activity_occurred($activitytype, $data, $plugintype=null, $pluginname=n
         $delay = !empty($at->delay);
     }
     if ($delay) {
-        $delayed = new StdClass;
+        $delayed = new stdClass();
         $delayed->type = $at->id;
         $delayed->data = serialize($data);
         $delayed->ctime = db_format_timestamp(time());
@@ -106,11 +108,12 @@ function get_activity_type_classname($activitytype) {
  * @return array of users
  */
 function activity_get_users($activitytype, $userids=null, $userobjs=null, $adminonly=false,
-                            $admininstitutions = array()) {
+                            $admininstitutions = array(), $includesuspendedusers=false) {
     $values = array($activitytype);
     $sql = '
         SELECT
             u.id, u.username, u.firstname, u.lastname, u.preferredname, u.email, u.admin, u.staff,
+            u.suspendedctime,
             p.method, ap.value AS lang, apm.value AS maildisabled, aic.value AS mnethostwwwroot,
             h.appname AS mnethostapp
         FROM {usr} u
@@ -138,10 +141,14 @@ function activity_get_users($activitytype, $userids=null, $userobjs=null, $admin
         $sql .= ' AND u.id IN (' . implode(',',db_array_to_ph($userids)) . ')';
         $values = array_merge($values, $userids);
     }
+    if (!$includesuspendedusers) {
+        $sql .= ' AND u.suspendedctime IS NULL ';
+    }
     if (!empty($admininstitutions)) {
         $sql .= '
         GROUP BY
             u.id, u.username, u.firstname, u.lastname, u.preferredname, u.email, u.admin, u.staff,
+            u.suspendedctime,
             p.method, ap.value, apm.value, aic.value, h.appname
         HAVING (u.admin = 1 OR SUM(ui.admin) > 0)';
     } else if ($adminonly) {
@@ -767,7 +774,7 @@ abstract class ActivityType {
     }
 
     public function notify_user($user) {
-        $changes = new stdClass;
+        $changes = new stdClass();
 
         $userdata = $this->to_stdclass();
         // some stuff gets overridden by user specific stuff
@@ -835,10 +842,9 @@ abstract class ActivityType {
                 // go into the activity log as 'unread'
                 $changes->read = 0;
                 update_record('notification_internal_activity', $changes);
+
                 //PATCH IOC005
-                if (!$badnotification && !($e instanceof EmailDisabledException ||
-                    $e instanceof InvalidEmailException ||
-                    $e instanceof EmailException)) {
+                if (!$badnotification && !($e instanceof EmailDisabledException ||$e instanceof InvalidEmailException ||$e instanceof EmailException)) {
                     //Fi
                     // Admins should probably know about the error, but to avoid sending too many similar notifications,
                     // save an initial prefix of the message being sent and throw away subsequent exceptions with the
@@ -962,6 +968,7 @@ class ActivityTypeObjectionable extends ActivityTypeAdmin {
     protected $artefact;
     protected $reporter;
     protected $ctime;
+    protected $review;
 
     /**
      * @param array $data Parameters:
@@ -970,6 +977,7 @@ class ActivityTypeObjectionable extends ActivityTypeAdmin {
      *                    - artefact (int) (optional)
      *                    - reporter (int)
      *                    - ctime (int) (optional)
+     *                    - review (int) (optional)
      */
     function __construct($data, $cron=false) {
         parent::__construct($data, $cron);
@@ -981,11 +989,21 @@ class ActivityTypeObjectionable extends ActivityTypeAdmin {
             require_once(get_config('docroot') . 'artefact/lib.php');
             $this->artefact = artefact_instance_from_id($this->artefact);
         }
-
+        // Notify institutional admins of the view owner
+        $adminusers = array();
         if ($owner = $this->view->get('owner')) {
-            // Notify institutional admins of the view owner
             if ($institutions = get_column('usr_institution', 'institution', 'usr', $owner)) {
-                $this->users = activity_get_users($this->get_id(), null, null, null, $institutions);
+                $adminusers = activity_get_users($this->get_id(), null, null, null, $institutions);
+            }
+        }
+        if (isset($data->touser) && !empty($data->touser)) {
+            // Notify user when admin updates objection
+            $owneruser = activity_get_users($this->get_id(), array($data->touser));
+            $this->users = array_merge($owneruser, $adminusers);
+        }
+        else if ($owner = $this->view->get('owner')) {
+            if (!empty($adminusers)) {
+                $this->users = $adminusers;
             }
         }
 
@@ -993,7 +1011,7 @@ class ActivityTypeObjectionable extends ActivityTypeAdmin {
             $this->url = $this->view->get_url(false, true) . '&objection=1';
         }
         else {
-            $this->url = 'artefact/artefact.php?artefact=' . $this->artefact->get('id') . '&view=' . $this->view->get('id') . '&objection=1';
+            $this->url = 'view/view.php?id=' . $this->view->get('id') . '&modal=1&artefact=' .  $this->artefact->get('id') . '&objection=1';
         }
 
         if (empty($this->strings->subject)) {
@@ -1002,7 +1020,7 @@ class ActivityTypeObjectionable extends ActivityTypeAdmin {
             $this->strings = new stdClass();
             if (empty($this->artefact)) {
                 $this->strings->subject = (object) array(
-                    'key'     => 'objectionablecontentview',
+                    'key'     => ($this->review ? 'objectionablereviewview' : 'objectionablecontentview'),
                     'section' => 'activity',
                     'args'    => array($viewtitle, display_default_name($this->reporter)),
                 );
@@ -1010,7 +1028,7 @@ class ActivityTypeObjectionable extends ActivityTypeAdmin {
             else {
                 $title = $this->artefact->get('title');
                 $this->strings->subject = (object) array(
-                    'key'     => 'objectionablecontentviewartefact',
+                    'key'     => ($this->review ? 'objectionablereviewviewartefact' : 'objectionablecontentviewartefact'),
                     'section' => 'activity',
                     'args'    => array($viewtitle, $title, display_default_name($this->reporter)),
                 );
@@ -1022,17 +1040,19 @@ class ActivityTypeObjectionable extends ActivityTypeAdmin {
         $reporterurl = profile_url($this->reporter);
         $ctime = strftime(get_string_from_language($user->lang, 'strftimedaydatetime'), $this->ctime);
         if (empty($this->artefact)) {
+            $key = ($this->review ? 'objectionablereviewviewtext' : 'objectionablecontentviewtext');
             return get_string_from_language(
-                $user->lang, 'objectionablecontentviewtext', 'activity',
+                $user->lang, $key, 'activity',
                 $this->view->get('title'), display_default_name($this->reporter), $ctime,
                 $this->message, $this->view->get_url(true, true) . "&objection=1", $reporterurl
             );
         }
         else {
+            $key = ($this->review ? 'objectionablereviewviewartefacttext' : 'objectionablecontentviewartefacttext');
             return get_string_from_language(
-                $user->lang, 'objectionablecontentviewartefacttext', 'activity',
+                $user->lang, $key, 'activity',
                 $this->view->get('title'), $this->artefact->get('title'), display_default_name($this->reporter), $ctime,
-                $this->message, get_config('wwwroot') . "artefact/artefact.php?artefact=" . $this->artefact->get('id') . "&view=" . $this->view->get('id') . "&objection=1", $reporterurl
+                $this->message, get_config('wwwroot') . "view/view.php?id=" . $this->view->get('id') . '&modal=1&artefact=' . $this->artefact->get('id') . "&objection=1", $reporterurl
             );
         }
     }
@@ -1042,20 +1062,22 @@ class ActivityTypeObjectionable extends ActivityTypeAdmin {
         $reportername = hsc(display_default_name($this->reporter));
         $reporterurl = profile_url($this->reporter);
         $ctime = strftime(get_string_from_language($user->lang, 'strftimedaydatetime'), $this->ctime);
-        $message = hsc($this->message);
+        $message = format_whitespace($this->message);
         if (empty($this->artefact)) {
+            $key = ($this->review ? 'objectionablereviewviewhtml' : 'objectionablecontentviewhtml');
             return get_string_from_language(
-                $user->lang, 'objectionablecontentviewhtml', 'activity',
+                $user->lang, $key, 'activity',
                 $viewtitle, $reportername, $ctime,
                 $message, $this->view->get_url(true, true) . "&objection=1", $viewtitle,
                 $reporterurl, $reportername
             );
         }
         else {
+            $key = ($this->review ? 'objectionablereviewviewartefacthtml' : 'objectionablecontentviewartefacthtml');
             return get_string_from_language(
-                $user->lang, 'objectionablecontentviewartefacthtml', 'activity',
+                $user->lang, $key, 'activity',
                 $viewtitle, hsc($this->artefact->get('title')), $reportername, $ctime,
-                $message, get_config('wwwroot') . "artefact/artefact.php?artefact=" . $this->artefact->get('id') . "&view=" . $this->view->get('id') . "&objection=1", hsc($this->artefact->get('title')),
+                $message, get_config('wwwroot') . "view/view.php?id=" . $this->view->get('id') . '&modal=1&artefact=' . $this->artefact->get('id') . "&objection=1", hsc($this->artefact->get('title')),
                 $reporterurl, $reportername
             );
         }
@@ -1112,7 +1134,8 @@ class ActivityTypeMaharamessage extends ActivityType {
      */
     public function __construct($data, $cron=false) {
         parent::__construct($data, $cron);
-        $this->users = activity_get_users($this->get_id(), $this->users);
+        $includesuspendedusers = isset($data->includesuspendedusers) && $data->includesuspendedusers;
+        $this->users = activity_get_users($this->get_id(), $this->users, null, false, array(), $includesuspendedusers);
     }
 
     public function get_required_parameters() {
@@ -1232,8 +1255,8 @@ class ActivityTypeWatchlist extends ActivityType {
 
     protected $view;
 
-    private $ownerinfo;
-    private $viewinfo;
+    protected $ownerinfo;
+    protected $viewinfo;
 
     /**
      * @param array $data Parameters:
@@ -1315,7 +1338,6 @@ class ActivityTypeWatchlist extends ActivityType {
  */
 class ActivityTypeWatchlistnotification extends ActivityTypeWatchlist{
     protected $view;
-    protected $viewinfo;
     protected $blocktitles = array();
     protected $usr;
 
@@ -1332,7 +1354,6 @@ class ActivityTypeWatchlistnotification extends ActivityTypeWatchlist{
         $this->usr = $data->usr;
         $this->unsubscribelink = get_config('wwwroot') . 'view/unsubscribe.php?a=watchlist&t=';
         $this->unsubscribetype = 'watchlist';
-        $this->viewinfo = new View($this->view);
     }
 
     /**
@@ -1344,7 +1365,7 @@ class ActivityTypeWatchlistnotification extends ActivityTypeWatchlist{
      */
     public function get_message($user) {
         $message = get_string_from_language($user->lang, 'newwatchlistmessageview1', 'activity',
-                                        $this->viewinfo->get('title'), display_name($this->usr, $user));
+                                        $this->viewinfo->get('title'), $this->ownerinfo);
 
         try {
             foreach ($this->blocktitles as $blocktitle) {
@@ -1536,93 +1557,6 @@ function format_notification_whitespace($message, $type=null) {
     // to see it.
     $replace = ($type == 'newpost' || $type == 'feedback') ? '<br>' : '<br><br>';
     return preg_replace('/(<br( ?\/)?>\s*){2,}/', $replace, $message);
-}
-
-/**
- * Get one page of notifications and return html
- */
-function activitylist_html($type='all', $limit=10, $offset=0) {
-    global $USER;
-
-    $userid = $USER->get('id');
-
-    $typesql = '';
-    if ($type != 'all') {
-        // Treat as comma-separated list of activity type names
-        $types = explode(',', preg_replace('/[^a-z,]+/', '', $type));
-        if ($types) {
-            $typesql = ' at.name IN (' . join(',', array_map('db_quote', $types)) . ')';
-            if (in_array('adminmessages', $types)) {
-                $typesql = '(' . $typesql . ' OR at.admin = 1)';
-            }
-            $typesql = ' AND ' . $typesql;
-        }
-    }
-
-    $from = "
-        FROM {notification_internal_activity} a
-        JOIN {activity_type} at ON a.type = at.id
-        WHERE a.usr = ? $typesql";
-    $values = array($userid);
-
-    $count = count_records_sql('SELECT COUNT(*)' . $from, $values);
-    safe_require('module', 'multirecipientnotification');
-    if (PluginModuleMultirecipientnotification::is_active()) {
-        $paginationurl = get_config('wwwroot') . 'module/multirecipientnotification/inbox.php?type=' . $type;
-    }
-    else {
-        $paginationurl = get_config('wwwroot') . 'account/activity/index.php?type=' . $type;
-    }
-
-
-    $pagination = build_pagination(array(
-        'id'         => 'activitylist_pagination',
-        'url'        => $paginationurl,
-        'jsonscript' => 'account/activity/index.json.php',
-        'datatable'  => 'activitylist',
-        'count'      => $count,
-        'limit'      => $limit,
-        'offset'     => $offset,
-        'jumplinks'  =>  6,
-        'numbersincludeprevnext' => 2,
-    ));
-
-    $result = array(
-        'count'         => $count,
-        'limit'         => $limit,
-        'offset'        => $offset,
-        'type'          => $type,
-        'tablerows'     => '',
-        'pagination'    => $pagination['html'],
-        'pagination_js' => $pagination['javascript'],
-    );
-
-    if ($count < 1) {
-        return $result;
-    }
-
-    $records = get_records_sql_array('
-        SELECT
-            a.*, at.name AS type, at.plugintype, at.pluginname' . $from . '
-        ORDER BY a.ctime DESC',
-        $values,
-        $offset,
-        $limit
-    );
-    if ($records) {
-        foreach ($records as &$r) {
-            $r->date = format_date(strtotime($r->ctime), 'strfdaymonthyearshort');
-            $section = empty($r->plugintype) ? 'activity' : "{$r->plugintype}.{$r->pluginname}";
-            $r->strtype = get_string('type' . $r->type, $section);
-            $r->message = format_notification_whitespace($r->message);
-        }
-    }
-
-    $smarty = smarty_core();
-    $smarty->assign('data', $records);
-    $result['tablerows'] = $smarty->fetch('account/activity/activitylist.tpl');
-
-    return $result;
 }
 
 /**

@@ -84,12 +84,17 @@ class PluginBlocktypeTaggedposts extends MaharaCoreBlocktype {
      * @param array $tagsout Optional reference variable for finding out the "extclude" tags used by this block
      * @return array of blogpost records
      */
-    public static function get_blog_posts_in_block(BlockInstance $instance, &$tagsinreturn = null, &$tagsoutreturn = null) {
+    public static function get_blog_posts_in_block(BlockInstance $instance, &$tagsinreturn = null, &$tagsoutreturn = null, $versioning=false) {
         $configdata = $instance->get('configdata');
         $results = array();
 
         $tagsin = $tagsout = array();
-        $tagrecords = get_records_array('blocktype_taggedposts_tags', 'block_instance', $instance->get('id'), 'tagtype desc, tag', 'tag, tagtype');
+        if ($versioning) {
+            $tagrecords = $configdata['tagrecords'];
+        }
+        else {
+            $tagrecords = get_records_array('blocktype_taggedposts_tags', 'block_instance', $instance->get('id'), 'tagtype desc, tag', 'tag, tagtype');
+        }
         if ($tagrecords) {
 
             $view = $instance->get('view');
@@ -107,31 +112,33 @@ class PluginBlocktypeTaggedposts extends MaharaCoreBlocktype {
             }
             $tagsout = array_filter($tagsout);
             $sqlvalues = array($view);
+            $typecast = is_postgres() ? '::varchar' : '';
             $sql =
-                'SELECT a.title, p.title AS parenttitle, a.id, a.parent, a.owner, a.description, a.allowcomments, at.tag, a.ctime, a.mtime
+                "SELECT a.title, p.title AS parenttitle, a.id, a.parent, a.owner, a.author, a.authorname,
+                    a.description, a.allowcomments, at.tag, a.ctime, a.mtime
                 FROM {artefact} a
                 JOIN {artefact} p ON a.parent = p.id
                 JOIN {artefact_blog_blogpost} ab ON (ab.blogpost = a.id AND ab.published = 1)
-                JOIN {artefact_tag} at ON (at.artefact = a.id)
-                WHERE a.artefacttype = \'blogpost\'
-                AND a.owner = (SELECT "owner" from {view} WHERE id = ?)';
+                JOIN {tag} at ON (at.resourcetype = 'artefact' AND at.resourceid = a.id" . $typecast . ")
+                WHERE a.artefacttype = 'blogpost'
+                AND a.owner = (SELECT \"owner\" from {view} WHERE id = ?)";
             if (!empty($tagsin)) {
                 foreach ($tagsin as $tagin) {
-                    $sql .= ' AND EXISTS (
-                        SELECT * FROM {artefact_tag} AS at
-                        WHERE a.id = at.artefact
+                    $sql .= " AND EXISTS (
+                        SELECT * FROM {tag} AS at
+                        WHERE at.resourcetype = 'artefact' AND at.resourceid = a.id" . $typecast . "
                         AND at.tag = ?
-                    )';
+                    )";
                 }
                 $sqlvalues = array_merge($sqlvalues, $tagsin);
             }
             if (!empty($tagsout)) {
                 foreach ($tagsout as $tagout) {
-                    $sql .= ' AND NOT EXISTS (
-                        SELECT * FROM {artefact_tag} AS at
-                        WHERE a.id = at.artefact
+                    $sql .= " AND NOT EXISTS (
+                        SELECT * FROM {tag} AS at
+                        WHERE at.resourcetype = 'artefact' AND at.resourceid = a.id" . $typecast . "
                         AND at.tag = ?
-                    )';
+                    )";
                 }
                 $sqlvalues = array_merge($sqlvalues, $tagsout);
             }
@@ -167,7 +174,7 @@ class PluginBlocktypeTaggedposts extends MaharaCoreBlocktype {
         return $results;
     }
 
-    public static function render_instance(BlockInstance $instance, $editing=false) {
+    public static function render_instance(BlockInstance $instance, $editing=false, $versioning=false) {
         global $USER;
 
         $configdata = $instance->get('configdata');
@@ -177,10 +184,11 @@ class PluginBlocktypeTaggedposts extends MaharaCoreBlocktype {
 
         $smarty = smarty_core();
         $smarty->assign('view', $view);
+        $smarty->assign('licensemetadata', get_config('licensemetadata') ? true : false);
         $viewownerdisplay = null;
         // Display all posts, from all blogs, owned by this user
         $tagsin = $tagsout = array();
-        $results = self::get_blog_posts_in_block($instance, $tagsin, $tagsout);
+        $results = self::get_blog_posts_in_block($instance, $tagsin, $tagsout, $versioning);
         if ($tagsin || $tagsout) {
 
             $smarty->assign('blockid', $instance->get('id'));
@@ -216,7 +224,8 @@ class PluginBlocktypeTaggedposts extends MaharaCoreBlocktype {
             foreach ($results as $result) {
                 $dataobject["artefact"] = $result->parent;
                 $result->displaydate= format_date(strtotime($result->ctime));
-                $result->postedbyon = ArtefactTypeBlog::display_postedby($result->ctime, display_default_name($result->owner));
+                $by = $result->author ? display_default_name($result->author) : $result->authorname;
+                $result->postedbyon = ArtefactTypeBlog::display_postedby($result->ctime, $by);
 
                 if ($result->ctime != $result->mtime) {
                     $result->updateddate= format_date(strtotime($result->mtime));
@@ -226,15 +235,16 @@ class PluginBlocktypeTaggedposts extends MaharaCoreBlocktype {
                 // get comments for this post
                 $result->commentcount = count_records_select('artefact_comment_comment', "onartefact = {$result->id} AND private = 0 AND deletedby IS NULL AND hidden=0");
                 $allowcomments = $artefact->get('allowcomments');
+                $smarty->assign('allowcomments', $allowcomments);
                 if (empty($result->commentcount) && empty($allowcomments)) {
                     $result->commentcount = null;
                 }
 
-                list($commentcount, $comments) = ArtefactTypeComment::get_artefact_comments_for_view($artefact, $viewobj, null, false);
+                list($commentcount, $comments) = ArtefactTypeComment::get_artefact_comments_for_view($artefact, $viewobj, null, false, false, $versioning);
                 $result->comments = $comments;
 
                 // get all tags for this post
-                $taglist = get_records_array('artefact_tag', 'artefact', $result->id, "tag DESC");
+                $taglist = get_records_sql_array("SELECT tag FROM {tag} WHERE resourcetype = 'artefact' AND resourceid = ? ORDER BY tag DESC", array($result->id));
                 foreach ($taglist as $t) {
                     $result->taglist[] = $t->tag;
                 }
@@ -242,7 +252,7 @@ class PluginBlocktypeTaggedposts extends MaharaCoreBlocktype {
                     $rendered = $artefact->render_self(array('viewid' => $view, 'details' => true, 'blockid' => $instance->get('id')));
                     $result->html = $rendered['html'];
                     if (!empty($rendered['javascript'])) {
-                        $result->html .= '<script type="application/javascript">' . $rendered['javascript'] . '</script>';
+                        $result->html .= '<script>' . $rendered['javascript'] . '</script>';
                     }
                     $attachments = $rendered['attachments'];
                     if (!empty($attachments)) {
@@ -281,14 +291,23 @@ class PluginBlocktypeTaggedposts extends MaharaCoreBlocktype {
             if ($key > 0) {
                 $tagstr .= ', ';
             }
-            $tagstr .= ($viewownerdisplay) ? '"' . $tag . '"' : '"<a href="' . get_config('wwwroot') . 'tags.php?tag=' . urlencode($tag) . '&sort=name&type=text">' . hsc($tag) . '</a>"';
+            if (strpos($tag, 'tagid_') !== false) {
+                $tags = get_records_sql_array("
+                    SELECT CONCAT(i.displayname, ': ', t.tag) AS tag, t.resourceid
+                    FROM {tag} t
+                    LEFT JOIN {institution} i ON i.name = t.ownerid
+                    WHERE t.id = ?", array(substr($tag, 6, 5))
+                );
+                $tag = $tags[0]->tag;
+            }
+            $tagstr .= ($USER->id != $owner) ? '"<a href="' . get_config('wwwroot') . 'relatedtags.php?tag=' . urlencode($tag) . '&view=' . $view . '">' . hsc($tag) . '</a>"' : '"<a href="' . get_config('wwwroot') . 'tags.php?tag=' . urlencode($tag) . '&sort=name&type=text">' . hsc($tag) . '</a>"';
         }
         if (!empty($tagsout)) {
             foreach ($tagsout as $key => $tag) {
                 if ($key > 0) {
                     $tagomitstr .= ', ';
                 }
-                $tagomitstr .= ($viewownerdisplay) ? '"' . $tag . '"' : '"<a href="' . get_config('wwwroot') . 'tags.php?tag=' . urlencode($tag) . '&sort=name&type=text">' . hsc($tag) . '</a>"';
+                $tagomitstr .= ($USER->id != $owner) ? '"<a href="' . get_config('wwwroot') . 'relatedtags.php?tag=' . urlencode($tag) . '&view=' . $view . '">' . hsc($tag) . '</a>"' : '"<a href="' . get_config('wwwroot') . 'tags.php?tag=' . urlencode($tag) . '&sort=name&type=text">' . hsc($tag) . '</a>"';
             }
         }
         if (empty($tagsin)) {
@@ -318,12 +337,11 @@ class PluginBlocktypeTaggedposts extends MaharaCoreBlocktype {
     private static function get_chooseable_tags() {
         global $USER;
 
+        $typecast = is_postgres() ? '::varchar' : '';
         return get_records_sql_array("
             SELECT at.tag
-            FROM
-                {artefact_tag} at
-                JOIN {artefact} a
-                ON a.id = at.artefact
+            FROM {tag} at
+            JOIN {artefact} a ON (at.resourcetype ='artefact' AND at.resourceid = a.id" . $typecast . ")
             WHERE
                 a.owner = ?
                 AND a.artefacttype = 'blogpost'
@@ -345,7 +363,18 @@ class PluginBlocktypeTaggedposts extends MaharaCoreBlocktype {
         $elements = array();
         if (!empty($tags)) {
             $tagselect = array();
-            $tagrecords = get_records_array('blocktype_taggedposts_tags', 'block_instance', $instance->get('id'), 'tagtype desc, tag', 'tag, tagtype');
+            $typecast = is_postgres() ? '::varchar' : '';
+            $tagrecords = get_records_sql_array("
+                 SELECT
+                     (CASE
+                         WHEN bt.tag LIKE 'tagid_%' THEN CONCAT(i.displayname, ': ', t.tag)
+                         ELSE bt.tag
+                     END) AS tag, bt.tagtype
+                 FROM {blocktype_taggedposts_tags} bt
+                 LEFT JOIN {tag} t ON t.id" . $typecast . " = SUBSTRING(bt.tag, 7)
+                 LEFT JOIN {institution} i ON i.name = t.ownerid
+                 WHERE bt.block_instance = ?
+                ORDER BY tagtype DESC", array($instance->get('id')));
             if ($tagrecords) {
                 foreach ($tagrecords as $tag) {
                     if ($tag->tagtype == PluginBlocktypeTaggedposts::TAGTYPE_INCLUDE) {
@@ -452,21 +481,35 @@ EOF;
         $tagselect = $values['tagselect'];
         unset($values['tagselect']);
         if (!empty($tagselect)) {
-            delete_records('blocktype_taggedposts_tags', 'block_instance', $instance->get('id'));
-            foreach ($tagselect as $tag) {
-                $value = PluginBlocktypeTaggedposts::TAGTYPE_INCLUDE;
-                if (substr($tag, 0, 1) == '-') {
-                    $value = PluginBlocktypeTaggedposts::TAGTYPE_EXCLUDE;
-                    $tag = substr($tag, 1);
-                }
-                $todb = new stdClass();
-                $todb->block_instance = $instance->get('id');
-                $todb->tag = htmlspecialchars_decode($tag);
-                $todb->tagtype = $value;
-                insert_record('blocktype_taggedposts_tags', $todb);
-            }
+            self::save_tag_selection($tagselect, $instance);
         }
         return $values;
+    }
+
+    public static function save_tag_selection($tagselect, BlockInstance $instance) {
+        delete_records('blocktype_taggedposts_tags', 'block_instance', $instance->get('id'));
+        foreach ($tagselect as $tag) {
+            $value = PluginBlocktypeTaggedposts::TAGTYPE_INCLUDE;
+            if (substr($tag, 0, 1) == '-') {
+                $value = PluginBlocktypeTaggedposts::TAGTYPE_EXCLUDE;
+                $tag = substr($tag, 1);
+            }
+            // If tag is institution tag, save it's correct form.
+            if (strpos($tag, ':')) {
+                $tagarray = explode(': ', $tag);
+                $sql = "SELECT t.id
+                    FROM {tag} t
+                    JOIN {institution} i ON i.name = t.ownerid
+                    WHERE t.tag = ? AND t.resourcetype = 'institution' AND i.displayname = ?";
+                $insttagid = get_field_sql($sql, array($tagarray[1], $tagarray[0]));
+                $tag = 'tagid_' . $insttagid;
+            }
+            $todb = new stdClass();
+            $todb->block_instance = $instance->get('id');
+            $todb->tag = htmlspecialchars_decode($tag);
+            $todb->tagtype = $value;
+            insert_record('blocktype_taggedposts_tags', $todb);
+        }
     }
 
     /**
@@ -507,7 +550,6 @@ EOF;
     public static function allowed_in_view(View $view) {
         return $view->get('owner') != null;
     }
-
 }
 
 function translate_ids_to_tags(array $ids) {

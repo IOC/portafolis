@@ -192,10 +192,19 @@ $inlinejs = <<<EOF
           toggle_xmlrpc_part();
       });
       toggle_xmlrpc_part();
+      $('#allocate_webservice_tokens_service').on('change', function() {
+          var params = {};
+          params.service = this.value;
+          sendjsonrequest('service.json.php', params, 'POST', function(data) {
+              if (data.servicelist) {
+                  $('#allocate_webservice_tokens_functions_container').html(data.servicelist);
+              }
+          });
+      });
   });
 EOF;
 
-$smarty = smarty(array(), array('<link rel="stylesheet" type="text/css" href="' . $THEME->get_url('style/webservice.css', false, 'auth/webservice') . '">',));
+$smarty = smarty();
 safe_require('auth', 'webservice');
 $smarty->assign('INLINEJAVASCRIPT', $inlinejs);
 $smarty->assign('token', $dbtoken->token);
@@ -259,7 +268,7 @@ function allocate_webservice_tokens_submit(Pieform $form, $values) {
     update_record('external_tokens', $dbtoken);
 
     $SESSION->add_ok_msg(get_string('configsaved', 'auth.webservice'));
-    redirect('/webservice/admin/tokenconfig.php?token=' . $dbtoken->id);
+    redirect('/webservice/admin/index.php?open=webservices_token');
 }
 
 function allocate_webservice_tokens_validate(PieForm $form, $values) {

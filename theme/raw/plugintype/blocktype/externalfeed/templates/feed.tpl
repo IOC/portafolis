@@ -2,7 +2,7 @@
     {if $feedimage}<div class="feedlogoimage">{$feedimage|safe}</div>{/if}
     <div id="blocktype_externalfeed_title" >
         {if $description && $description != $entries[0]->description}
-        <div class="panel-body flush">
+        <div class="card-body flush">
             <div id="blocktype_externalfeed_desc" class="feed-decription text-midtone text-small">
                 {$description|clean_html|safe}
             </div>
@@ -43,9 +43,9 @@
                     <h4 class="list-group-item-heading text-inline">
                         {$entry->title}
                     </h4>
-                    <span class="postdetails text-small text-midtone">
-                     - {if $entry->pubdate}{str tag=publishedon section=blocktype.externalfeed arg1=$entry->pubdate}{/if}
-                    </span>
+                    <div class="postdetails metadata text-small">
+                        {if $entry->pubdate}{str tag=publishedon section=blocktype.externalfeed arg1=$entry->pubdate}{/if}
+                    </div>
                 </li>
             {/foreach}
             </ol>

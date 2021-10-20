@@ -94,13 +94,17 @@ function check_upgrades($name=null) {
             $core->fromrelease = $corerelease;
         }
         else if ($config->version < $coreversion) {
+            // Core can't be upgraded. Remove it from the list!
+            unset($toupgrade['core']);
             if (get_config('productionmode')) {
                 throw new ConfigSanityException("Database version of Mahara $corerelease ($coreversion) is newer "
                                             . "than files version $config->release ($config->version). "
                                             . "Please make sure you have the correct Mahara files in place.");
             }
             else {
-                define('SITEOUTOFSYNC', 'core');
+                if (!defined('SITEOUTOFSYNC')) {
+                    define('SITEOUTOFSYNC', 'core');
+                }
             }
         }
         else {
@@ -122,7 +126,7 @@ function check_upgrades($name=null) {
             $localrelease = 0;
         }
 
-        $config = new StdClass;
+        $config = new stdClass();
         require(get_config('docroot') . 'local/version.php');
 
         if ($config->version > $localversion) {
@@ -227,7 +231,7 @@ function check_upgrades($name=null) {
             }
         }
 
-        $config = new StdClass;
+        $config = new stdClass();
         require(get_config('docroot') . $pluginpath . '/version.php');
 
         $classname = generate_class_name($plugintype, $pluginname);
@@ -240,7 +244,7 @@ function check_upgrades($name=null) {
             if (empty($installing) && $pluginkey != $name) {
                 $newinstall = true;
             }
-            $plugininfo = new StdClass;
+            $plugininfo = new stdClass();
             $plugininfo->install = true;
             $plugininfo->to = $config->version;
             $plugininfo->torelease = $config->release;
@@ -280,7 +284,7 @@ function check_upgrades($name=null) {
                                           . " (you have $pluginversion ($pluginrelease))");
             }
             $toupgradecount++;
-            $plugininfo = new StdClass;
+            $plugininfo = new stdClass();
             $plugininfo->upgrade = true;
             $plugininfo->from = $pluginversion;
             $plugininfo->fromrelease = $pluginrelease;
@@ -322,12 +326,14 @@ function check_upgrades($name=null) {
         }
     }
     if (!empty($outofsyncplugins)) {
-        define('SITEOUTOFSYNC', implode(', ', $outofsyncplugins));
+        if (!defined('SITEOUTOFSYNC')) {
+            define('SITEOUTOFSYNC', implode(', ', $outofsyncplugins));
+        }
     }
     // if we've just asked for one, don't return an array...
     if (!empty($name)) {
         if (count($toupgrade) == 1) {
-            $upgrade = new StdClass;
+            $upgrade = new stdClass();
             $upgrade->name = $name;
             foreach ((array)$toupgrade[$name] as $key => $value) {
                 $upgrade->{$key} = $value;
@@ -374,6 +380,7 @@ function upgrade_core($upgrade) {
     set_config('release', $upgrade->torelease);
     set_config('series', $upgrade->toseries);
     bump_cache_version();
+    cron_check_for_updates();
 
     if (!empty($upgrade->install)) {
         core_postinst();
@@ -449,7 +456,7 @@ function upgrade_plugin($upgrade) {
         }
     }
 
-    $installed = new StdClass;
+    $installed = new stdClass();
     $installed->name = $pluginname;
     $installed->version = $upgrade->to;
     $installed->release = $upgrade->torelease;
@@ -579,7 +586,7 @@ function upgrade_plugin($upgrade) {
             foreach ($types as $type) {
                 $ph[] = '?';
                 if (!record_exists('artefact_installed_type', 'plugin', $pluginname, 'name', $type)) {
-                    $t = new StdClass;
+                    $t = new stdClass();
                     $t->name = $type;
                     $t->plugin = $pluginname;
                     insert_record('artefact_installed_type',$t);
@@ -737,7 +744,7 @@ function core_postinst() {
 function core_install_lastcoredata_defaults() {
     global $USER;
     db_begin();
-    $institution = new StdClass;
+    $institution = new stdClass();
     $institution->name = 'mahara';
     $institution->displayname = 'No Institution';
     $institution->authplugin  = 'internal';
@@ -745,7 +752,7 @@ function core_install_lastcoredata_defaults() {
     $institution->priority = 0;
     insert_record('institution', $institution);
 
-    $auth_instance = new StdClass;
+    $auth_instance = new stdClass();
     $auth_instance->instancename  = 'Internal';
     $auth_instance->priority='1';
     $auth_instance->institution   = 'mahara';
@@ -755,7 +762,7 @@ function core_install_lastcoredata_defaults() {
 
     // Insert the root user
     $userid = 0;
-    $user = new StdClass;
+    $user = new stdClass();
     $user->id = $userid;
     $user->username = 'root';
     $user->password = '*';
@@ -801,9 +808,6 @@ function core_install_lastcoredata_defaults() {
         insert_record('site_content_version', $page);
     }
 
-    // install the default layout options
-    install_view_layout_defaults();
-
     require_once('group.php');
     install_system_profile_view();
     install_system_dashboard_view();
@@ -824,7 +828,7 @@ function core_install_lastcoredata_defaults() {
     update_record('usr', $user, array('id' => 0));
 
     // Insert the admin user
-    $user = new StdClass;
+    $user = new stdClass();
     $user->username = 'admin';
     $user->salt = auth_get_random_salt();
     $user->password = crypt('mahara', '$2a$' . get_config('bcrypt_cost') . '$' . substr(md5(get_config('passwordsaltmain') . $user->salt), 0, 22));
@@ -855,6 +859,17 @@ function core_install_lastcoredata_defaults() {
     // if we're upgrading this happens somewhere else.  This is because of dependency issues around
     // the order of installation stuff.
     install_blocktype_extras();
+
+    // Setting user access roles for content block access
+    $table = new XMLDBTable('usr_access_roles');
+
+    $roles = array('peer' => 0, 'manager' => 1, 'peermanager' => 1);
+    foreach ($roles as $role => $state) {
+        $obj = new stdClass();
+        $obj->role              = $role;
+        $obj->see_block_content = $state;
+        insert_record('usr_access_roles', $obj);
+    }
 }
 
 function core_install_firstcoredata_defaults() {
@@ -889,7 +904,7 @@ function core_install_firstcoredata_defaults() {
     set_config('watchlistnotification_delay', 20);
 
     // install the applications
-    $app = new StdClass;
+    $app = new stdClass();
     $app->name = 'mahara';
     $app->displayname = 'Mahara';
     $app->xmlrpcserverurl = '/api/xmlrpc/server.php';
@@ -916,6 +931,7 @@ function core_install_firstcoredata_defaults() {
         'activateuser',
         'userjoinsgroup',
         'userleavesgroup',
+        'userchangegrouprole',
         'saveartefact',
         'deleteartefact',
         'deleteartefacts',
@@ -941,7 +957,7 @@ function core_install_firstcoredata_defaults() {
     );
 
     foreach ($eventtypes as $et) {
-        $e = new StdClass;
+        $e = new stdClass();
         $e->name = $et;
         insert_record('event_type', $e);
     }
@@ -993,7 +1009,7 @@ function core_install_firstcoredata_defaults() {
     );
 
     foreach ($activitytypes as $at) {
-        $a = new StdClass;
+        $a = new stdClass();
         $a->name = $at[0];
         $a->admin = $at[1];
         $a->delay = $at[2];
@@ -1023,16 +1039,17 @@ function core_install_firstcoredata_defaults() {
         'cron_clean_internal_activity_notifications'=> array(45, 22, '*', '*', '*'),
         'cron_sitemap_daily'                        => array(0, 1, '*', '*', '*'),
         'file_cleanup_old_cached_files'             => array(0, 1, '*', '*', '*'),
-        'user_login_tries_to_zero'                  => array('*/5', '*', '*', '*', '*'),
+        'user_login_tries_to_zero'                  => array('2-59/5', '*', '*', '*', '*'),
         'cron_institution_registration_data'        => array(rand(0, 59), rand(0, 23), '*', '*', rand(0, 6)),
         'cron_institution_data_weekly'              => array('55', '23', '*', '*', '6'),
         'cron_institution_data_daily'               => array('51', '23', '*', '*', '*'),
         'check_imap_for_bounces'                    => array('*', '*', '*', '*', '*'),
         'cron_event_log_expire'                     => array('7', '23', '*', '*', '*'),
         'watchlist_process_notifications'           => array('*', '*', '*', '*', '*'),
+        'cron_email_reset_rebounce'                 => array(rand(0, 59), rand(0, 23), '*', '*', '*'),
     );
     foreach ($cronjobs as $callfunction => $times) {
-        $cron = new StdClass;
+        $cron = new stdClass();
         $cron->callfunction = $callfunction;
         $cron->minute       = $times[0];
         $cron->hour         = $times[1];
@@ -1249,150 +1266,6 @@ function install_blocktype_extras() {
 }
 
 /**
- * Installs all the allowed column widths for views. Used when installing core
- * defaults, and also when upgrading from 1.7 to 1.8
- */
-function install_view_column_widths() {
-    require_once('view.php');
-
-    $layout = new stdClass();
-    $delayinserts = array();
-    $x = 0;
-    foreach (View::$basic_column_layouts as $column => $widths) {
-        foreach ($widths as $width) {
-            // If we're upgrading, then this width may already be present
-            // from the conversion of an exising layout.
-            if (!record_exists('view_layout_columns', 'widths', $width)) {
-                $layout = new stdClass();
-                $layout->columns = $column;
-                $layout->widths = $width;
-                insert_record('view_layout_columns', $layout);
-            }
-        }
-    }
-}
-
-function install_view_layout_defaults() {
-    db_begin();
-    require_once('view.php');
-
-    // Make sure all the column widths are present
-    install_view_column_widths();
-
-    // Fetch all the existing layouts so we can check below whether each default already exists
-    $oldlayouts = array();
-    $layoutrecs = get_records_assoc('view_layout', 'iscustom', '0', '', 'id, "rows", iscustom');
-    if ($layoutrecs) {
-        foreach ($layoutrecs as $rec) {
-            $rows = get_records_sql_assoc(
-                    'select vlrc.row, vlc.widths
-                    from
-                        {view_layout_rows_columns} vlrc
-                        inner join {view_layout_columns} vlc
-                            on vlrc.columns = vlc.id
-                    where vlrc.viewlayout = ?
-                    order by vlrc.row',
-                    array($rec->id)
-            );
-            if (!$rows) {
-                // This layout has no rows. Strange, but let's just ignore it for now.
-                log_warn('view_layout ' . $rec->id . ' is missing its row or column width records.');
-                continue;
-            }
-            $allwidths = '';
-            foreach ($rows as $rowrec) {
-                $allwidths .= $rowrec->widths . '-';
-            }
-            // Drop the last comma
-            $allwidths = substr($allwidths, 0, -1);
-            $oldlayouts[$rec->id] = $allwidths;
-        }
-    }
-
-    foreach (View::$defaultlayoutoptions as $id => $rowscols) {
-        // Check to see whether it matches an existing record
-        $allwidths = '';
-        $numrows = 0;
-        foreach ($rowscols as $row => $col) {
-            if ($row != 'order') {
-                $allwidths .= $col . '-';
-                $numrows++;
-            }
-        }
-        $allwidths = substr($allwidths, 0, -1);
-        $found = array_search($allwidths, $oldlayouts);
-        if ($found !== false) {
-            // There's a perfect match in the DB already. Just make sure it has the right menu order
-            if (isset($rowscols['order'])) {
-                update_record(
-                        'view_layout',
-                        (object)array(
-                                'id' => $found,
-                                'layoutmenuorder'=>$rowscols['order']
-                        )
-                );
-            }
-            continue;
-        }
-
-        // It doesn't exist yet! So, set it up.
-        $vlid = insert_record(
-                'view_layout',
-                (object)array(
-                    'iscustom' => 0,
-                    'rows' => $numrows,
-                    'layoutmenuorder' => (isset($rowscols['order']) ? $rowscols['order'] : 0)
-                ),
-                'id',
-                true
-        );
-        insert_record(
-                'usr_custom_layout',
-                (object)array(
-                        'usr' => 0,
-                        'group' => null,
-                        'layout' => $vlid,
-                )
-        );
-
-        foreach ($rowscols as $row => $col) {
-            // The 'order' field indicates menu order if this layout is meant to be present
-            // in the default layout menu
-            if ($row == 'order') {
-                continue;
-            }
-
-            // Check for the ID of the column widths that match this row
-            $colsid = get_field('view_layout_columns', 'id', 'widths', $col);
-            if (!$colsid) {
-                // For some reason this layout_columns wasn't present yet.
-                // We'll just insert it, but also throw a warning
-                $colsid = insert_record(
-                        'view_layout_columns',
-                        (object) array(
-                                'columns' => substr_count($col, ','),
-                                'widths' => $col
-                        ),
-                        'id',
-                        true
-                );
-                log_warn('Default layout option ' . $id . ' uses a column set that is not present in the list of default column widths.');
-            }
-            insert_record(
-                    'view_layout_rows_columns',
-                    (object)array(
-                        'viewlayout' => $vlid,
-                        'row' => $row,
-                        'columns' => $colsid,
-                    )
-            );
-        }
-    }
-
-    db_commit();
-}
-
-/**
  * Reload htmlpurifier filters from the XML configuration file.
  */
 function reload_html_filters() {
@@ -1477,7 +1350,7 @@ function activate_plugin_form($plugintype, $plugin) {
         'renderer'        => 'div',
         'elementclasses'  => false,
         'successcallback' => 'activate_plugin_submit',
-        'class'           => 'form-inline form-as-button pull-left last btn-group-item',
+        'class'           => 'form-inline form-as-button float-left last btn-group-item',
         'jsform'          => false,
         'action'          => get_config('wwwroot') . 'admin/extensions/pluginconfig.php',
         'elements' => array(
@@ -1488,7 +1361,7 @@ function activate_plugin_form($plugintype, $plugin) {
             'submit'     => array(
                 'type'  => 'button',
                 'usebuttontag' => true,
-                'class' => 'btn-default',
+                'class' => 'btn-secondary',
                 'title' => ($plugin->active ? get_string('hide') : get_string('show')) . ' ' . $plugintype . ' ' . (($plugin->displayname) ? $plugin->displayname : $plugin->name),
                 'hiddenlabel' => true,
                 'value' => $plugin->active ? get_string('hide') : get_string('show')
@@ -1542,6 +1415,9 @@ function site_warnings() {
     if ($tz_count == 0 || $tz_count == FALSE) {
         $warnings[] = get_string('timezoneidentifierunusable', 'error');
     }
+    if (get_config('dbtimezone')) {
+        $warnings[] = get_string('updatesitetimezone', 'error');
+    }
 
     // Check for low security (i.e. not random enough) session IDs
     if (version_compare(PHP_VERSION, '7.1.0') < 0 && (int)ini_get('session.entropy_length') < 16) {
@@ -1549,8 +1425,22 @@ function site_warnings() {
     }
 
     // Check noreply address is valid.
-    if (!sanitize_email(get_config('noreplyaddress'))) {
+    if (!sanitize_email(get_config('noreplyaddress')) || get_config('noreplyaddress') == 'noreply@example.org') {
         $warnings[] = get_string('noreplyaddressmissingorinvalid', 'error', get_config('wwwroot') . 'admin/site/options.php?fs=emailsettings');
+    }
+
+    // If the configurable themes bug 1760732 was triggered by a recent upgrade, provide a warning that the theme needs resaving.
+    $custom_themes = get_records_sql_array("SELECT i.displayname FROM {institution} i
+                                            JOIN {institution_config} ic ON ic.institution = i.name
+                                            WHERE ic.field = ? AND ic.value = ?
+                                            ORDER BY i.displayname", array('customthemeupdate', '1'));
+    if ($custom_themes) {
+        $warning = get_string('resavecustomthemes', 'error') . "<ul>";
+        foreach ($custom_themes as $theme) {
+            $warning .= "<li>" . hsc($theme->displayname) . "</li>";
+        }
+        $warning .= "</ul>";
+        $warnings[] = $warning;
     }
 
     safe_require('auth', 'saml');
@@ -1575,7 +1465,7 @@ function site_warnings() {
         $autoload = get_config('docroot') .'auth/saml/extlib/simplesamlphp/vendor/autoload.php';
         if (file_exists($autoload)) {
             require(get_config('docroot') .'auth/saml/extlib/simplesamlphp/vendor/autoload.php');
-            $config = SimpleSAML_Configuration::getInstance();
+            $config = SimpleSAML\Configuration::getInstance();
 
             $libversion = get_config_plugin('auth', 'saml', 'version');
             if (!empty($libversion) && $config->getVersion() != $libversion) {

@@ -16,7 +16,7 @@ require(dirname(dirname(__FILE__)) . '/init.php');
 define('TITLE', get_string('deleteaccountuser', 'account', display_name($USER, null, false, false, true)));
 
 if (!$USER->can_delete_self()) {
-    throw new AccessDeniedException(get_string('accessdenied', 'error'));
+    throw new AccessDeniedException();
 }
 
 $deleteform = pieform(array(
@@ -32,7 +32,7 @@ $deleteform = pieform(array(
               'rules' => array('required' => true),
           ),
         'submit' => array(
-            'class' => 'btn-default',
+            'class' => 'btn-secondary',
             'type' => 'submit',
             'value' => get_string('resenddeletionnotification', 'account'),
         ),

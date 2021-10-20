@@ -1,4 +1,4 @@
-<script type="application/javascript">
+<script>
     var {{$name}}_current = {{$next}};
     var {{$name}}_newrefinput;
     var {{$name}}_newref;
@@ -10,7 +10,7 @@
 
         jQuery('#{{$name}}_list').append({{$name}}_newref);
 
-        {{$name}}_newrefinput.focus();
+        {{$name}}_newrefinput.trigger("focus");
     }
 </script>
 <div id="{{$name}}_list">

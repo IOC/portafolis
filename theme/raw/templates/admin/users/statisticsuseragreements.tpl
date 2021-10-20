@@ -15,7 +15,7 @@
     <br>
 <div id="privacy-text" class="lead tab">{str tag="userprivacyagreements" section="admin"}</div>
 <div id="termsandconditions-text" class="lead tab js-hidden">{str tag="usertermsagreements" section="admin"}</div>
-<div class="panel panel-default view-container">
+<div class="card view-container">
     <div class="table-responsive">
         <table id="adminstitutionslist" class="fullwidth table table-striped">
             <thead>
@@ -49,8 +49,8 @@
                             </td>
                             <td>
                                 <div class="btn-group">
-                                    <a href="{$link}&activetab=privacy&versionid={$content->id}" title="{str tag=viewversion section='admin' arg1='$content->version'}" class="btn btn-default btn-xs">
-                                        <span class="icon icon-eye icon-lg" role="presentation" aria-hidden="true"></span>
+                                    <a href="{$link}&activetab=privacy&versionid={$content->id}" title="{str tag=viewversion section='admin' arg1='$content->version'}" class="btn btn-secondary btn-sm">
+                                        <span class="icon icon-regular icon-eye icon-lg" role="presentation" aria-hidden="true"></span>
                                     </a>
                                 </div>
                             </td>
@@ -93,8 +93,8 @@
                             </td>
                             <td>
                                 <div class="btn-group">
-                                    <a href="{$link}&activetab=termsandconditions&versionid={$content->id}" title="{str tag=viewversion section='admin' arg1='$content->version'}" class="btn btn-default btn-xs">
-                                        <span class="icon icon-eye icon-lg" role="presentation" aria-hidden="true"></span>
+                                    <a href="{$link}&activetab=termsandconditions&versionid={$content->id}" title="{str tag=viewversion section='admin' arg1='$content->version'}" class="btn btn-secondary btn-sm">
+                                        <span class="icon icon-regular icon-eye icon-lg" role="presentation" aria-hidden="true"></span>
                                     </a>
                                 </div>
                             </td>

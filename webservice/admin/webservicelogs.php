@@ -144,7 +144,7 @@ $form = array(
 
 $form = pieform($form);
 $smarty = smarty(array('paginator'));
-setpageicon($smarty, 'icon-puzzle-piece');
+setpageicon($smarty, 'icon-truck-loading');
 safe_require('auth', 'webservice');
 
 $smarty->assign('search', $search);
@@ -180,7 +180,7 @@ function logsearchform_submit(Pieform $form, $values) {
             }
         }
     }
-    $goto = '/webservice/admin/webservicelogs.php?' . http_build_query($query);
+    $goto = get_config('wwwroot') . 'webservice/admin/webservicelogs.php?' . http_build_query($query);
     redirect($goto);
 }
 
@@ -191,17 +191,7 @@ function logsearchform_submit(Pieform $form, $values) {
  * @return object $results containing id and text values
  */
 function translate_ids_to_names(array $ids) {
-
-    // for an empty list, the element '' is transmitted
-    $ids = array_diff($ids, array(''));
-    $results = array();
-    foreach ($ids as $id) {
-        $deleted = get_field('usr', 'deleted', 'id', $id);
-        if (($deleted === '0') && is_numeric($id)) {
-            $results[] = (object) array('id' => $id, 'text' => display_name($id));
-        }
-    }
-    return $results;
+    return translate_user_ids_to_names($ids);
 }
 
 /**

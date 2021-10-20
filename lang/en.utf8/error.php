@@ -19,6 +19,7 @@ $string['mysqldbextensionnotloaded'] = 'Your server configuration does not inclu
 $string['mysqlmodulenolongersupported1'] = 'Your server configuration does not include the mysqli extension. Please make sure that it is loaded in php.ini or install it if it is not installed. Mahara stopped supporting the mysql extension in version 16.10';
 $string['unknowndbtype'] = 'Your server configuration references an unknown database type. Valid values are "postgres" and "mysql". Please change the database type setting in config.php.';
 $string['domextensionnotloaded'] = 'Your server configuration does not include the dom extension. Mahara requires this in order to parse XML data from a variety of sources.';
+$string['mbstringextensionnotloaded'] = 'Your server configuration does not include the mbstring extension. Mahara requires this to parse multi-byte strings for varying languages.';
 $string['xmlextensionnotloaded'] = 'Your server configuration does not include the %s extension. Mahara requires this in order to parse XML data from a variety of sources. Please make sure that it is loaded in php.ini or install it if it is not installed.';
 $string['gdextensionnotloaded'] = 'Your server configuration does not include the gd extension. Mahara requires this in order to perform resizes and other operations on uploaded images. Please make sure that it is loaded in php.ini or install it if it is not installed.';
 $string['gdfreetypenotloaded'] = 'Your server configuration of the gd extension does not include Freetype support. Please make sure that gd is configured with it.';
@@ -78,6 +79,7 @@ $string['blocktypeprovidedbyartefactnotinstallable'] = 'This will be installed a
 $string['blockconfigdatacalledfromset'] = 'Configdata should not be set directly. Use PluginBlocktype::instance_config_save instead.';
 $string['invaliddirection'] = 'Invalid direction %s.';
 $string['onlyoneprofileviewallowed'] = 'You are only allowed one profile page.';
+$string['cannotputblocktypeintoview'] = 'Cannot put %s block types into this page';
 $string['onlyoneblocktypeperview'] = 'Cannot put more than one %s block type into a page.';
 
 // if you change these next two , be sure to change them in libroot/errors.php
@@ -91,6 +93,7 @@ $string['notfoundexception'] = 'The page you are looking for could not be found.
 
 $string['accessdenied'] = 'Access denied';
 $string['accessdeniedobjection'] = 'Access denied. The objection has already been resolved by another administrator.';
+$string['accessdeniedsuspension'] = 'This portfolio is under review.';
 $string['accessdeniedexception'] =  'You do not have access to view this page.';
 $string['accessdeniednourlsecret'] =  'You do not have access to this functionality. Please provide the value for "urlsecret" from your config.php file as part of the URL.';
 $string['accessdeniedbadge'] =  'You do not have access to view this badge.';
@@ -101,8 +104,10 @@ $string['viewnotfoundexceptionmessage'] = 'You tried to access a page that does 
 $string['viewnotfound'] = 'Page with id %s not found.';
 $string['viewnotfoundbyname'] = 'Page %s by %s not found.';
 $string['youcannotviewthisusersprofile'] = 'You cannot view this user\'s profile.';
+$string['notinthesamegroup'] = 'You cannot view this user\'s profile because you are not members of the same group.';
+$string['notinthesameinstitution'] = 'You cannot view this user\'s profile because you are not members of the same institution.';
+$string['notinstitutionmember'] = 'You cannot view this page because you are not a member of the institution to which this page belongs.';
 $string['invalidlayoutselection'] = 'You tried to select a layout that doesn\'t exist.';
-$string['invalidnumrows'] = 'You have tried to create a layout with more than the allowed maximum number of rows. (This should not be possible; please notify your site\'s administrator.)';
 $string['previewimagegenerationfailed'] = 'Sorry, there was a problem generating the preview image.';
 $string['viewtemplatenotfound'] = 'Default page template not found.';
 
@@ -117,16 +122,15 @@ $string['blockinstancenotfound'] = 'Block instance with id %s not found.';
 $string['interactioninstancenotfound'] = 'Activity instance with id %s not found.';
 
 $string['invalidviewaction'] = 'Invalid page control action: %s';
+$string['invaliduser'] = 'Invalid user selected';
 
 $string['missingparamblocktype'] = 'Try selecting a block type to add first.';
-$string['missingparamcolumn'] = 'Missing column specification';
-$string['missingparamrow'] = 'Missing row specification';
 $string['missingparamorder'] = 'Missing order specification';
 $string['missingparamid'] = 'Missing id';
 
 $string['themenameinvalid'] = "The name of the theme '%s' contains invalid characters.";
 
-$string['timezoneidentifierunusable'] = 'PHP on your website host does not return a useful value for the timezone identifier (%%z) - certain date formatting, such as the Leap2A export, will be broken. %%z is a PHP date formatting code. This problem is usually due to a limitation in running PHP on Windows.';
+$string['timezoneidentifierunusable'] = 'PHP on your website host does not return a useful value for the time zone identifier (%%z). Certain date formatting, such as the Leap2A export, will be broken. %%z is a PHP date formatting code. This problem is usually due to a limitation in running PHP on Windows.';
 $string['postmaxlessthanuploadmax'] = 'Your PHP post_max_size setting (%s) is smaller than your upload_max_filesize setting (%s). Uploads larger than %s will fail without displaying an error. Usually, post_max_size should be much larger than upload_max_filesize.';
 $string['smallpostmaxsize'] = 'Your PHP post_max_size setting (%s) is very small. Uploads larger than %s will fail without displaying an error.';
 $string['notenoughsessionentropy'] = 'Your PHP session.entropy_length setting is too small. Set it to at least 16 in your php.ini to ensure that generated session IDs are random and unpredictable enough.';
@@ -135,6 +139,7 @@ $string['noreplyaddressmissingorinvalid'] = 'The noreply address setting is eith
 $string['openbasedirenabled'] = 'Your server has the php open_basedir restriction enabled.';
 $string['openbasedirpaths'] = 'Mahara can only open files within the following path(s): %s.';
 $string['openbasedirwarning'] = 'Some requests for external sites may fail to complete. This could stop certain feeds from updating among other things.';
+$string['resavecustomthemes'] = 'Your latest upgrade may have stopped your configurable themes from displaying correctly. To update a configurable theme, please go to Administration →  Institution -> Settings, configure the institution\'s settings, and save the form.<br>The following institutions use configurable themes:';
 
 $string['gdlibrarylacksgifsupport'] = 'The installed PHP GD library does not support both creating and reading GIF images. Full support is needed to upload GIF images.';
 $string['gdlibrarylacksjpegsupport'] = 'The installed PHP GD library does not support JPEG/JPG images. Full support is needed to upload JPEG/JPG images.';
@@ -151,3 +156,9 @@ $string['nophpextension'] = 'The PHP extension "%s" is not enabled. Please enabl
 $string['nomemcacheserversdefined'] = 'The session save handler "%s" has no related servers defined. Please set the $cfg->memcacheservers value, e.g. "localhost:11211".';
 $string['memcacheusememcached'] = 'The "memcache" session storage is obsolete. Please use "memcached".';
 $string['siteoutofsyncfor'] = 'This site has database information newer than %s files indicate it should be.';
+$string['updatesitetimezone'] = 'The time zone for the site now needs to be set via "Configure site" →  "Site options" →  "Site settings". Please set it there and delete the $cfg->dbtimezone line from your config.php file.';
+$string['pluginnotactive1'] = 'The plugin "%s" is not enabled. Please got to "Administration" →  "Extensions" →  "Plugin administration" to enable it.';
+
+$string['fileuploadtoobig'] = 'The file upload is too big as it is bigger than "%s"';
+$string['sideblockmenuclash'] = 'The sideblock name "%s" is already in use. Please choose a different one.';
+$string['isolatedinstitutionsremoverules'] = 'We have hidden %s access rules due to isolated institutions being in effect. The hidden rules will be removed once the form is saved.';

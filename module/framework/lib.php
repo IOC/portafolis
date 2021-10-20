@@ -63,7 +63,7 @@ class PluginModuleFramework extends PluginModule {
     }
 
     public static function matrix_is_valid_json($filename) {
-
+        global $SESSION;
         $ok = array('error' => false);
         $matrix = file_get_contents($filename);
         if (!$matrix) {
@@ -97,6 +97,8 @@ class PluginModuleFramework extends PluginModule {
                         }
                         unset($content->framework->standardelements);
                     }
+                    //put ok content into session variable
+                    $SESSION->set('jsoneditorcontent', $content);
                 }
             }
         }
@@ -140,6 +142,31 @@ class PluginModuleFramework extends PluginModule {
 
         return $map;
     }
+
+    // Set up 3rd level nav for upload json file vs. edit
+    static function submenu_items($active_tab = null) {
+        $tabs = array(
+            'overview' => array(
+                'page' => 'overview',
+                'url'  => 'module/framework/frameworks.php',
+                'title'=>  get_string('Management', 'module.framework'),
+            ),
+            'editor' => array(
+                'page'  => 'editor',
+                'url'   => 'module/framework/frameworks.php?upload=1',
+                'title' => get_string('editor', 'module.framework'),
+            ),
+            'import' => array(
+                'page'  => 'import',
+                'url'   => 'module/framework/frameworks.php?uploadmatrix=1',
+                'title' => get_string('Import', 'admin'),
+            ),
+        );
+        if ($active_tab && isset($tabs[$active_tab])) {
+            $tabs[$active_tab]['selected'] = true;
+        }
+        return $tabs;
+    }
 }
 
 /**
@@ -162,14 +189,13 @@ class Framework {
     const EVIDENCE_COMPLETED = 3;
 
     public function __construct($id=0, $data=null) {
-
         if (!empty($id)) {
             $tempdata = get_record('framework', 'id', $id);
             if (empty($tempdata)) {
                 throw new FrameworkNotFoundException("Framework with id $id not found");
             }
             if (!empty($data)) {
-                $data = array_merge((array)$tempdata, $data);
+                $data = array_merge((array)$tempdata, (array)$data);
             }
             else {
                 $data = $tempdata; // use what the database has
@@ -238,7 +264,9 @@ class Framework {
         delete_records('framework_evidence', 'framework', $this->id);
         delete_records('framework_evidence_statuses', 'framework', $this->id);
         delete_records('framework_assessment_feedback', 'framework', $this->id);
-        delete_records_sql('DELETE FROM {framework_standard_element} WHERE standard IN (' . join(',', array_map('intval', $standards)) . ')');
+        if ($standards) {
+            delete_records_sql('DELETE FROM {framework_standard_element} WHERE standard IN (' . join(',', array_map('intval', $standards)) . ')');
+        }
         delete_records('framework_standard', 'framework', $this->id);
         delete_records('framework_config', 'framework', $this->id);
         delete_records('framework', 'id', $this->id);
@@ -254,7 +282,7 @@ class Framework {
      */
     public function commit() {
 
-        $fordb = new StdClass;
+        $fordb = new stdClass();
         foreach (get_object_vars($this) as $k => $v) {
             $fordb->{$k} = $v;
         }
@@ -295,7 +323,7 @@ class Framework {
                  default:
                     $key = $k;
                 }
-                $cfordb = new StdClass;
+                $cfordb = new stdClass();
                 $cfordb->framework = $this->id;
                 $cfordb->name = isset($choice->{$keystr}) ? $choice->{$keystr} : '';
                 $cfordb->type = $key;
@@ -308,74 +336,82 @@ class Framework {
                 }
             }
         }
-        // update standards
         $standardsvars = array('shortname','name','description');
+
         if (isset($this->standards) && is_array($this->standards)) {
+            $uniqueids = array();
             foreach ($this->standards['standards'] as $key => $standard) {
-                $sfordb = new StdClass;
+                $sfordb = new stdClass();
                 $sfordb->framework = $this->id;
                 $sfordb->mtime = db_format_timestamp(time());
-                $sfordb->priority = $key;
+                $sfordb->priority = $key;//needs to be a number, works if array of objects
                 foreach ($standardsvars as $v) {
                     $sfordb->{$v} = isset($standard->{$v}) ? $standard->{$v} : null;
                 }
+                //update each standard
                 if (!empty($standard->id)) {
+                    $sid = $standard->id;
                     $sfordb->id = $standard->id;
                     update_record('framework_standard', $sfordb, 'id');
+
                 }
+                //create new standard
                 else {
                     $sfordb->ctime = db_format_timestamp(time());
                     $sid = insert_record('framework_standard', $sfordb, 'id', true);
+                }
                     // From .matrix file reading
-                    if (isset($standard->standardelement) && is_array($standard->standardelement)) {
-                        $standard->options = $standard->standardelement;
-                    }
-                    if ($sid && isset($standard->options) && is_array($standard->options)) {
-                        $uniqueids = array();
-                        $priority = 0;
-                        foreach ($standard->options as $option) {
-                            $priority++;
-                            $sofordb = new StdClass;
-                            $sofordb->standard = $sid;
-                            $sofordb->mtime = db_format_timestamp(time());
-                            foreach ($standardsvars as $ov) {
-                                $sofordb->{$ov} = isset($option->{$ov}) ? $option->{$ov} : null;
+                if (isset($standard->standardelement) && is_array($standard->standardelement)) {
+                    $standard->options = $standard->standardelement;
+                }
+                if ($sid && isset($standard->options) && is_array($standard->options)) {
+
+                    $priority = 0;
+                    foreach ($standard->options as $option) {
+                        $priority++;
+                        $sofordb = new stdClass();
+                        $sofordb->standard = $sid;
+                        $sofordb->mtime = db_format_timestamp(time());
+                        foreach ($standardsvars as $ov) {
+                            $sofordb->{$ov} = isset($option->{$ov}) ? $option->{$ov} : null;
+                        }
+                        // set priority based on the order the array is passed in
+                        $sofordb->priority = $priority;
+                        if (!empty($option->id)) {//if existing se
+                            $sofordb->id = $option->id;
+                            if (!empty($option->elementid)) {
+                                $uniqueids[$option->id] = $option->elementid;
                             }
-                            // set priority based on the order the array is passed in
-                            $sofordb->priority = $priority;
-                            if (!empty($option->id)) {
-                                $sofordb->id = $option->id;
-                                if (!empty($option->elementid)) {
-                                    $uniqueids[$option->id] = $option->elementid;
-                                }
-                                if (($index = array_search($option->parentelementid, $uniqueids)) !== false) {
-                                    $option->parentelementid = $index;
-                                }
-                                update_record('framework_standard', $sofordb, 'id');
+                            if (($index = array_search($option->parentelementid, $uniqueids)) !== false) {
+                                $sofordb->parent = $index;
                             }
-                            else {
-                                $sofordb->ctime = db_format_timestamp(time());
-                                if (isset($option->parentelementid) && ($index = array_search($option->parentelementid, $uniqueids)) !== false) {
-                                    $option->parentelementid = $index;
-                                }
-                                $sofordb->parent = !empty($option->parentelementid) ? $option->parentelementid : null;
-                                $inserted = insert_record('framework_standard_element', $sofordb, 'id', true);
-                                if (!empty($option->elementid)) {
-                                    $uniqueids[$inserted] = $option->elementid;
-                                }
+                            update_record('framework_standard_element', $sofordb, 'id');
+                        }
+                        else {//otherwise it's new
+                            $sofordb->ctime = db_format_timestamp(time());
+                            if (isset($option->parentelementid) && ($index = array_search($option->parentelementid, $uniqueids)) !== false) {
+                                $option->parentelementid = $index;//db id for the parent
+                            }
+                            else if (isset($option->parentelementid) && $option->parentelementid == 'undefined') {
+                                $option->parentelementid = null;
+                            }
+                            $sofordb->parent = !empty($option->parentelementid) ? $option->parentelementid : null;
+                            //where se record goes in
+                            $inserted = insert_record('framework_standard_element', $sofordb, 'id', true);
+                            if (!empty($option->elementid)) {
+                                $uniqueids[$inserted] = $option->elementid;
                             }
                         }
                     }
                 }
             }
         }
-
         db_commit();
     }
 
     function set_config_fields() {
-        if (table_exists(new XMLDBTable('framework_config'))) {
-            $status = new StdClass;
+        if (db_table_exists('framework_config')) {
+            $status = new stdClass();
 
             $status->framework = $this->get('id');
             $status->field     = 'completed_field_enabled';
@@ -539,7 +575,7 @@ class Framework {
         $states = array(
             'begun' => array(
                 'state' => (int) $state === self::EVIDENCE_BEGUN ? 1 : 0,
-                'classes' => 'icon icon-circle-o begun',
+                'classes' => 'icon icon-regular icon-circle begun',
             ),
             'incomplete' => array(
                 'state' => (int) $state === self::EVIDENCE_INCOMPLETE ? 1 : 0,
@@ -632,25 +668,18 @@ class Framework {
             // Get the title for the option
             $title = get_field('framework_standard_element', 'shortname', 'id', $data->option);
 
-            // Find out which is the last lefthand 'cell' on the page
-            $lastrow = get_field('view', 'numrows', 'id', $data->view);
-            if ($lastrow === false) {
-                throw new MaharaException('An error occurred. A valid view should not have an empty "numrows" column');
-            }
-            // Find out how many blocks already exist for this 'cell'.
-            $maxorder = get_field_sql(
-                'SELECT MAX("order") FROM {block_instance} WHERE "view"=? AND "row"=? AND "column"=?',
-                array($data->view, $lastrow, 1)
-            );
+            $view = new View($data->view);
+            $blockpositiony = $view->bottomfreeposition();
 
             // Create the block at the end of the 'cell'.
             $annotation = new BlockInstance(0, array(
                 'blocktype'  => 'annotation',
                 'title'      => (get_string('Annotation', 'artefact.annotation') . ': ' . $title),
                 'view'       => $data->view,
-                'row'        => $lastrow,
-                'column'     => 1,
-                'order'      => (int)$maxorder + 1,
+                'positionx'  => 0,
+                'positiony'  => (int)$blockpositiony,
+                'width'      => 4,
+                'height'     => 3,
             ));
             $annotation->commit();
             $new = true;
@@ -823,77 +852,74 @@ class Framework {
         $collection = $view->get('collection');
         $evidence = get_record('framework_evidence', 'annotation', $annotation->get('id'));
         $defaultval = $evidence->state;
+        $selfassess = get_field('framework', 'selfassess', 'id', $evidence->framework);
 
         if (!is_object($collection) || !$collection->get('framework')) {
             return false;
         }
 
-        $options = self::get_my_assessment_options_for_user($view->get('owner'), $evidence->framework);
-        if (!$options) {
+        $annotationhtml = clean_html($text);
+        $annotationdivhtml = '<div class="modal-header modal-section">' . get_string("assessment", "module.framework") . '</div>';
+        $assessmenthtml = '<div class="top-line select form-group">
+                            <span class="pseudolabel">' . get_string("assessment", "module.framework") . '</span>
+                            ' . self::get_evidence_statuses($collection->get('framework'))[$defaultval] . '
+                          </div>';
+
+        $options = self::get_my_assessment_options_for_user($view, $evidence->framework);
+        if (!$options || !array_key_exists($defaultval, $options)
+            || ($view->get('owner') == $USER->get('id') && !$selfassess)
+            || ($view->get('owner') != $USER->get('id') && $selfassess)
+            ) {
             // not allowed to set the assessment so we just show the current state as html
-            $choices = self::get_evidence_statuses($collection->get('framework'));
-            $assessment = array(
-                'type' => 'html',
-                'title' => get_string('assessment', 'module.framework'),
-                'value' => $choices[$defaultval],
-                'class' => 'top-line',
-            );
+            $smarty = smarty_core();
+            $smarty->assign('annotationhtml', $annotationhtml);
+            $smarty->assign('annotationdivhtml', $annotationdivhtml);
+            $smarty->assign('assessmenthtml', $assessmenthtml);
+            $content = $smarty->fetch('module:framework:evidencestatus.tpl');
         }
         else {
-            if (!array_key_exists($defaultval, $options)) {
-                // not allowed to set the assessment to current state so show current state as html
-                $choices = self::get_evidence_statuses($collection->get('framework'));
-                $assessment = array(
-                    'type' => 'html',
-                    'title' => get_string('assessment', 'module.framework'),
-                    'value' => $choices[$defaultval],
-                    'class' => 'top-line',
-                );
-            }
-            else {
-                // Show the select box with current state selected
-                $assessment = array(
-                    'type' => 'select',
-                    'title' => get_string('assessment', 'module.framework'),
-                    'options' => $options,
-                    'defaultvalue' => $defaultval,
-                    'width' => '280px',
-                    'class' => 'top-line',
-                );
-            }
-        }
+            // Show the select box with current state selected
+            $assessment = array(
+                'type' => 'select',
+                'title' => get_string('assessment', 'module.framework'),
+                'options' => $options,
+                'defaultvalue' => $defaultval,
+                'width' => '280px',
+                'class' => 'top-line',
+            );
 
-        $form = array(
-            'name' => 'annotationfeedback',
-            'jsform' => true,
-            'renderer' => 'div',
-            'plugintype' => 'module',
-            'pluginname' => 'framework',
-            'jssuccesscallback' => 'updateAnnotation',
-            'elements'   => array(
-                'annotation' => array(
-                    'type' => 'html',
-                    'value' => clean_html($text),
+            $form = array(
+                'name' => 'annotationfeedback',
+                'jsform' => true,
+                'renderer' => 'div',
+                'plugintype' => 'module',
+                'pluginname' => 'framework',
+                'jssuccesscallback' => 'updateAnnotation',
+                'elements'   => array(
+                    'annotation' => array(
+                        'type' => 'html',
+                        'value' => $annotationhtml,
+                    ),
                 ),
-            ),
-        );
-        if ($options || (!$options && $view->get('owner') == $USER->get('id'))) {
-            $form['elements']['annotationdiv'] = array(
-                'type' => 'html',
-                'value' => '<div class="modal-header modal-section">' . get_string("assessment", "module.framework") . '</div>',
             );
-            $form['elements']['assessment'] = $assessment;
+            if ($options) {
+                $form['elements']['annotationdiv'] = array(
+                    'type' => 'html',
+                    'value' => $annotationdivhtml,
+                );
+                $form['elements']['assessment'] = $assessment;
+            }
+            $frameworkurl = $collection->collection_nav_framework_option();
+            if ($options) {
+                $form['elements']['submitcancel'] = array(
+                    'type' => 'submitcancel',
+                    'class' => 'btn-secondary',
+                    'value' => array(get_string('save'), get_string('cancel')),
+                    'goto' => $frameworkurl->fullurl,
+                );
+            }
+            $content = pieform($form);
         }
-        $frameworkurl = $collection->collection_nav_framework_option();
-        if ($options) {
-            $form['elements']['submitcancel'] = array(
-                'type' => 'submitcancel',
-                'class' => 'btn-default',
-                'value' => array(get_string('save'), get_string('cancel')),
-                'goto' => $frameworkurl->fullurl,
-            );
-        }
-        $content = pieform($form);
         list($feedbackcount, $annotationfeedback) = ArtefactTypeAnnotationfeedback::get_annotation_feedback_for_matrix($artefact, $view, $annotation->get('id'));
         $content .= $annotationfeedback;
 
@@ -942,25 +968,27 @@ class Framework {
     /**
      * Check to see if a user can set the assessment status for a piece of evidence.
      *
-     * @param string $ownerid   The owner of the smart evidence annotation
+     * @param string $view   The view being assessed
      * @param string $framework ID of the framework
      *
      * @return bool
      */
-    public static function can_assess_user($ownerid, $framework = null) {
-        return (boolean) static::get_my_assessment_options_for_user($ownerid, $framework);
+    public static function can_assess_user($view, $framework = null) {
+        return (boolean) static::get_my_assessment_options_for_user($view, $framework);
     }
 
     /**
      * Get assessment status options for a piece of evidence.
      *
-     * @param string $ownerid   The owner of the smart evidence annotation
+     * @param string $view The view being assessed
      * @param string $framework ID of the framework
 
      * @return array Options for select dropdown
      */
-    public static function get_my_assessment_options_for_user($ownerid, $framework = null) {
+    public static function get_my_assessment_options_for_user($view, $framework = null) {
         global $USER;
+
+        $ownerid = $view->get('owner');
 
         if (empty($ownerid) || !is_numeric($ownerid)) {
             return false;
@@ -979,6 +1007,11 @@ class Framework {
             }
         }
         else if ($institution != 'mahara' && ($USER->is_institutional_admin($institution) || $USER->is_institutional_staff($institution))) {
+            if ($USER->get('id') != $owner->get('id')) {
+                $isadminofowner = true;
+            }
+        }
+        else if (!empty($USER->get('id')) && !empty($view->get('submittedgroup')) && group_user_can_assess_submitted_views($view->get('submittedgroup'), $USER->get('id'))) {
             if ($USER->get('id') != $owner->get('id')) {
                 $isadminofowner = true;
             }
@@ -1034,7 +1067,7 @@ class Framework {
 
     function get_config($value) {
         $record = false;
-        if (table_exists(new XMLDBTable('framework_config')) &&
+        if (db_table_exists('framework_config') &&
             $record = get_record('framework_config', 'framework', $this->id, 'field', $value)) {
             return $record->value;
         }
@@ -1070,13 +1103,13 @@ class Framework {
     public function get_framework_config_options() {
         // check if the plugin has been upgraded
         // if not, all status settings should be greyed out
-        $disabled = !table_exists(new XMLDBTable('framework_config'));
+        $disabled = !db_table_exists('framework_config');
         $warning = array();
         if ($disabled) {
             $warning['plugin_warning'] = array(
-                    'type' => 'markup',
-                    'value' =>  '<div class="admin-warning alert alert-warning">' .
-                              '<p>' .  get_string('upgradeplugin', 'module.framework') . '</p></div>',
+                    'type'  => 'markup',
+                    'value' => '<div class="admin-warning alert alert-warning">' .
+                               '<p>' .  get_string('upgradeplugin', 'module.framework') . '</p></div>',
             );
         }
 
@@ -1089,77 +1122,77 @@ class Framework {
                 'defaultvalue' => $this->config_option_enabled('active_framework'),
             ),
             'statusestitle' => array(
-                'type' => 'html',
+                'type'  => 'html',
                 'value' => "<h4>" . get_string('displaystatusestitle','module.framework') . "</h4>" .
-                          "<p>" . get_string('displaystatusestitledetail','module.framework') . "</p>",
+                           "<p>" . get_string('displaystatusestitledetail','module.framework') . "</p>",
             ),
             'readyforassesment_container' => array(
-              'type' => 'fieldset',
-              'class' => 'form-inline',
-              'elements' => array(
-                  'label' => array(
-                      'type'=> 'html',
-                      'value' => '<div class="pseudolabel statusheader"><span>' . $choices[Framework::EVIDENCE_BEGUN] . '</span>' .
-                                '<span class="' . $this->get_state_array(Framework::EVIDENCE_BEGUN)['begun']['classes'] . '"></span></div>',
-                  ),
-                  'readyforassesment_field_enabled' => array(
-                      'type'  => 'switchbox',
-                      'title' => '',
-                      'defaultvalue' => $this->config_option_enabled('readyforassesment_field_enabled'),
-                      'disabled' => $disabled,
-                  ),
-              ),
+                'type' => 'fieldset',
+                'class' => 'form-inline',
+                'elements' => array(
+                    'label' => array(
+                        'type'=> 'html',
+                        'value' => '<div class="pseudolabel statusheader"><span>' . $choices[Framework::EVIDENCE_BEGUN] . '</span>' .
+                                   '<span class="' . $this->get_state_array(Framework::EVIDENCE_BEGUN)['begun']['classes'] . '"></span></div>',
+                    ),
+                    'readyforassesment_field_enabled' => array(
+                        'type'  => 'switchbox',
+                        'title' => '',
+                        'defaultvalue' => $this->config_option_enabled('readyforassesment_field_enabled'),
+                        'disabled' => $disabled,
+                    ),
+                ),
             ),
             'dontmatch_container' => array(
-              'type' => 'fieldset',
-              'class' => 'form-inline',
-              'elements' => array(
-                  'label' => array(
-                      'type'=> 'html',
-                      'value' => '<div class="pseudolabel statusheader"><span>' . $choices[Framework::EVIDENCE_INCOMPLETE] . '</span>' .
-                                '<span class="' . $this->get_state_array(Framework::EVIDENCE_INCOMPLETE)['incomplete']['classes'] . '"></span></div>',
-                  ),
-                  'dontmatch_field_enabled' => array(
-                      'type'  => 'switchbox',
-                      'title' => '',
-                      'defaultvalue' => $this->config_option_enabled('dontmatch_field_enabled'),
-                      'disabled' => $disabled,
-                  ),
-              ),
+                'type' => 'fieldset',
+                'class' => 'form-inline',
+                'elements' => array(
+                    'label' => array(
+                        'type'=> 'html',
+                        'value' => '<div class="pseudolabel statusheader"><span>' . $choices[Framework::EVIDENCE_INCOMPLETE] . '</span>' .
+                                   '<span class="' . $this->get_state_array(Framework::EVIDENCE_INCOMPLETE)['incomplete']['classes'] . '"></span></div>',
+                    ),
+                    'dontmatch_field_enabled' => array(
+                        'type'  => 'switchbox',
+                        'title' => '',
+                        'defaultvalue' => $this->config_option_enabled('dontmatch_field_enabled'),
+                        'disabled' => $disabled,
+                    ),
+                ),
             ),
             'partiallycomplete_container' => array(
-              'type' => 'fieldset',
-              'class' => 'form-inline',
-              'elements' => array(
-                  'label' => array(
-                      'type'=> 'html',
-                      'value' => '<div class="pseudolabel statusheader"><span>' . $choices[Framework::EVIDENCE_PARTIALCOMPLETE] . '</span>' .
-                                '<span class="' . $this->get_state_array(Framework::EVIDENCE_PARTIALCOMPLETE)['partialcomplete']['classes'] . '"></span></div>',
-                  ),
-                  'partiallycomplete_field_enabled' => array(
-                      'type'  => 'switchbox',
-                      'title' => '',
-                      'defaultvalue' => $this->config_option_enabled('partiallycomplete_field_enabled'),
-                      'disabled' => $disabled,
-                  ),
-              ),
+                'type' => 'fieldset',
+                'class' => 'form-inline',
+                'elements' => array(
+                    'label' => array(
+                        'type'=> 'html',
+                        'value' => '<div class="pseudolabel statusheader"><span>' . $choices[Framework::EVIDENCE_PARTIALCOMPLETE] . '</span>' .
+                                   '<span class="' . $this->get_state_array(Framework::EVIDENCE_PARTIALCOMPLETE)['partialcomplete']['classes'] . '"></span></div>',
+                    ),
+                    'partiallycomplete_field_enabled' => array(
+                        'type'  => 'switchbox',
+                        'title' => '',
+                        'defaultvalue' => $this->config_option_enabled('partiallycomplete_field_enabled'),
+                        'disabled' => $disabled,
+                    ),
+                ),
             ),
             'completed_container' => array(
-              'type' => 'fieldset',
-              'class' => 'form-inline',
-              'elements' => array(
-                  'label' => array(
-                      'type'=> 'html',
-                      'value' => '<div class="pseudolabel statusheader"><span>' . $choices[Framework::EVIDENCE_COMPLETED] . '</span>' .
-                                '<span class="' . $this->get_state_array(Framework::EVIDENCE_COMPLETED)['completed']['classes'] . '"></span></div>',
-                  ),
-                  'completed_field_enabled' => array(
-                      'type'  => 'switchbox',
-                      'title' => '',
-                      'value' => $disabled || $this->config_option_enabled('completed_field_enabled'),
-                      'disabled' => true,
-                  ),
-              ),
+                'type' => 'fieldset',
+                'class' => 'form-inline',
+                'elements' => array(
+                    'label' => array(
+                        'type'=> 'html',
+                        'value' => '<div class="pseudolabel statusheader"><span>' . $choices[Framework::EVIDENCE_COMPLETED] . '</span>' .
+                                   '<span class="' . $this->get_state_array(Framework::EVIDENCE_COMPLETED)['completed']['classes'] . '"></span></div>',
+                    ),
+                    'completed_field_enabled' => array(
+                        'type'  => 'switchbox',
+                        'title' => '',
+                        'value' => $disabled || $this->config_option_enabled('completed_field_enabled'),
+                        'disabled' => true,
+                    ),
+                ),
             ),
         );
 

@@ -23,7 +23,7 @@ define('TITLE', get_string('editnote', 'artefact.internal'));
 $note = param_integer('id');
 $artefact = new ArtefactTypeHtml($note);
 if (!$USER->can_edit_artefact($artefact) || $artefact->get('locked')) {
-    throw new AccessDeniedException(get_string('accessdenied', 'error'));
+    throw new AccessDeniedException();
 }
 
 $goto = get_config('wwwroot') . 'artefact/internal/notes.php';
@@ -38,7 +38,7 @@ else if ($institution = $artefact->get('institution')) {
     $goto .= '?institution=' . $institution;
 }
 else {
-    define('MENUITEM', 'content/notes');
+    define('MENUITEM', 'create/notes');
 }
 
 $folder = param_integer('folder', 0);
@@ -71,6 +71,9 @@ $form = array(
             'rows'         => 10,
             'cols'         => 70,
             'defaultvalue' => $artefact->get('description'),
+            'rules'       => array(
+                'maxlength' => 1000000
+            )
         ),
         'tags' => array(
             'type'         => 'tags',
@@ -147,15 +150,9 @@ $othernotesmsg = '<div class="alert alert-info">' . get_string('textusedinothern
 $smarty = smarty(array(), array(), array(), array(
     'tinymceconfig' => '
         image_filebrowser: "editnote_filebrowser",
-    ',
-    'sideblocks' => array(
-        array(
-            'name'   => 'quota',
-            'weight' => -10,
-            'data'   => array(),
-        ),
-    ),
+    '
 ));
+setpageicon($smarty, 'icon-regular icon-edit');
 $smarty->assign('INLINEJAVASCRIPT', $javascript);
 $smarty->assign('form', $form);
 $smarty->assign('PAGEHEADING', $artefact->get('title'));
@@ -185,26 +182,8 @@ function editnote_submit(Pieform $form, array $values) {
     $artefact->commit();
 
     // Attachments
-    $old = $artefact->attachment_id_list();
-    $new = is_array($values['filebrowser']) ? $values['filebrowser'] : array();
-    if (!empty($new) || !empty($old)) {
-        foreach ($old as $o) {
-            if (!in_array($o, $new)) {
-                try {
-                    $artefact->detach($o);
-                }
-                catch (ArtefactNotFoundException $e) {}
-            }
-        }
-        foreach ($new as $n) {
-            if (!in_array($n, $old)) {
-                try {
-                    $artefact->attach($n);
-                }
-                catch (ArtefactNotFoundException $e) {}
-            }
-        }
-    }
+    $new = update_attachments($artefact, $values['filebrowser']);
+
     // need to update the block_instances where this artefact is used - so they have
     // the correct configuration artefactids
     if ($blocks = get_column('view_artefact', 'block', 'artefact', $artefact->get('id'))) {

@@ -30,8 +30,13 @@ if ($USER->is_logged_in()) {
     // get the user's dashboard view
     require_once(get_config('libroot') . 'view.php');
     $view = $USER->get_view_by_type('dashboard');
+    $layoutjs = array();
+    if ($newlayout = $view->uses_new_layout()) {
+        $layoutjs = array('js/lodash/lodash.js', 'js/gridstack/gridstack.js', 'js/gridlayout.js');
+    }
 
     $javascript = array('paginator');
+    $javascript = array_merge($javascript, $layoutjs);
     $blocktype_js = $view->get_all_blocktype_javascript();
     $javascript = array_merge($javascript, $blocktype_js['jsfiles']);
     $inlinejs = "jQuery( function() {\n" . join("\n", $blocktype_js['initjs']) . "\n});";
@@ -46,16 +51,31 @@ if ($USER->is_logged_in()) {
     else {
         $skin = false;
     }
+    if ($newlayout) {
+        $blocks = $view->get_blocks();
+        $blocks = json_encode($blocks);
+        $blocksjs = <<<EOF
+        $(function () {
+            var options = {
+                verticalMargin: 5,
+                cellHeight: 10,
+                disableDrag : true,
+                disableResize: true,
+            };
+            var grid = $('.grid-stack');
+            grid.gridstack(options);
+            grid = $('.grid-stack').data('gridstack');
 
-    // include slimbox2 js and css files, if it is enabled...
-    if (get_config_plugin('blocktype', 'gallery', 'useslimbox2')) {
-        $langdir = (get_string('thisdirection', 'langconfig') == 'rtl' ? '-rtl' : '');
-        $stylesheets = array_merge($stylesheets, array('<script type="application/javascript" src="' . append_version_number(get_config('wwwroot') . 'lib/slimbox2/js/slimbox2.js') . '"></script>',
-           '<link rel="stylesheet" type="text/css" href="' . append_version_number(get_config('wwwroot') . 'lib/slimbox2/css/slimbox2' . $langdir . '.css') . '">'
-           ));
+            // should add the blocks one by one
+            var blocks = {$blocks};
+            loadGrid(grid, blocks);
+        });
+EOF;
     }
-
-    $viewcontent = $view->build_rows(); // Build content before initialising smarty in case pieform elements define headers.
+    else {
+        $viewcontent = $view->build_rows(); // Build content before initialising smarty in case pieform elements define headers.
+        $blocksjs = "$(function () {jQuery(document).trigger('blocksloaded');});";
+    }
     $smarty = smarty(
         $javascript,
         $stylesheets,
@@ -66,6 +86,7 @@ if ($USER->is_logged_in()) {
         )
     );
 
+    $js = '';
     if (get_config('homepageinfo') && $USER->get_account_preference('showhomeinfo')) {
         // allow the user to choose never to see the info boxes again
         $strhowtodisable = json_encode(get_string('howtodisable', 'mahara', get_config('wwwroot') . 'account'));
@@ -85,14 +106,21 @@ jQuery(function($) {
     if ($('#hideinfo').length) {
         $('#hideinfo').on('click', nevershow);
     }
+
+    // Disable the modal_links for images etc... when page loads
+    $('a[class*=modal_link], a[class*=inner-link]').addClass('no-modal');
+    $('a[class*=modal_link], a[class*=inner-link]').css('cursor', 'default');
 });
 JAVASCRIPT;
 
-        $smarty->assign('INLINEJAVASCRIPT', $js . $inlinejs);
     }
+    $smarty->assign('INLINEJAVASCRIPT', $blocksjs . $js . $inlinejs);
 
     $smarty->assign('dashboardview', true);
-    $smarty->assign('viewcontent', $viewcontent);
+    $smarty->assign('newlayout', $newlayout);
+    if (!$newlayout) {
+        $smarty->assign('viewcontent', $viewcontent);
+    }
     $smarty->assign('viewid', $view->get('id'));
 }
 else {
@@ -109,8 +137,8 @@ $urls = array(
     'resume'  => $wwwroot . 'artefact/resume/index.php',
     'blog'    => $wwwroot . 'artefact/blog/index.php',
     'views'   => $wwwroot . 'view/index.php',
-    'friends' => $wwwroot . 'user/find.php',
-    'groups'  => $wwwroot . 'group/find.php',
+    'friends' => $wwwroot . 'user/index.php?filter=current',
+    'groups'  => $wwwroot . 'group/index.php',
     'topics'  => $wwwroot . 'group/topics.php',
     'share'   => $wwwroot . 'view/share.php',
 );

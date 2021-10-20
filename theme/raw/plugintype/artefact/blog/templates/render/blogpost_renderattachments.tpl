@@ -1,13 +1,13 @@
-        <div class="has-attachment panel panel-default collapsible">
-            <h3 class="panel-heading">
+        <div class="has-attachment card collapsible">
+            <div class="card-header">
                 <a class="text-left collapsed" aria-expanded="false" href="#blog-attach-{$postid}" data-toggle="collapse">
-                    <span class="icon left icon-paperclip" role="presentation" aria-hidden="true"></span>
+                    <span class="icon left icon-paperclip icon-sm" role="presentation" aria-hidden="true"></span>
 
                     <span class="text-small">{str tag=attachedfiles section=artefact.blog}</span>
                     <span class="metadata">({$attachments|count})</span>
-                    <span class="icon icon-chevron-down pull-right collapse-indicator" role="presentation" aria-hidden="true"></span>
+                    <span class="icon icon-chevron-down float-right collapse-indicator" role="presentation" aria-hidden="true"></span>
                 </a>
-            </h3>
+            </div>
             <!-- Attachment list with view and download link -->
             <div id="blog-attach-{$postid}" class="collapse">
                 <ul class="list-unstyled list-group">
@@ -25,19 +25,18 @@
                         <span class="icon icon-{$item->artefacttype} icon-lg text-default left" role="presentation" aria-hidden="true"></span>
                         {/if}
 
-                        <span class="title list-group-item-heading inline">
-                            <a href="{$item->viewpath}" class="inner-link">
+                        <span class="title">
+                            <span class="inner-link text-small">
                                 {$item->title}
-                            </a>
+                            </span>
                             <span class="metadata"> -
                                 [{$item->size|display_size}]
                             </span>
                         </span>
 
-                        <span class="icon icon-download icon-lg pull-right text-watermark icon-action" role="presentation" aria-hidden="true"></span>
+                        <span class="icon icon-download icon-lg float-right text-watermark icon-action" role="presentation" aria-hidden="true"></span>
                     </li>
                 {/foreach}
                 </ul>
             </div>
         </div>
-

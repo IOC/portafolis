@@ -1,7 +1,7 @@
 {if $views}
 <div class="list-group">
     {foreach from=$views item=view}
-    <div class="list-group-item">
+    <div class="list-group-item flush">
         <h4 class="list-group-item-heading text-inline">
             <a href="{$view.fullurl}">{$view.title}</a>
         </h4>
@@ -48,7 +48,7 @@
     {/foreach}
 </div>
 {else}
-<div class="panel-body">
+<div class="card-body">
     <p class="lead text-small">{str tag=noviews1 section=view}</p>
 </div>
 {/if}

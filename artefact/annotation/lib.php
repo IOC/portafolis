@@ -36,6 +36,10 @@ require_once('license.php');
 
 class PluginArtefactAnnotation extends PluginArtefact {
 
+    public static function is_active() {
+        return get_field('artefact_installed', 'active', 'name', 'annotation');
+    }
+
     public static function get_artefact_types() {
         return array(
             'annotation',
@@ -169,7 +173,7 @@ class PluginArtefactAnnotation extends PluginArtefact {
                 'name' => 'annotation',
                 'title' => get_string('placeannotation', 'artefact.annotation'),
                 'plugin' => 'annotation',
-                'active' => true,
+                'active' => get_field('blocktype_installed', 'active', 'name', 'annotation', 'artefactplugin', 'annotation'),
                 'iscountable' => true,
                 'is_metaartefact' => true,
             ),
@@ -177,7 +181,7 @@ class PluginArtefactAnnotation extends PluginArtefact {
                 'name' => 'annotationfeedback',
                 'title' => get_string('placeannotationfeedback', 'artefact.annotation'),
                 'plugin' => 'annotation',
-                'active' => true,
+                'active' => get_field('blocktype_installed', 'active', 'name', 'annotation', 'artefactplugin', 'annotation'),
                 'iscountable' => true,
                 'is_metaartefact' => true,
             )
@@ -787,6 +791,16 @@ class ArtefactTypeAnnotationfeedback extends ArtefactType {
                 $item->highlight = 1;
             }
             $is_export_preview = param_integer('export', $data->export);
+
+            // Comment authors can edit recent comments if they're private or if no one has replied yet.
+            if (!$item->deletedby && $item->isauthor && !$is_export_preview
+                && ($item->private || $item->id == $lastcomment->id) && $item->ts > $editableafter) {
+                $item->canedit = 1;
+            }
+            else {
+                $item->canedit = 0;
+            }
+
             if ($item->deletedby) {
                 $item->deletedmessage = $deletedmessage[$item->deletedby];
             }
@@ -794,13 +808,12 @@ class ArtefactTypeAnnotationfeedback extends ArtefactType {
                      (!$isadminfeedback || ($isadminfeedback && ($data->owner === $item->author)))) {
                 // If the auther was admin/staff and not the owner of the annotation,
                 // the feedback can't be deleted.
-                $item->deleteform = pieform(self::delete_annotation_feedback_form($data->annotation, $data->view, $data->artefact, $data->block, $item->id));
-            }
-
-            // Comment authors can edit recent comments if they're private or if no one has replied yet.
-            if (!$item->deletedby && $item->isauthor && !$is_export_preview
-                && ($item->private || $item->id == $lastcomment->id) && $item->ts > $editableafter) {
-                $item->canedit = 1;
+                $check = get_record_sql('SELECT v.* FROM {view} v WHERE v.id = ?', array($data->view), ERROR_MULTIPLE);
+                if ($check->submittedstatus == View::UNSUBMITTED ||
+                    ($item->canedit && $item->id == $lastcomment->id && $item->ts > $editableafter)
+                   ) {
+                    $item->deleteform = pieform(self::delete_annotation_feedback_form($data->annotation, $data->view, $data->artefact, $data->block, $item->id));
+                }
             }
 
             // Form to make private comment public, or request that a
@@ -881,9 +894,8 @@ class ArtefactTypeAnnotationfeedback extends ArtefactType {
             );
         $data->jsonscript = 'artefact/annotation/annotations.json.php';
 
-        $data->baseurl = get_config('wwwroot') . 'artefact/artefact.php?' .
-            'artefact=' . $data->annotation .
-            '&view=' . $data->view .
+        $data->baseurl = get_config('wwwroot') . 'view/view.php?id=' . $data->view .
+            '&artefact=' . $data->annotation .
             (isset($data->block) ? '&block=' . $data->block : '');
 
         $smarty = smarty_core();
@@ -969,7 +981,7 @@ class ArtefactTypeAnnotationfeedback extends ArtefactType {
             $submit = array(
                 'type'  => 'submit',
                 'value' => get_string('placeannotationfeedback', 'artefact.annotation'),
-                'class' => 'btn-default'
+                'class' => 'btn-secondary'
             );
             $form['elements']['submit'] = $submit;
             // Dont use the 'Processing...' bit on the submit button
@@ -1126,6 +1138,7 @@ class ArtefactTypeAnnotationfeedback extends ArtefactType {
             $block = new BlockInstance($blockid);
 
             $smarty->assign('blockid', $blockid);
+            $smarty->assign('artefactid', $annotationartefact->get('id'));
             $smarty->assign('annotationtitle', $block->get('title'));
             $smarty->assign('annotationfeedbackcount', $annotationfeedbackcount);
             $smarty->assign('annotationfeedback', $annotationfeedback);
@@ -1255,7 +1268,7 @@ class ArtefactTypeAnnotationfeedback extends ArtefactType {
             'title' => get_string('Annotationfeedback', 'artefact.annotation'),
             'rows'  => 5,
             'cols'  => 80,
-            'rules' => array('maxlength' => 8192),
+            'rules' => array('maxlength' => 1000000),
         );
 
         $collection = $view->get('collection');
@@ -1270,7 +1283,7 @@ class ArtefactTypeAnnotationfeedback extends ArtefactType {
                         // we are dealing with an annotation added since smartevidence was added
                         $defaultval = $evidence->state;
 
-                        if ($options = Framework::get_my_assessment_options_for_user($view->get('owner'), $evidence->framework)) {
+                        if ($options = Framework::get_my_assessment_options_for_user($view, $evidence->framework)) {
                             if (!array_key_exists($defaultval, $options)) {
                                 $defaultval = null;
                             }
@@ -1326,9 +1339,9 @@ class ArtefactTypeAnnotationfeedback extends ArtefactType {
         }
         $form['elements']['submit'] = array(
             'type'  => 'submitcancel',
-            'class' => 'btn-default',
+            'class' => 'btn-secondary',
             'value' => array(get_string('placeannotationfeedback', 'artefact.annotation'), get_string('cancel')),
-            'goto' => '/' . $view->get_url(false),
+            'goto' => $view->get_url(true),
         );
         return $form;
     }
@@ -1355,7 +1368,7 @@ class ArtefactTypeAnnotationfeedback extends ArtefactType {
                 'submit'   => array(
                     'type'  => 'button',
                     'usebuttontag' => true,
-                    'class' => 'btn-link btn-xs quiet',
+                    'class' => 'btn-link btn-sm quiet',
                     'name'  => 'make_annotation_feedback_public_submit',
                     'value' => '<span class="icon icon-lock text-default left" role="presentation" aria-hidden="true"></span>' . get_string('makepublic', 'artefact.annotation'),
                 ),
@@ -1372,7 +1385,7 @@ class ArtefactTypeAnnotationfeedback extends ArtefactType {
             'renderer'          => 'oneline',
             'plugintype'        => 'artefact',
             'pluginname'        => 'annotation',
-            'class' => 'form-as-button pull-left delete-comment btn-group-item',
+            'class' => 'form-as-button float-left delete-comment btn-group-item',
             'jsform'            => true,
             'successcallback'   => 'delete_annotation_feedback_submit',
             'jssuccesscallback' => 'modifyAnnotationFeedbackSuccess',
@@ -1385,8 +1398,8 @@ class ArtefactTypeAnnotationfeedback extends ArtefactType {
                 'submit'  => array(
                     'type'  => 'button',
                     'usebuttontag' => true,
-                    'class' => 'btn-default btn-sm',
-                    'value' => '<span class="icon icon-trash text-danger" role="presentation" aria-hidden="true"></span><span class="sr-only">' . get_string('delete') . '</span>',
+                    'class' => 'btn-secondary btn-sm',
+                    'value' => '<span class="icon icon-trash-alt text-danger" role="presentation" aria-hidden="true"></span><span class="sr-only">' . get_string('delete') . '</span>',
                     'elementtitle' => get_string('delete'),
                     'confirm' => get_string('reallydeletethisannotationfeedback', 'artefact.annotation'),
                     'name'  => 'delete_annotation_feedback_submit',
@@ -1600,61 +1613,74 @@ function delete_annotation_feedback_submit(Pieform $form, $values) {
 
     $viewid = $view->get('id');
     if ($artefactid = $annotation->get('artefact')) {
-        $url = 'artefact/artefact.php?view=' . $viewid . '&artefact=' . $artefactid;
+        $url = 'view/view.php?id=' . $viewid . '&artefact=' . $artefactid;
     }
     else {
         $url = $view->get_url(false);
     }
 
-    db_begin();
-
-    $annotationfeedback->set('deletedby', $deletedby);
-    $annotationfeedback->commit();
-
-    if ($deletedby != 'author') {
-        // Notify author
-        if ($artefactid) {
-            $title = get_field('artefact', 'title', 'id', $artefactid);
-        }
-        else {
-            $title = get_field('view', 'title', 'id', $viewid);
-        }
-        $title = hsc($title);
-        $data = (object) array(
-            'subject'   => false,
-            'message'   => false,
-            'strings'   => (object) array(
-                'subject' => (object) array(
-                    'key'     => 'annotationfeedbackdeletednotificationsubject',
-                    'section' => 'artefact.annotation',
-                    'args'    => array($title),
-                ),
-                'message' => (object) array(
-                    'key'     => 'annotationfeedbackdeletedauthornotification',
-                    'section' => 'artefact.annotation',
-                    'args'    => array($title, html2text($annotationfeedback->get('description'))),
-                ),
-                'urltext' => (object) array(
-                    'key'     => $artefactid ? 'artefact' : 'view',
-                ),
-            ),
-            'users'     => array($annotationfeedback->get('author')),
-            'url'       => $url,
-        );
-        activity_occurred('maharamessage', $data);
+    // If this page is being marked, make annotation feedback un-deletable until released
+    // unless it is the last fedback still with in the editable timeframe
+    $editableafter = time() - 60 * get_config_plugin('artefact', 'annotation', 'commenteditabletime');
+    $lastcomment = $annotationfeedback::last_public_annotation_feedback($annotationid, $viewid, null);
+    if ($annotationfeedback->get('id') == $lastcomment->id && $annotationfeedback->get('mtime') > $editableafter) {
+        $candelete = 1;
     }
-    if ($deletedby != 'owner' && $annotationfeedback->get('owner') != $USER->get('id')) {
-        // Notify owner
-        $data = (object) array(
-            'annotationfeedbackid' => $annotationfeedback->get('id'),
-            'annotationid'         => $annotationid,
-            'viewid'               => $viewid,
-            'artefactid'           => $artefactid,
-        );
-        activity_occurred('annotationfeedback', $data, 'artefact', 'annotation');
+    else {
+        $candelete = 0;
     }
 
-    db_commit();
+    if ($view->get('submittedstatus') == View::UNSUBMITTED || $candelete) {
+        db_begin();
+
+        $annotationfeedback->set('deletedby', $deletedby);
+        $annotationfeedback->commit();
+
+        if ($deletedby != 'author') {
+            // Notify author
+            if ($artefactid) {
+                $title = get_field('artefact', 'title', 'id', $artefactid);
+            }
+            else {
+                $title = get_field('view', 'title', 'id', $viewid);
+            }
+            $title = hsc($title);
+            $data = (object) array(
+                'subject'   => false,
+                'message'   => false,
+                'strings'   => (object) array(
+                    'subject' => (object) array(
+                        'key'     => 'annotationfeedbackdeletednotificationsubject',
+                        'section' => 'artefact.annotation',
+                        'args'    => array($title),
+                    ),
+                    'message' => (object) array(
+                        'key'     => 'annotationfeedbackdeletedauthornotification',
+                        'section' => 'artefact.annotation',
+                        'args'    => array($title, html2text($annotationfeedback->get('description'))),
+                    ),
+                    'urltext' => (object) array(
+                        'key'     => $artefactid ? 'artefact' : 'view',
+                    ),
+                ),
+                'users'     => array($annotationfeedback->get('author')),
+                'url'       => $url,
+            );
+            activity_occurred('maharamessage', $data);
+        }
+        if ($deletedby != 'owner' && $annotationfeedback->get('owner') != $USER->get('id')) {
+            // Notify owner
+            $data = (object) array(
+                'annotationfeedbackid' => $annotationfeedback->get('id'),
+                'annotationid'         => $annotationid,
+                'viewid'               => $viewid,
+                'artefactid'           => $artefactid,
+            );
+            activity_occurred('annotationfeedback', $data, 'artefact', 'annotation');
+        }
+
+        db_commit();
+    }
 
     if (param_exists('offset')) {
         $options = ArtefactTypeAnnotationfeedback::get_annotation_feedback_options();
@@ -1933,7 +1959,7 @@ class ActivityTypeArtefactAnnotationAnnotationfeedback extends ActivityTypePlugi
                 $institutionid = $artefactinstance->get('institution');
             }
             if (empty($this->url)) {
-                $this->url = 'artefact/artefact.php?artefact=' . $onartefact . '&view=' . $this->viewid;
+                $this->url = 'view/view.php?id=' . $this->viewid . '&artefact=' . $onartefact;
             }
         }
         else if ($onview = $annotation->get('view')) {

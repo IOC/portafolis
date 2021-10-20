@@ -10,7 +10,7 @@
  */
 
 define('INTERNAL', 1);
-define('MENUITEM', 'myportfolio/views');
+define('MENUITEM', 'create/views');
 
 define('SECTION_PLUGINTYPE', 'core');
 define('SECTION_PLUGINNAME', 'view');
@@ -27,11 +27,12 @@ list($searchform, $data, $pagination) = View::views_by_owner();
 $js = <<< EOF
 jQuery(function ($) {
     {$pagination['javascript']}
+    showmatchall();
 EOF;
 if ($offset > 0) {
     $js .= <<< EOF
     if ($('#myviews').length) {
-        $('#myviews a').focus();
+        $('#myviews a').trigger("focus");
     }
 EOF;
 }
@@ -40,7 +41,7 @@ else {
     if ($('#searchresultsheading').length) {
         $('#searchresultsheading').addClass('hidefocus')
             .prop('tabIndex', -1)
-            .focus();
+            .trigger("focus");
     }
 EOF;
 }
@@ -50,6 +51,7 @@ $groupid = param_integer('group', 0);
 $institutionname = param_alphanum('institution', false);
 
 $smarty = smarty(array('paginator', 'js/jquery/jquery-ui/js/jquery-ui.min.js'));
+setpageicon($smarty, 'icon-regular icon-file-alt');
 $smarty->assign('INLINEJAVASCRIPT', $js);
 $smarty->assign('views', $data->data);
 $smarty->assign('sitetemplate', View::SITE_TEMPLATE);

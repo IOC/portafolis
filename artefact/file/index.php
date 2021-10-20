@@ -10,7 +10,7 @@
  */
 
 define('INTERNAL', 1);
-define('MENUITEM', 'content/files');
+define('MENUITEM', 'create/files');
 define('SECTION_PLUGINTYPE', 'artefact');
 define('SECTION_PLUGINNAME', 'file');
 define('SECTION_PAGE', 'index');
@@ -23,21 +23,8 @@ safe_require('artefact', 'file');
 $form = pieform(ArtefactTypeFileBase::files_form(get_config('wwwroot') . 'artefact/file/index.php'));
 $js = ArtefactTypeFileBase::files_js();
 
-$smarty = smarty(
-    array(),
-    array(),
-    array(),
-    array(
-        'sideblocks' => array(
-            array(
-                'name'   => 'quota',
-                'weight' => -10,
-                'data'   => array(),
-            ),
-        ),
-    )
-);
-
+$smarty = smarty();
+setpageicon($smarty, 'icon-regular icon-file-image');
 $smarty->assign('form', $form);
 $smarty->assign('INLINEJAVASCRIPT', $js);
 $smarty->display('artefact:file:files.tpl');

@@ -30,17 +30,11 @@ class PluginBlocktypeInbox extends MaharaCoreBlocktype {
     }
 
     public static function get_link(BlockInstance $instance) {
-        safe_require('module', 'multirecipientnotification');
-        if (PluginModuleMultirecipientnotification::is_active()) {
-            $data = get_config('wwwroot') . 'module/multirecipientnotification/inbox.php';
-        }
-        else {
-            $data = get_config('wwwroot') . 'account/activity/index.php';
-        }
-        return sanitize_url($data);
+        $data = get_config('wwwroot') . 'module/multirecipientnotification/inbox.php';
+        return $data;
     }
 
-    public static function render_instance(BlockInstance $instance, $editing=false) {
+    public static function render_instance(BlockInstance $instance, $editing=false, $versioning=false) {
         global $USER, $THEME;
         $configdata = $instance->get('configdata');
         require_once('activity.php');
@@ -60,44 +54,10 @@ class PluginBlocktypeInbox extends MaharaCoreBlocktype {
 
         $maxitems = isset($configdata['maxitems']) ? $configdata['maxitems'] : 5;
 
-        // check if multirecipientnotification plugin is active or if we proceed here
-        if (record_exists('module_installed', 'name', 'multirecipientnotification', 'active', '1') && safe_require_plugin('module', 'multirecipientnotification')) {
-            global $USER;
-            $userid = $USER->get('id');
-            $activitylist = activityblocklistin(join(',', $desiredtypes), $maxitems);
-            $records = $activitylist->records;
-            $showmore = ($activitylist->count > $maxitems);
-            // use a different template
-            $smartytemplate = 'blocktype:inbox:inboxmr.tpl';
-        }
-        else {
-            $records = array();
-            if ($desiredtypes) {
-                $sql = "
-                    SELECT n.id, n.subject, n.message, n.url, n.urltext, n.read, t.name AS type
-                    FROM {notification_internal_activity} n JOIN {activity_type} t ON n.type = t.id
-                    WHERE n.usr = ?
-                    AND t.name IN (" . join(',', array_map('db_quote', $desiredtypes)) . ")
-                    ORDER BY n.ctime DESC
-                    LIMIT ?;";
-
-                $records = get_records_sql_array($sql, array(
-                    $USER->get('id'),
-                    $maxitems + 1 // Hack to decide whether to show the More... link
-                ));
-            }
-
-            // Hack to decide whether to show the More... link
-            if ($showmore = count($records) > $maxitems) {
-                unset($records[$maxitems]);
-            }
-            if ($records) {
-                foreach ($records as &$r) {
-                    $r->message = format_notification_whitespace($r->message, $r->type);
-                }
-            }
-            $smartytemplate = 'blocktype:inbox:inbox.tpl';
-        }
+        safe_require_plugin('module', 'multirecipientnotification');
+        $activitylist = activityblocklistin(join(',', $desiredtypes), $maxitems);
+        $records = $activitylist->records;
+        $showmore = ($activitylist->count > $maxitems);
 
         if ($records) {
             require_once('activity.php');
@@ -114,7 +74,7 @@ class PluginBlocktypeInbox extends MaharaCoreBlocktype {
         $smarty->assign('blockid', 'blockinstance_' . $instance->get('id'));
         $smarty->assign('items', $records);
 
-        return $smarty->fetch($smartytemplate);
+        return $smarty->fetch('blocktype:inbox:inboxmr.tpl');
     }
 
     public static function has_instance_config() {
@@ -126,9 +86,6 @@ class PluginBlocktypeInbox extends MaharaCoreBlocktype {
         $configdata = $instance->get('configdata');
 
         $types = get_records_array('activity_type', 'admin', 0, 'plugintype,pluginname,name', 'name,plugintype,pluginname');
-        if ($USER->get('admin')) {
-            $types[] = (object)array('name' => 'adminmessages');
-        }
 
         $elements = array();
         $elements['types'] = array(
@@ -138,14 +95,24 @@ class PluginBlocktypeInbox extends MaharaCoreBlocktype {
         );
         foreach($types as $type) {
             if (!empty($type->plugintype)) {
-                $title = get_string('type' . $type->name, $type->plugintype . '.' . $type->pluginname);
+                $type->title = get_string('type' . $type->name, $type->plugintype . '.' . $type->pluginname);
             }
             else {
-                $title = get_string('type' . $type->name, 'activity');
+                $type->title = get_string('type' . $type->name, 'activity');
             }
+            $type->class = '';
+        }
+        usort($types, function ($a, $b) { return strnatcasecmp($a->title, $b->title); });
+        if ($USER->get('admin')) {
+            $types[] = (object)array('name' => 'adminmessages',
+                                     'title' => get_string('typeadminmessages', 'activity'),
+                                     'class' => 'field-label-bold');
+        }
+        foreach($types as $type) {
             $elements['types']['elements'][$type->name] = array(
                 'type' => 'switchbox',
-                'title' => $title,
+                'title' => $type->title,
+                'class' => $type->class,
                 'defaultvalue' => isset($configdata[$type->name]) ? $configdata[$type->name] : 0,
             );
         }
@@ -171,7 +138,7 @@ class PluginBlocktypeInbox extends MaharaCoreBlocktype {
      * Inbox only makes sense for personal views
      */
     public static function allowed_in_view(View $view) {
-        return $view->get('owner') != null;
+        return in_array($view->get('type'), self::get_viewtypes());
     }
 
     /**
@@ -209,4 +176,5 @@ class PluginBlocktypeInbox extends MaharaCoreBlocktype {
     public static function get_artefacts(BlockInstance $instance) {
         return array();
     }
+
 }

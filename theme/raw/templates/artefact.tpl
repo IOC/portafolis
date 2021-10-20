@@ -1,21 +1,23 @@
 {if $tags}
 <p class="tags">
     <strong>{str tag=tags}:</strong>
-    {list_tags owner=$owner tags=$tags}
+    {list_tags owner=$owner tags=$tags view=$view}
 </p>
 {/if}
 
+{if $modal && !$artefacttype == 'html'}
 <p>{$description|clean_html|safe}</p>
+{/if}
 
 {if isset($attachments)}
-<div class="has-attachment panel panel-default collapsible">
-    <h5 class="panel-heading">
+<div class="has-attachment card collapsible">
+    <h5 class="card-header">
         <a href="#atrtefact-attach" class="text-left collapsed" aria-expanded="false" data-toggle="collapse">
             <span class="icon icon-paperclip left" role="presentation" aria-hidden="true"></span>
 
             <span class="text-small">{str tag=attachedfiles section=artefact.blog}</span>
             <span class="metadata">({$attachments|count})</span>
-            <span class="icon icon-chevron-down pull-right collapse-indicator" role="presentation" aria-hidden="true"></span>
+            <span class="icon icon-chevron-down float-right collapse-indicator" role="presentation" aria-hidden="true"></span>
         </a>
     </h5>
         <!-- Attachment list with view and download link -->
@@ -36,14 +38,14 @@
                 {/if}
 
                 <span class="title list-group-item-heading text-inline">
-                    <a href="{$item->viewpath}" class="inner-link">
+                    <a class="modal_link inner-link" data-toggle="modal-docked" data-target="#configureblock" href="#" data-blockid="{$blockid}" data-artefactid="{$item->id}">
                         {$item->title}
                     </a>
                     <span class="metadata"> -
                         [{$item->size|display_size}]
                     </span>
                 </span>
-                <span class="icon icon-download icon-lg pull-right text-watermark icon-action" role="presentation" aria-hidden="true"></span>
+                <span class="icon icon-download icon-lg float-right text-watermark icon-action" role="presentation" aria-hidden="true"></span>
             </li>
             {/foreach}
         </ul>

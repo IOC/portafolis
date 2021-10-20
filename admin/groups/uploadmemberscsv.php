@@ -34,9 +34,14 @@ $MANDATORYFIELDS = array(
 );
 $MEMBERS = array(); // Store the members
 $GROUPS = array(); // Map gid to group shortnames
+$UPDATES = array(); // During validation, remember which group already exist
 
 $form = array(
     'name' => 'uploadcsv',
+    'jsform' => true,
+    'jssuccesscallback' => 'pmeter_success',
+    'jserrorcallback' => 'pmeter_error',
+    'presubmitcallback' => 'pmeter_presubmit',
     'elements' => array(
         'institution' => get_institution_selector(),
         'file' => array(
@@ -117,7 +122,7 @@ function uploadcsv_validate(Pieform $form, $values) {
         $i = ($csvgroups->get('headerExists')) ? ($key + 2) : ($key + 1);
 
         // In adding 5000 groups, this part was approx 8% of the wall time.
-        if (!($key % 25)) {
+        if (!($key % 5)) {
             set_progress_info('uploadgroupmemberscsv', $key, $num_lines * 10, get_string('validating', 'admin'));
         }
 
@@ -227,7 +232,11 @@ function uploadcsv_submit(Pieform $form, $values) {
         $SESSION->add_ok_msg(get_string('numbergroupsupdated', 'admin', 0));
     }
     set_progress_done('uploadgroupmemberscsv');
-    redirect('/admin/groups/uploadmemberscsv.php');
+
+    $form->reply(PIEFORM_OK, array(
+        'message'  => get_string('csvfileprocessedsuccessfully', 'admin'),
+        'goto'     => get_config('wwwroot') . 'admin/groups/uploadmemberscsv.php',
+    ));
 }
 
 $uploadcsvpagedescription = get_string('uploadgroupmemberscsvpagedescription3', 'admin',
@@ -239,7 +248,7 @@ $form = pieform($form);
 set_progress_done('uploadgroupmemberscsv');
 
 $smarty = smarty(array('adminuploadcsv'));
-setpageicon($smarty, 'icon-users');
+setpageicon($smarty, 'icon-users-cog');
 
 $smarty->assign('uploadcsvpagedescription', $uploadcsvpagedescription);
 $smarty->assign('uploadcsvform', $form);

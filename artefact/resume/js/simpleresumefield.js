@@ -5,7 +5,7 @@ jQuery(function($) {
     "use strict";
 
     simpleresume.connect_editbuttons = function() {
-        $("#resumefieldform input.openedit").click(function() {
+        $("#resumefieldform input.openedit").on("click", function() {
             //takes id and removes the word 'edit' from the end...
             var t = this.id.substr(0, this.id.length - 4),
                 container = $("#" + t + "_container"),
@@ -20,27 +20,27 @@ jQuery(function($) {
             submit.removeClass("js-hidden");
             cancel.removeClass("js-hidden");
 
-            displaycontainer.addClass("hidden").removeClass("nojs-hidden-block");
-            editcontainer.addClass("hidden").removeClass("nojs-hidden-block");
+            displaycontainer.addClass("d-none").removeClass("nojs-hidden-block");
+            editcontainer.addClass("d-none").removeClass("nojs-hidden-block");
 
 
 
             if (typeof tinyMCE != 'undefined') {
                 var editor = tinyMCE.get(t),
-                formTop =  container.closest('#main-column-container').attr('id');;
-                $('.mce-toolbar.mce-first').siblings().toggleClass('hidden');
+                formTop =  container.closest('#main-column-container').attr('id');
+                $('.mce-toolbar.mce-first').siblings().toggleClass('d-none');
                 editor.show();
                 editor.focus();
                 document.location.href = "#" + formTop;
             }
             else {
-                $("#" + t).removeClass("js-hidden").focus();
+                $("#" + t).removeClass("js-hidden").trigger("focus");
             }
         });
     };
 
     simpleresume.connect_cancelbuttons = function() {
-        $("#resumefieldform input.submitcancel.cancel").click(function(e) {
+        $("#resumefieldform input.submitcancel.cancel").on("click", function(e) {
             e.preventDefault();
              //takes id and removes the word 'cancel' from the end...
             var t = this.id.substr(7, this.id.length - 7 - 6),
@@ -56,15 +56,18 @@ jQuery(function($) {
             submitcontainer.addClass("js-hidden");
             submit.addClass("js-hidden");
             cancel.addClass("js-hidden");
-            displaycontainer.removeClass("hidden");
-            editcontainer.removeClass("hidden");
+            displaycontainer.removeClass("d-none");
+            editcontainer.removeClass("d-none");
             if (typeof tinyMCE != 'undefined') {
-                tinyMCE.get(t).hide();
+                // Clear any cancelled content back to original
+                var ed = tinyMCE.get(t);
+                ed.setContent($('#' + t).text());
+                ed.hide();
             }
             else {
                 $("#" + t).addClass("js-hidden");
             }
-            $("#" + t + "edit_container").find('input.openedit').focus();
+            $("#" + t + "edit_container").find('input.openedit').trigger("focus");
         });
     };
 
@@ -106,7 +109,7 @@ function simple_resumefield_error(form, data) {
     if (errornodeid) {
         var editbutton = jQuery("input#" + errornodeid + "edit");
         if (editbutton) {
-            editbutton.click();
+            editbutton.trigger("click");
         }
     }
 }

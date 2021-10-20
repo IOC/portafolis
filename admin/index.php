@@ -37,10 +37,11 @@ if (isset($upgrades['core']) && !empty($upgrades['core']->install)) {
     exit;
 }
 
-if (!get_config('registration_lastsent')
-    || get_config('new_registration_policy')) {
-    $register = true;
+// If this is true, we changed to make weekly updates mandatory since this site registered. So tell them.
+if (get_config('registration_lastsent') && !get_config('registration_firstsent')) {
+    set_config('new_registration_policy', true);
 }
+
 
 $closed = get_config('siteclosedbyadmin');
 $closeform = pieform(array(
@@ -54,7 +55,7 @@ $closeform = pieform(array(
         'submit' => array(
             'type'  => 'submit',
             'value' => get_string($closed ? 'Open' : 'Close', 'admin'),
-            'class' => $closed ? 'btn-primary' : 'btn-default'
+            'class' => $closed ? 'btn-primary' : 'btn-secondary'
         ),
     ),
 ));
@@ -67,7 +68,7 @@ $clearcachesform = pieform(array(
         'submit' => array(
             'type'  => 'submit',
             'value' => get_string('clearcachessubmit', 'admin'),
-            'class' => 'btn-default',
+            'class' => 'btn-secondary',
         ),
     ),
 ));
@@ -84,17 +85,25 @@ $smarty->assign('upgrades', $upgrades);
 if (isset($sitedata)) {
     $smarty->assign('sitedata', $sitedata);
 }
+$firstregistered = get_config('registration_firstsent');
+$smarty->assign('firstregistered', $firstregistered ?  format_date($firstregistered) : false);
 
-if (isset($register)) {
-    $smarty->assign('register', $register);
-}
-
+$smarty->assign('register', true);
+$smarty->assign('newregisterpolicy', get_config('new_registration_policy'));
+$smarty->assign('sendweeklyupdates', get_config('registration_sendweeklyupdates'));
 $smarty->assign('closed', $closed);
 $smarty->assign('closeform', $closeform);
 $smarty->assign('clearcachesform', $clearcachesform);
 
 $smarty->assign('warnings', site_warnings());
-
+// Add the menu items for tags, if that feature is enabled in a visible institution.
+if (($selector = get_institution_selector(false, false, false, false, false, true)) && !empty($selector['options'])) {
+    $smarty->assign('institutiontags', true);
+}
+safe_require('module', 'framework');
+if (PluginModuleFramework::is_active()) {
+    $smarty->assign('framework', true);
+}
 $smarty->display('admin/index.tpl');
 
 function close_site_submit(Pieform $form, $values) {

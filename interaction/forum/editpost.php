@@ -10,7 +10,8 @@
  */
 
 define('INTERNAL', 1);
-define('MENUITEM', 'groups/forums');
+define('MENUITEM', 'engage/index');
+define('MENUITEM_SUBPAGE', 'forums');
 define('SECTION_PLUGINTYPE', 'interaction');
 define('SECTION_PLUGINNAME', 'forum');
 define('SECTION_PAGE', 'editpost');
@@ -20,16 +21,19 @@ safe_require('interaction', 'forum');
 require_once('group.php');
 require_once(get_config('docroot') . 'interaction/lib.php');
 require_once('antispam.php');
+safe_require('artefact', 'file');
+define('SUBSECTIONHEADING', get_string('nameplural', 'interaction.forum'));
 
 $postid = param_integer('id', 0);
-
+$page = get_config('wwwroot') . 'interaction/forum/editpost.php';
 if ($postid == 0) { // post reply
     unset($postid);
     $parentid = param_integer('parent');
+    $page .= '?parent=' . $parentid;
 }
 else { // edit post
     $post = get_record_sql(
-        'SELECT p.subject, p.body, p.parent, p.topic, p.poster, ' . db_format_tsfield('p.ctime', 'ctime') . '
+        'SELECT p.subject, p.body, p.parent, p.topic, p.poster, ' . db_format_tsfield('p.ctime', 'ctime') . ', p.sent
         FROM {interaction_forum_post} p
         WHERE p.id = ?
         AND p.deleted != 1
@@ -40,6 +44,7 @@ else { // edit post
         throw new NotFoundException(get_string('cantfindpost', 'interaction.forum', $postid));
     }
     $parentid = $post->parent;
+    $page .= '?id=' . $postid;
 }
 
 if (!$parentid) {
@@ -47,7 +52,7 @@ if (!$parentid) {
 }
 
 $parent = get_record_sql(
-    'SELECT p.subject, p.body, p.topic, p.parent, p.poster, p.deleted, ' . db_format_tsfield('p.ctime', 'ctime') . ', m.user AS moderator, t.id AS topic, t.forum, t.closed AS topicclosed, p2.subject AS topicsubject, f.group AS "group", f.title AS forumtitle, g.name AS groupname, COUNT(p3.id)
+    'SELECT p.subject, p.body, p.topic, p.parent, p.poster, p.approved, p.deleted, ' . db_format_tsfield('p.ctime', 'ctime') . ', m.user AS moderator, t.id AS topic, t.forum, t.closed AS topicclosed, p2.subject AS topicsubject, f.group AS "group", f.title AS forumtitle, g.name AS groupname, COUNT(p3.id)
     FROM {interaction_forum_post} p
     INNER JOIN {interaction_forum_topic} t ON (p.topic = t.id AND t.deleted != 1)
     INNER JOIN {interaction_forum_post} p2 ON (p2.topic = t.id AND p2.parent IS NULL)
@@ -62,11 +67,25 @@ $parent = get_record_sql(
     INNER JOIN {interaction_forum_topic} t2 ON (t2.deleted != 1 AND p3.topic = t2.id)
     INNER JOIN {interaction_instance} f2 ON (t2.forum = f2.id AND f2.deleted != 1 AND f2.group = f.group)
     WHERE p.id = ?
-    GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15',
+    GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16',
     array(0, $parentid)
 );
 
-
+if ($parent) {
+    $parent->filecount = 0;
+    if ($parent->attachments = get_records_sql_array("
+                  SELECT a.*, aff.size, aff.fileid, pa.post
+                  FROM {artefact} a
+                  JOIN {interaction_forum_post_attachment} pa ON pa.attachment = a.id
+                  LEFT JOIN {artefact_file_files} aff ON aff.artefact = a.id
+                  WHERE pa.post = ?", array($parentid))) {
+        $parent->filecount = count($parent->attachments);
+        safe_require('artefact', 'file');
+        foreach ($parent->attachments as $file) {
+            $file->icon = call_static_method(generate_artefact_class_name($file->artefacttype), 'get_icon', array('id' => $file->id, 'post' => $parentid));
+        }
+    }
+}
 define('GROUP', $parent->group);
 
 $membership = user_can_access_forum((int)$parent->forum);
@@ -98,7 +117,7 @@ else { // edit post
     // no record for edits to own posts with 30 minutes
     if (user_can_edit_post($post->poster, $post->ctime)) {
         $post->editrecord = false;
-        $timeleft = (int)get_config_plugin('interaction', 'forum', 'postdelay') - round((time() - $post->ctime) / 60);
+        $timeleft = ceil(get_config_plugin('interaction', 'forum', 'postdelay') - (time() - $post->ctime) / 60);
     }
     else if ($moderator) {
         $post->editrecord = true;
@@ -117,10 +136,27 @@ else { // edit post
 
 $parent->ctime = relative_date(get_string('strftimerecentfullrelative', 'interaction.forum'), get_string('strftimerecentfull'), $parent->ctime);
 
+$folder = param_integer('folder', 0);
+$browse = (int) param_variable('browse', 0);
+$highlight = null;
+if ($file = param_integer('file', 0)) {
+    $highlight = array($file);
+}
+
+$instance = new InteractionForumInstance($parent->forum);
+$currenttab = array('type' => 'user', 'id' => $USER->get('id'));
+$mailsent = (isset($post) && !empty($post->sent)) ? true : false;
 $editform = array(
     'name'     => 'editpost',
     'successcallback' => isset($post) ? 'editpost_submit' : 'addpost_submit',
-    'autofocus' => 'body',
+    'method'            => 'post',
+    'jsform'            => true,
+    'newiframeonsubmit' => true,
+    'jssuccesscallback' => 'editpost_callback',
+    'jserrorcallback'   => 'editpost_callback',
+    'plugintype'        => 'interaction',
+    'pluginname'        => 'forum',
+    'configdirs'        => array(get_config('libroot') . 'form/', get_config('docroot') . 'artefact/file/form/'),
     'elements' => array(
         'subject' => array(
             'type'         => 'text',
@@ -140,16 +176,43 @@ $editform = array(
             'defaultvalue' => isset($post) ? $post->body : null,
             'rules'        => array(
                 'required'  => true,
-                'maxlength' => 65536,
+                'maxlength' => 1000000,
             ),
+        ),
+        'filebrowser' => array(
+            'type'         => 'filebrowser',
+            'title'        => get_string('attachments', 'artefact.blog'),
+            'folder'       => $folder,
+            'highlight'    => $highlight,
+            'browse'       => $browse,
+            'page'         => $page . '&browse=1',
+            'browsehelp'   => 'browsemyfiles',
+            'config'       => array(
+                'upload'          => true,
+                'uploadplaces'    => array('user', 'group'),
+                'uploadagreement' => get_config_plugin('artefact', 'file', 'uploadagreement'),
+                'resizeonuploaduseroption' => get_config_plugin('artefact', 'file', 'resizeonuploaduseroption'),
+                'resizeonuploaduserdefault' => $USER->get_account_preference('resizeonuploaduserdefault'),
+                'createfolder'    => false,
+                'edit'            => true,
+                'noselect'        => $mailsent,
+                'select'          => true,
+                'alwaysopen'      => false,
+            ),
+            'defaultvalue'       => $instance->attachment_id_list(isset($postid) ? $postid : 0),
+            'selectlistcallback' => 'artefact_get_records_by_id',
+            'selectcallback'     => 'add_attachment',
+            'unselectcallback'   => 'delete_attachment',
+            'tabs'               => $currenttab,
         ),
         'sendnow' => array(
             'type'         => 'switchbox',
             'title'        => get_string('sendnow', 'interaction.forum'),
             'description'  => get_string('sendnowdescription', 'interaction.forum', get_config_plugin('interaction', 'forum', 'postdelay')),
+            'disabled'     => isset($post) && !empty($post->sent),
             'defaultvalue' => false,
         ),
-        'submit'   => array(
+        'submitpost'   => array(
             'type'  => 'submitcancel',
             'class' => 'btn-primary',
             'value'       => array(
@@ -173,6 +236,10 @@ if ((!$moderator && !$admintutor && !group_sendnow($parent->group)) || get_confi
     unset($editform['elements']['sendnow']);
 }
 
+if (isset($post) && (!empty($post->sent) || !user_can_edit_post($post->poster, $post->ctime))) {
+    unset($editform['elements']['sendnow']);
+}
+
 $editform = pieform($editform);
 
 function editpost_validate(Pieform $form, $values) {
@@ -193,10 +260,29 @@ function get_groupid_from_postid($postid) {
     return $groupid;
 }
 
+function reply_needs_approval($topicid) {
+    $needsapproval = get_field_sql("SELECT c.value FROM {interaction_forum_instance_config} c
+                              INNER JOIN {interaction_forum_topic} t
+                              ON t.forum = c.forum WHERE field = 'moderateposts' AND t.id = ?", array($topicid));
+    return ($needsapproval == 'replies' || $needsapproval == 'postsandreplies');
+}
+
+function is_logged_user_moderator($topicid) {
+    global $USER;
+    return (count_records_sql(
+       'SELECT COUNT(*)
+        FROM {interaction_forum_moderator} m
+        INNER JOIN {interaction_instance} f ON (m.forum = f.id AND f.deleted != 1)
+        INNER JOIN {interaction_forum_topic} t ON (t.forum = f.id)
+        WHERE t.id = ? AND m.user = ?',
+        array($topicid, $USER->get('id'))) != 0 );
+}
+
 function editpost_submit(Pieform $form, $values) {
-    global $USER, $SESSION;
+    global $USER, $SESSION, $parent;
     require_once('embeddedimage.php');
     $postid = param_integer('id');
+    $mailsent = get_field('interaction_forum_post', 'sent', 'id', $postid);
     $groupid = get_groupid_from_postid($postid);
     $newbody = EmbeddedImage::prepare_embedded_images($values['body'], 'post', $postid, $groupid);
     db_begin();
@@ -218,9 +304,23 @@ function editpost_submit(Pieform $form, $values) {
             )
         );
     }
+    // Attachments
+    $instance = new InteractionForumInstance($parent->forum);
+    update_attachments($instance, $values['filebrowser'], $postid, $mailsent);
+
     db_commit();
-    $SESSION->add_ok_msg(get_string('editpostsuccess', 'interaction.forum'));
-    redirect(get_config('wwwroot') . 'interaction/forum/topic.php?id=' . $values['topic'] . '&post=' . $postid);
+
+    $result = array(
+        'error'   => false,
+        'message' => get_string('editpostsuccess', 'interaction.forum'),
+        'goto'    => get_config('wwwroot') . 'interaction/forum/topic.php?id=' . $values['topic'] . '&post=' . $postid,
+    );
+    if ($form->submitted_by_js()) {
+        // Redirect back to the note page from within the iframe
+        $SESSION->add_ok_msg($result['message']);
+        $form->json_reply(PIEFORM_OK, $result, false);
+    }
+    $form->reply(PIEFORM_OK, $result);
 }
 
 function addpost_submit(Pieform $form, $values) {
@@ -235,6 +335,11 @@ function addpost_submit(Pieform $form, $values) {
         'body'    => $values['body'],
         'ctime'   =>  db_format_timestamp(time())
     );
+
+    if (reply_needs_approval($values['topic']) && !is_logged_user_moderator($values['topic']) && !$USER->get('admin')) {
+        $post->approved = 0;
+    }
+
     $sendnow = isset($values['sendnow']) && $values['sendnow'] ? 1 : 0;
     // See if the same content has been submitted in the last 5 seconds. If so, don't add this post.
     $oldpost = get_record_select('interaction_forum_post', 'topic = ? AND poster = ? AND parent = ? AND subject = ? AND body = ? AND ctime > ?',
@@ -248,6 +353,20 @@ function addpost_submit(Pieform $form, $values) {
     $postrec->path = get_field('interaction_forum_post', 'path', 'id', $parentid) . '/' . sprintf('%010d', $postrec->id);
     update_record('interaction_forum_post', $postrec);
 
+    if (isset($post->approved) && $post->approved == 0) {
+        $forumid = get_field('interaction_forum_topic', 'forum', 'id', $values['topic']);
+           // Trigger activity.
+        $data = new stdClass();
+        $data->topicid      = $values['topic'];
+        $data->forumid      = $forumid;
+        $data->postbody     = $values['body'];
+        $data->poster       = $USER->get('id');
+        $data->postedtime   = time();
+        $data->reason       = '';
+        $data->event        = POST_NEEDS_APPROVAL;
+        activity_occurred('postmoderation', $data, 'interaction', 'forum');
+    }
+
     // Rewrite the post id into links in the body
     $groupid = get_groupid_from_postid($postid);
     $newbody = EmbeddedImage::prepare_embedded_images($post->body, 'post', $postid, $groupid);
@@ -255,6 +374,11 @@ function addpost_submit(Pieform $form, $values) {
     if (!empty($newbody) && $newbody != $post->body) {
         set_field('interaction_forum_post', 'body', $newbody, 'id', $postid);
     }
+    // Attachments
+    $forumid = get_field('interaction_forum_topic', 'forum', 'id', $post->topic);
+    $instance = new InteractionForumInstance($forumid);
+    update_attachments($instance, $values['filebrowser'], $postid);
+
     if ($sendnow == 0) {
       $delay = get_config_plugin('interaction', 'forum', 'postdelay');
     }
@@ -264,20 +388,52 @@ function addpost_submit(Pieform $form, $values) {
     if (!is_null($delay) && $delay == 0) {
         PluginInteractionForum::interaction_forum_new_post(array($postid));
     }
-    $SESSION->add_ok_msg(get_string('addpostsuccess', 'interaction.forum'));
 
     if (is_using_probation() && $post->parent) {
         $parentposter = get_field('interaction_forum_post', 'poster', 'id', $post->parent);
         vouch_for_probationary_user($parentposter);
     }
 
-    redirect(get_config('wwwroot') . 'interaction/forum/topic.php?id=' . $values['topic'] . '&post=' . $postid);
+    $result = array(
+        'error'   => false,
+        'message' => get_string('addpostsuccess', 'interaction.forum'),
+        'goto'    => get_config('wwwroot') . 'interaction/forum/topic.php?id=' . $values['topic'] . '&post=' . $postid,
+    );
+    if ($form->submitted_by_js()) {
+        // Redirect back to the note page from within the iframe
+        $SESSION->add_ok_msg($result['message']);
+        $form->json_reply(PIEFORM_OK, $result, false);
+    }
+    $form->reply(PIEFORM_OK, $result);
 }
+
+function add_attachment($attachmentid) {
+    global $parent, $postid;
+    $instance = new InteractionForumInstance($parent->forum);
+    if ($instance) {
+        $instance->attach($postid, $attachmentid);
+    }
+}
+
+function delete_note_attachment($attachmentid) {
+    global $parent, $postid;
+    $instance = new InteractionForumInstance($parent->forum);
+    if ($instance) {
+        $instance->detach($postid, $attachmentid);
+    }
+}
+
+$inlinejs = <<<EOF
+function editpost_callback(form, data) {
+    editpost_filebrowser.callback(form, data);
+};
+EOF;
 
 $smarty = smarty();
 $smarty->assign('deleteduser', $poster->get('deleted'));
 $smarty->assign('poster', $poster);
 $smarty->assign('editform', $editform);
+$smarty->assign('moderator', $moderator);
 $smarty->assign('parent', $parent);
 $smarty->assign('action', $action);
 $smarty->assign('groupadmins', group_get_admin_ids($parent->group));
@@ -286,7 +442,8 @@ if (isset($inlinejs)) {
     $smarty->assign('INLINEJAVASCRIPT', $inlinejs);
 }
 
-if (isset($timeleft)) {
-    $smarty->assign('timeleft', $timeleft);
+if (!isset($timeleft)) {
+    $timeleft = 0;
 }
+$smarty->assign('timeleft', $timeleft);
 $smarty->display('interaction:forum:editpost.tpl');

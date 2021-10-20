@@ -152,8 +152,14 @@ class Collection {
         }
 
         delete_records('collection_view','collection',$this->id);
-        delete_records('collection_tag','collection',$this->id);
-        delete_records('collection','id',$this->id);
+        delete_records('tag', 'resourcetype', 'collection', 'resourceid', $this->id);
+        if (is_plugin_active('lti', 'module')) {
+            delete_records('lti_assessment_submission', 'collectionid', $this->id);
+        }
+        delete_records('existingcopy', 'collection', $this->id);
+        delete_records('collection', 'id', $this->id);
+        // Delete any submission history
+        delete_records('module_assessmentreport_history', 'event', 'collection', 'itemid', $this->id);
 
         // Secret url records belong to the collection, so remove them from the view.
         // @todo: add user message to whatever calls this.
@@ -172,8 +178,9 @@ class Collection {
      * This method updates the contents of the collection table only.
      */
     public function commit() {
+        global $USER;
 
-        $fordb = new StdClass;
+        $fordb = new stdClass();
         foreach (get_object_vars($this) as $k => $v) {
             $fordb->{$k} = $v;
             if (in_array($k, array('mtime', 'ctime', 'submittedtime')) && !empty($v)) {
@@ -195,12 +202,35 @@ class Collection {
         }
 
         if (isset($this->tags)) {
-            delete_records('collection_tag', 'collection', $this->get('id'));
-            $tags = check_case_sensitive($this->get_tags(), 'collection_tag');
-            foreach ($tags as $tag) {
+            if ($this->group) {
+                $ownertype = 'group';
+                $ownerid = $this->group;
+            }
+            else if ($this->institution) {
+                $ownertype = 'institution';
+                $ownerid = $this->institution;
+            }
+            else {
+                $ownertype = 'user';
+                $ownerid = $this->owner;
+            }
+            delete_records('tag', 'resourcetype', 'collection', 'resourceid', $this->get('id'));
+            $tags = check_case_sensitive($this->get_tags(), 'tag');
+            foreach (array_unique($tags) as $tag) {
                 //truncate the tag before insert it into the database
                 $tag = substr($tag, 0, 128);
-                insert_record('collection_tag', (object)array( 'collection' => $this->get('id'), 'tag' => $tag));
+                $tag = check_if_institution_tag($tag);
+                insert_record('tag',
+                    (object)array(
+                        'resourcetype' => 'collection',
+                        'resourceid' => $this->get('id'),
+                        'ownertype' => $ownertype,
+                        'ownerid' => $ownerid,
+                        'tag' => $tag,
+                        'ctime' => db_format_timestamp(time()),
+                        'editedby' => $USER->get('id'),
+                    )
+                );
             }
         }
 
@@ -243,6 +273,8 @@ class Collection {
      * @param int $userid     The user who has issued the command to create the
      *                        collection.
      * @param int $checkaccess Whether to check that the user can see the collection before copying it
+     * @param boolean $titlefromtemplate  Title of new collection or view will be exactly copied from the template
+     *
      * @return array A list consisting of the new collection, the template collection and
      *               information about the copy - i.e. how many blocks and
      *               artefacts were copied
@@ -262,7 +294,7 @@ class Collection {
 
         $colltemplate = new Collection($templateid);
 
-        $data = new StdClass;
+        $data = new stdClass();
         // Set a default name if one wasn't set in $collectiondata
         if ($titlefromtemplate) {
             $data->name = $colltemplate->get('name');
@@ -300,6 +332,9 @@ class Collection {
         $numcopied = array('pages' => 0, 'blocks' => 0, 'artefacts' => 0);
 
         $views = $colltemplate->get('views');
+        if (empty($views)) {
+            $views['views'] = array();
+        }
         $copyviews = array();
         $evidenceviews = array();
         $artefactcopies = array();
@@ -535,6 +570,7 @@ class Collection {
                 'description'  => get_string('tagsdescprofile'),
                 'defaultvalue' => null,
                 'help'         => true,
+                'institution'  =>  $this->institution,
             ),
             'navigation' => array(
                 'type'  => 'switchbox',
@@ -659,6 +695,7 @@ class Collection {
      * @return object $institution or false
      */
      public function get_framework_institution() {
+        require_once('institution.php');
         if (!empty($this->group)) {
             return false;
         }
@@ -747,7 +784,7 @@ class Collection {
      * @return object $option;
      */
     public function collection_nav_framework_option() {
-        $option = new StdClass;
+        $option = new stdClass();
         $option->framework = $this->framework;
         $option->id = $this->id;
         $option->title = get_field('framework', 'name', 'id', $this->framework);
@@ -877,6 +914,7 @@ class Collection {
                 'allowcomments'   => $firstview->get('allowcomments'),
                 'approvecomments' => (int) ($firstview->get('allowcomments') && $firstview->get('approvecomments')),
                 'accesslist'      => $firstview->get_access(),
+                'lockblocks'      => $firstview->get('lockblocks'),
             );
             View::update_view_access($viewconfig, $viewids);
         }
@@ -986,28 +1024,29 @@ class Collection {
      * after editing the collection, redirect back to the appropriate place
      */
     public function post_edit_redirect($new=false, $copy=false, $urlparams=null) {
+        $redirecturl = get_config('wwwroot');
         if ($new || $copy) {
             $urlparams['id'] = $this->get('id');
-            $redirecturl = '/collection/views.php';
+            $redirecturl .= 'collection/views.php';
         }
         else {
             if ($this->get('group')) {
                 // Group owned collection
-                $redirecturl = '/view/groupviews.php';
+                $redirecturl .= 'view/groupviews.php';
             }
             else if ($this->get('institution')) {
                 if ($this->get('institution') == 'mahara') {
                     // Site owned collection
-                    $redirecturl = '/admin/site/views.php';
+                    $redirecturl .= 'admin/site/views.php';
                 }
                 else {
                     // Institution owned collection
-                    $redirecturl = '/view/institutionviews.php';
+                    $redirecturl .= 'view/institutionviews.php';
                 }
             }
             else {
                 // User owned collection
-                $redirecturl = '/view/index.php';
+                $redirecturl .= 'view/index.php';
             }
         }
         if ($urlparams) {
@@ -1153,40 +1192,44 @@ class Collection {
         View::_db_release($viewids, $this->owner, $this->submittedgroup);
         db_commit();
 
+        $releaseuser = optional_userobj($releaseuser);
         handle_event('releasesubmission', array('releaseuser' => $releaseuser,
                                                 'id' => $this->get('id'),
-                                                'groupname' => $this->submittedgroup,
+                                                'hostname' => $this->submittedhost,
+                                                'groupname' => ($this->submittedgroup ? get_field('group', 'name', 'id', $this->submittedgroup) : ''),
                                                 'eventfor' => 'collection'));
 
         // We don't send out notifications about the release of remote-submitted Views & Collections
         // (though I'm not sure why)
         // if the method is called in an upgrade and we dont have a release user
         if (!defined('INSTALLER') && $this->submittedgroup) {
-            $releaseuser = optional_userobj($releaseuser);
             $releaseuserdisplay = display_name($releaseuser, $this->owner);
+            $releaseuserid = ($releaseuser instanceof User) ? $releaseuser->get('id') : $releaseuser->id;
             $submitinfo = $this->submitted_to();
 
-            require_once('activity.php');
-            activity_occurred(
-                'maharamessage',
-                array(
-                    'users' => array($this->get('owner')),
-                    'strings' => (object) array(
-                        'subject' => (object) array(
-                            'key'     => 'collectionreleasedsubject1',
-                            'section' => 'group',
-                            'args'    => array($this->name, $submitinfo->name, $releaseuserdisplay),
+            if ((int)$releaseuserid !== (int)$this->get('owner')) {
+                require_once('activity.php');
+                activity_occurred(
+                    'maharamessage',
+                    array(
+                        'users' => array($this->get('owner')),
+                        'strings' => (object) array(
+                            'subject' => (object) array(
+                                'key'     => 'collectionreleasedsubject1',
+                                'section' => 'group',
+                                'args'    => array($this->name, $submitinfo->name, $releaseuserdisplay),
+                            ),
+                            'message' => (object) array(
+                                'key'     => 'collectionreleasedmessage1',
+                                'section' => 'group',
+                                'args'    => array($this->name, $submitinfo->name, $releaseuserdisplay),
+                            ),
                         ),
-                        'message' => (object) array(
-                            'key'     => 'collectionreleasedmessage1',
-                            'section' => 'group',
-                            'args'    => array($this->name, $submitinfo->name, $releaseuserdisplay),
-                        ),
-                    ),
-                    'url' => $this->get_url(false),
-                    'urltext' => $this->name,
-                )
-            );
+                        'url' => $this->get_url(false),
+                        'urltext' => $this->name,
+                    )
+                );
+            }
         }
     }
 
@@ -1230,7 +1273,7 @@ class Collection {
      * @param int $owner The owner of the collection (if not just $USER)
      * @throws SystemException
      */
-    public function submit($group = null, $submittedhost = null, $owner = null) {
+    public function submit($group = null, $submittedhost = null, $owner = null, $sendnotification=true) {
         global $USER;
 
         if ($this->is_submitted()) {
@@ -1290,7 +1333,7 @@ class Collection {
                                             'name' => $this->name,
                                             'group' => ($group) ? $group->id : null,
                                             'groupname' => ($group) ? $group->name : null));
-        if ($group) {
+        if ($group && $sendnotification) {
             activity_occurred(
                 'groupmessage',
                 array(
@@ -1329,7 +1372,18 @@ class Collection {
      */
     public function get_tags() {
         if (!isset($this->tags)) {
-            $this->tags = get_column('collection_tag', 'tag', 'collection', $this->get('id'));
+            $typecast = is_postgres() ? '::varchar' : '';
+            $this->tags = get_column_sql("
+            SELECT
+                (CASE
+                    WHEN t.tag LIKE 'tagid_%' THEN CONCAT(i.displayname, ': ', t2.tag)
+                    ELSE t.tag
+                END) AS tag
+            FROM {tag} t
+            LEFT JOIN {tag} t2 ON t2.id" . $typecast . " = SUBSTRING(t.tag, 7)
+            LEFT JOIN {institution} i ON i.name = t2.ownerid
+            WHERE t.resourcetype = ? AND t.resourceid = ?
+            ORDER BY tag", array('collection', $this->get('id')));
         }
         return $this->tags;
     }
@@ -1382,6 +1436,27 @@ class Collection {
         }
         reset($viewids);
         return View::get_invisible_token(current($viewids));
+    }
+
+    /**
+     * Retrieves the groupid, if this collection is associated as outcome to a task
+     * corresponding to a group selection plan, otherwise false
+     *
+     * @return bool
+     * @throws SQLException
+     */
+    public function get_group_id_of_corresponding_group_task() {
+        $sql = 'SELECT * FROM {artefact} AS a '.
+            'INNER JOIN {artefact_plans_task} AS gt ON gt.artefact = a.id '.
+            'INNER JOIN {artefact_plans_task} AS ut ON ut.rootgrouptask = gt.artefact '.
+            'WHERE ut.outcometype = ? AND ut.outcome = ?';
+
+        $result = get_record_sql($sql, ['collection', $this->get('id')]);
+
+        if ($result && $result->group) {
+            return $result->group;
+        }
+        return false;
     }
 }
 

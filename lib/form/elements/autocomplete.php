@@ -121,6 +121,9 @@ function pieform_element_autocomplete(Pieform $form, $element) {
     if (isset($element['description'])) {
         $smarty->assign('describedby', $form->element_descriptors($element));
     }
+    if (isset($element['institution'])) {
+        $smarty->assign('institution', $element['institution']);
+    }
 
     return $smarty->fetch('form/autocomplete.tpl');
 }
@@ -162,7 +165,7 @@ function pieform_element_autocomplete_get_headdata() {
     $lang = pieform_element_autocomplete_language();
     $langfile = '';
     if ($lang != 'en') {
-        $langfile = '<script type="application/javascript" src="' .
+        $langfile = '<script src="' .
             get_config('wwwroot') . "js/select2/i18n/{$lang}.js" .
             '"></script>';
     }

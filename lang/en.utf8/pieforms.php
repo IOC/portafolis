@@ -40,11 +40,29 @@ $string['element.date.monthnames'] = 'January,February,March,April,May,June,July
 $string['element.date.specify'] = 'Set date';
 $string['element.date.at'] = 'at';
 
+$string['element.expiry.days.lowercase'] = array(
+    0 => '%s day',
+    1 => '%s days'
+);
+$string['element.expiry.weeks.lowercase'] = array(
+    0 => '%s week',
+    1 => '%s weeks'
+);
+$string['element.expiry.months.lowercase'] = array(
+    0 => '%s month',
+    1 => '%s months'
+);
+$string['element.expiry.years.lowercase'] = array(
+    0 => '%s year',
+    1 => '%s years'
+);
+
 $string['element.expiry.days'] = 'Days';
 $string['element.expiry.weeks'] = 'Weeks';
 $string['element.expiry.months'] = 'Months';
 $string['element.expiry.years'] = 'Years';
 $string['element.expiry.noenddate'] = 'No end date';
+$string['element.expiry.noenddate.lowercase'] = 'no end date';
 
 $string['element.files.addattachment'] = 'Add attachment';
 
@@ -55,7 +73,8 @@ $string['element.passwordpolicy.ulns'] = 'Upper and lowercase letters, numbers, 
 $string['element.select.other'] = 'Other';
 $string['element.select.remove'] = 'Remove "%s"';
 
-$string['element.color.transparent'] = 'Default or ';
+$string['element.color.transparent1'] = 'Theme default';
+$string['element.font.themedefault'] = 'Use Theme font';
 
 $string['rule.before.before'] = 'This cannot be after the field "%s"';
 
@@ -63,7 +82,7 @@ $string['rule.email.email'] = 'Email address is invalid';
 
 $string['rule.integer.integer'] = 'The field must be an integer';
 
-$string['rule.maxlength.maxlength'] = 'This field must be at most %d characters long.';
+$string['rule.maxlength.maxlength'] = 'This field must be at most %d characters long. Please revise it or try splitting this over multiple instances.';
 
 $string['rule.minlength.minlength'] = 'This field must be at least %d characters long.';
 
@@ -72,6 +91,7 @@ $string['rule.minvalue.minvalue'] = 'This value cannot be smaller than %d.';
 $string['rule.regex.regex'] = 'This field is not in valid form.';
 
 $string['rule.required.required'] = 'This field is required.';
+$string['rule.oneof.oneof'] = 'One of the fields in this group are required.';
 $string['rule.safetext.invalidchars'] = 'This field has invalid characters.';
 $string['rule.validateoptions.validateoptions'] = 'The option "%s" is invalid.';
 
@@ -85,3 +105,4 @@ $string['switchbox.yes'] = 'Yes';
 $string['switchbox.no'] = 'No';
 
 $string['requiredfields'] = "Fields marked by '%s' are required.";
+$string['oneoffields'] = "Fields marked by '%s' require one of them to be filled in.";

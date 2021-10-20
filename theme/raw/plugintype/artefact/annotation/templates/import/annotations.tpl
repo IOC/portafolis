@@ -1,4 +1,4 @@
-{if count($entryannotations)}
+{if is_array($entryannotations) && count($entryannotations)}
 <div class="section-import">
     <h2>{str tag=Annotation section=artefact.annotation}</h2>
     {foreach from=$entryannotations item=annotation}
@@ -53,7 +53,7 @@
                         <h4 class="title list-group-item-heading">
                             {$feedback.title|str_shorten_text:80:true}
                         </h4>
-                        <div id="{$feedback.id}_desc" class="detail hidden">
+                        <div id="{$feedback.id}_desc" class="detail d-none">
                             {$feedback.description|clean_html|safe}
                         </div>
                         <span id="annotationfeedbackstatus{$feedback.id}" class="annotationfeedbackstatus text-small text-midtone">
@@ -97,9 +97,9 @@
     </div>
     {/foreach}
 </div>
-<script type="application/javascript">
+<script>
     jQuery(function() {
-        jQuery("input.annotationdecision").change(function(e) {
+        jQuery("input.annotationdecision").on("change", function(e) {
             e.preventDefault();
             if (this.value == '1') {
                 // The import decision for the annotation is IGNORE

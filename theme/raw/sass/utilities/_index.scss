@@ -1,7 +1,7 @@
 // Core variables and mixins
 
 // Libraries (Please, do not amend content of these folders)
-@import "../lib/font-awesome/font-awesome";
+@import "../lib/font-awesome/fontawesome";
 @import "../lib/select2/core";
 
 @import "mixins";
@@ -21,19 +21,22 @@
 @import "../layout/footer";
 @import "../layout/header";
 @import "../layout/profile-block";
+@import "../layout/block-comments-details-header";
+@import "../layout/gridlayout";
 
-// Panels are a very commonly used layout component
-@import "../layout/panel/panel";
-@import "../layout/panel/panel-body";
-@import "../layout/panel/panel-collapse"; // for collapsible panels and collapsible fieldsets
-@import "../layout/panel/panel-control";
-@import "../layout/panel/panel-footer";
-@import "../layout/panel/panel-form";
-@import "../layout/panel/panel-half";
-@import "../layout/panel/panel-quarter";
-@import "../layout/panel/panel-heading";
-@import "../layout/panel/panel-items"; // groups of panels
-@import "../layout/panel/panel-secondary";
+// cards are a very commonly used layout component
+@import "../layout/card/card";
+@import "../layout/card/card-body";
+@import "../layout/card/card-collapse"; // for collapsible cards and collapsible fieldsets
+@import "../layout/card/card-control";
+@import "../layout/card/card-footer";
+@import "../layout/card/card-form";
+@import "../layout/card/card-half";
+@import "../layout/card/card-quarter";
+@import "../layout/card/card-header";
+@import "../layout/card/card-items"; // groups of cards
+@import "../layout/card/card-secondary";
+@import "../layout/card/card-colors";
 
 // Navigation
 @import "../layout/nav/main-nav";
@@ -85,11 +88,12 @@
 @import "../features/forum-post";
 @import "../features/manage-collection";
 @import "../features/message-thread";
-@import "../features/notification"; // email style notification panels
+@import "../features/notification"; // email style notification cards
 @import "../features/option-alt";
 @import "../features/skiplink";
 @import "../features/user-pages";
 @import "../features/plan-task";
+@import "../features/timeline";
 
 // Plugin sass
 @import "../plugin/artefact/resume";
@@ -107,6 +111,8 @@
 @import "../lib/graph";
 @import "../lib/elasticsearch";
 @import "../lib/print";
+@import "../lib/cookieconsent";
+@import "../lib/gridstack";
 
 // Keep these files last to override all other style sheets
 @import "../custom";

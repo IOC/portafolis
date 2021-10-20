@@ -10,7 +10,7 @@
  */
 
 define('INTERNAL', 1);
-define('MENUITEM', 'myportfolio/export');
+define('MENUITEM', 'manage/export');
 require(dirname(dirname(__FILE__)) . '/init.php');
 require_once('view.php');
 require_once('collection.php');
@@ -72,7 +72,13 @@ if ($viewids = get_column_sql('SELECT id FROM {view} WHERE owner = ? AND type = 
             'viewlink' => $view->get_url(true, true),
         );
     }
-    $jsfiles = array('js/preview.js', 'js/export.js');
+    $jsfiles = array(
+        'js/preview.js',
+        'js/export.js',
+        'js/lodash/lodash.js',
+        'js/gridstack/gridstack.js',
+        'js/gridlayout.js',
+    );
 
     $collections = get_records_sql_array('
         SELECT c.id, c.name, c.description
@@ -204,6 +210,7 @@ function export_submit(Pieform $form, $values) {
 $smarty = smarty(
     $jsfiles
 );
+setpageicon($smarty, 'icon-upload');
 $smarty->assign('pagedescription', get_string('exportportfoliodescription', 'export'));
 $smarty->assign('form', $form);
 $smarty->display('form.tpl');

@@ -33,8 +33,16 @@ if ($readone) {
     }
     $unread = $USER->add_unread(-1);
     $data = array(
-        'newunreadcount' => $unread
+        'newunreadcount' => $unread,
+        'newunreadcounttext' => get_string('unread', 'mahara', $unread)
     );
+    foreach (plugin_all_installed() as $plugin) {
+        $classname = generate_class_name($plugin->plugintype, $plugin->name);
+        safe_require($plugin->plugintype, $plugin->name);
+        if (is_callable(array($classname, 'notification_read'))) {
+            call_static_method($classname, 'notification_read', array($readone), $USER->get('id'), $list);
+        }
+    }
     json_reply(false, array('data' => $data));
 }
 
@@ -56,6 +64,14 @@ if ($markasread) {
             $ids[$list][] = $m[2];
         }
     }
+    $plugins = plugin_all_installed();
+    foreach ($plugins as $key => $plugin) {
+        $classname = generate_class_name($plugin->plugintype, $plugin->name);
+        safe_require($plugin->plugintype, $plugin->name);
+        if (!is_callable(array($classname, 'notification_read'))) {
+            unset ($plugins[$key]);
+        }
+    }
     foreach ($ids as $list => $idsperlist) {
         if ($idsperlist) {
             if ('module_multirecipient_notification' === $list) {
@@ -71,6 +87,11 @@ if ($markasread) {
                 array($USER->get('id'))
             );
             $newunread = $USER->add_unread(-count($idsperlist));
+
+            foreach ($plugins as $plugin) {
+                $classname = generate_class_name($plugin->plugintype, $plugin->name);
+                call_static_method($classname, 'notification_read', $idsperlist, $USER->get('id'), $list);
+            }
         }
     }
     $message = get_string('markedasread', 'activity');
@@ -90,6 +111,16 @@ else if ($delete) {
 
     db_begin();
     $countdeleted = 0;
+
+    $plugins = plugin_all_installed();
+    foreach ($plugins as $key => $plugin) {
+        $classname = generate_class_name($plugin->plugintype, $plugin->name);
+        safe_require($plugin->plugintype, $plugin->name);
+        if (!is_callable(array($classname, 'notification_delete'))) {
+            unset ($plugins[$key]);
+        }
+    }
+
     foreach ($ids as $list => $idsperlist) {
         if ('module_multirecipient_notification' === $list) {
             delete_messages_mr($idsperlist, $USER->get('id'));
@@ -126,6 +157,11 @@ else if ($delete) {
             }
         }
         $countdeleted += ($ids) ? count($ids) : count($idsperlist);
+
+        foreach ($plugins as $plugin) {
+            $classname = generate_class_name($plugin->plugintype, $plugin->name);
+            call_static_method($classname, 'notification_delete', $idsperlist, $USER->get('id'), $list);
+        }
     }
     db_commit();
     $message = get_string('deletednotifications1', 'activity', $countdeleted);
@@ -139,6 +175,7 @@ $newhtml = activitylistin_html($type, $limit, $offset);
 
 if (isset($newunread)) {
     $newhtml['newunreadcount'] = $newunread;
+    $newhtml['newunreadcounttext'] = get_string('unread', 'mahara', $newunread);
 }
 
 json_reply(false, (object) array('message' => $message, 'data' => $newhtml));

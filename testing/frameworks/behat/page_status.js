@@ -32,15 +32,22 @@ window.isEditorInitializing = false;
  */
 window.isModalRendering = false;
 
+/**
+ * This variable determines if gridstack blocks have finished loading
+ * = true if it is in progress
+ */
+window.isGridstackRendering = false;
+
 function isMaharaPageReady() {
     return (window.isRequestProcessing === false)
         && (window.isPieformRendering === false)
         && (window.isEditorInitializing === false)
         && (window.isModalRendering === false)
-        && (document.readyState === "complete");
+        && (document.readyState === "complete")
+        && (window.isGridstackRendering === false);
 }
 
-jQuery(document).ready(function() {
+jQuery(function() {
     /**
      * Listening for ajax events
      */

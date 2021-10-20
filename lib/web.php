@@ -9,12 +9,13 @@
  * @copyright  (C) portions from Moodle, (C) Martin Dougiamas http://dougiamas.com
  */
 
+use Mahara\Dwoo_Mahara as Dwoo_Mahara;
 defined('INTERNAL') || die();
 
 
 function smarty_core() {
-    require_once 'dwoo/dwoo/dwooAutoload.php';
-    require_once 'dwoo/mahara/Dwoo_Mahara.php';
+    require_once(__DIR__ . '/dwoo/vendor/autoload.php');
+    require_once(__DIR__ . '/dwoo/mahara/Dwoo_Mahara.php');
 
     return new Dwoo_Mahara();
 }
@@ -168,14 +169,50 @@ function smarty($javascript = array(), $headers = array(), $pagestrings = array(
     if (!isset($langselectform)) {
         $langselectform = language_select_form();
     }
-    // Now that password element can set headdata we need to call the login form before smarty_core()
-    //PATCH IOC010
-    $isloginblockvisible = !$USER->is_logged_in() && !get_config('siteclosedforupgrade')
-        && get_config('showloginsideblock') && ($_SERVER['SCRIPT_FILENAME'] === get_config('docroot') . 'about.php');
-    //Fi
-    if ($isloginblockvisible) {
+    $sideblock_menu = array();
+    if (get_config('installed')) {
+        // Fetch all the core side blocks now to avoid any 'set headdata' before smarty_core() problems
         $authgenerateloginform = auth_generate_login_form();
+        //PATCH IOC010
+        $isloginblockvisible = !$USER->is_logged_in() && !get_config('siteclosedforupgrade')
+        && get_config('showloginsideblock') && ($_SERVER['SCRIPT_FILENAME'] === get_config('docroot') . 'about.php');
+        //Fi
+        $loginsideblock = array(
+            'name'   => 'login',
+            'weight' => -10,
+            'id'     => 'sb-loginbox',
+            'data'   => array('loginform' => $authgenerateloginform),
+            'visible' => $isloginblockvisible,
+            'template' => 'sideblocks/login.tpl',
+            'smarty' => array('SHOWLOGINBLOCK' => $isloginblockvisible),
+        );
+        sideblock_template($loginsideblock, $sideblock_menu);
+        sideblock_template(site_menu(), $sideblock_menu);
+        sideblock_template(tags_sideblock(), $sideblock_menu);
+        sideblock_template(selfsearch_sideblock(), $sideblock_menu);
+        sideblock_template(profile_sideblock(), $sideblock_menu);
+        sideblock_template(onlineusers_sideblock(), $sideblock_menu);
+        sideblock_template(progressbar_sideblock(), $sideblock_menu);
+        sideblock_template(ssopeer_sideblock(), $sideblock_menu);
+        sideblock_template(quota_sideblock(), $sideblock_menu);
+        if (isset($extraconfig['sideblocks']) && is_array($extraconfig['sideblocks'])) {
+            foreach ($extraconfig['sideblocks'] as $sideblock) {
+                sideblock_template($sideblock, $sideblock_menu);
+            }
+        }
+        // local_sideblocks_update allows sites to customise the sideblocks by munging the $sideblock_menu array.
+        if (function_exists('local_sideblocks_update')) {
+            local_sideblocks_update($sideblock_menu);
+        }
+        // Remove those that are not visible before displaying
+        foreach ($sideblock_menu as $sbk => $sbv) {
+            if (empty($sbv['visible'])) {
+                unset($sideblock_menu[$sbk]);
+            }
+        }
+        usort($sideblock_menu, "sort_menu_by_weight");
     }
+
     $smarty = smarty_core();
 
     $wwwroot = get_config('wwwroot');
@@ -193,7 +230,7 @@ function smarty($javascript = array(), $headers = array(), $pagestrings = array(
             $wwwrootparts = parse_url($wwwroot);
             if ($wwwrootparts['host'] != $requesthost) {
                 $fakewwwroot = $wwwrootparts['scheme'] . '://' . $requesthost . '/';
-                $headers[] = '<script type="application/javascript">var fakewwwroot = ' . json_encode($fakewwwroot) . ';</script>';
+                $headers[] = '<script>var fakewwwroot = ' . json_encode($fakewwwroot) . ';</script>';
             }
         }
     }
@@ -217,13 +254,13 @@ function smarty($javascript = array(), $headers = array(), $pagestrings = array(
 
     $langdirection = get_string('thisdirection', 'langconfig');
 
-    // Make jQuery accessible with $j (Mochikit has $)
+    // Make jQuery accessible with $j
     $javascript_array[] = $jsroot . 'jquery/jquery.js';
-    $headers[] = '<script type="application/javascript">$j=jQuery;</script>';
+    $headers[] = '<script>$j=jQuery;</script>';
 
     // If necessary, load MathJax configuration
     if (get_config('mathjax')) {
-        $headers[] = '<script type="application/javascript">'.get_config('mathjaxconfig').'</script>';
+        $headers[] = '<script>'.get_config('mathjaxconfig').'</script>';
     }
 
     // TinyMCE must be included first for some reason we're not sure about
@@ -272,11 +309,11 @@ function smarty($javascript = array(), $headers = array(), $pagestrings = array(
                     if (get_config('tinymcespellcheckerengine')) {
                         $spellchecker = ',spellchecker';
                         $spellchecker_toolbar = '| spellchecker';
-                        $spellchecker_config = "gecko_spellcheck : false, spellchecker_rpc_url : \"{$jsroot}tinymce/plugins/spellchecker/spellchecker.php\",";
+                        $spellchecker_config = "spellchecker_rpc_url : \"{$jsroot}tinymce/plugins/spellchecker/spellchecker.php\",";
                     }
                     else {
                         $spellchecker = $spellchecker_toolbar = '';
-                        $spellchecker_config = 'gecko_spellcheck : true,';
+                        $spellchecker_config = 'browser_spellcheck : true,';
                     }
                     $mathslate = (get_config('mathjax')) ? 'mathslate' : '';
                     $mathslateplugin = !empty($mathslate) ? ',' . $mathslate : '';
@@ -308,9 +345,14 @@ EOF;
 
                     if ($check[$key] == 'tinymce') {
                         $tinymceconfig = <<<EOF
-    theme: "modern",
-    plugins: "tooltoggle,textcolor,visualblocks,wordcount,link,lists,imagebrowser,table,emoticons{$spellchecker},paste,code,fullscreen,directionality,searchreplace,nonbreaking,charmap{$mathslateplugin},anchor",
-    skin: 'light',
+    theme: "silver",
+    mobile: {
+        theme: 'mobile',
+        toolbar: ['undo', 'bold', 'italic', 'link', 'bullist', 'styleselect'],
+    },
+    contextmenu: false,
+    plugins: "tooltoggle,visualblocks,wordcount,link,lists,imagebrowser,table,emoticons{$spellchecker},paste,code,fullscreen,directionality,searchreplace,nonbreaking,charmap{$mathslateplugin},anchor",
+    skin: 'oxide',
     toolbar1: {$toolbar[1]},
     toolbar2: {$toolbar[2]},
     toolbar3: {$toolbar[3]},
@@ -324,15 +366,15 @@ EOF;
                     else {
                         $tinymceconfig = <<<EOF
     selector: "textarea.tinywysiwyg",
-    theme: "modern",
+    theme: "silver",
     skin: 'light',
     plugins: "fullscreen,autoresize",
     toolbar: {$toolbar[0]},
 EOF;
                     }
-
+$samepage = get_string('samepage', 'mahara');
                     $headers[] = <<<EOF
-<script type="application/javascript">
+<script>
 tinyMCE.init({
     {$tinymceconfig}
     schema: 'html4',
@@ -343,7 +385,7 @@ tinyMCE.init({
         + ",script[src,type,language]"
         + ",ul[id|type|compact]"
         + ",iframe[src|width|height|name|scrolling|frameborder|allowfullscreen|webkitallowfullscreen|mozallowfullscreen|longdesc|marginheight|marginwidth|align|title|class|type]"
-        + ",a[id|class|title|href|name]"
+        + ",a[id|class|title|href|name|target]"
         + ",button[id|class|title]"
     ,urlconverter_callback : "custom_urlconvert",
     language: '{$language}',
@@ -352,7 +394,11 @@ tinyMCE.init({
     font_formats: 'Andale Mono=andale mono,times;Arial=arial,helvetica,sans-serif;Arial Black=arial black,avant garde;Book Antiqua=book antiqua,palatino;Comic Sans MS=comic sans ms,sans-serif;Courier New=courier new,courier;Georgia=georgia,palatino;Helvetica=helvetica;Impact=impact,chicago;Open Sans=Open Sans;Symbol=symbol;Tahoma=tahoma,arial,helvetica,sans-serif;Terminal=terminal,monaco;Times New Roman=times new roman,times;Trebuchet MS=trebuchet ms,geneva;Verdana=verdana,geneva;Webdings=webdings;Wingdings=wingdings,zapf dingbats;',
     remove_script_host: false,
     relative_urls: false,
-    target_list: false,
+    target_list: [
+        {title: 'None', value: ''},
+        {title: "{$samepage}", value: '_self'}, // This one is not translated in tinymce lang files
+        {title: 'New window', value: '_blank'}
+    ],
     link_list: function(success) {
         // Only show the list of links in the normal user section
         if ({$inpersonalarea}) {
@@ -372,7 +418,7 @@ tinyMCE.init({
             success(''); // stop showing list with only option being 'none'
         }
     },
-
+    'branding': false,
     cache_suffix: '?v={$CFG->cacheversion}',
     {$extramceconfig}
     setup: function(ed) {
@@ -380,7 +426,7 @@ tinyMCE.init({
         ed.on('init', function(ed) {
         {$tinymceinitbehatsetup}
             if (typeof(editor_to_focus) == 'string' && ed.editorId == editor_to_focus) {
-                ed.focus();
+                ed.trigger("focus");
             }
         });
         ed.on('keyup change', function (e) {
@@ -388,7 +434,7 @@ tinyMCE.init({
         });
         ed.on('LoadContent', function(e) {
             // Hide all the 2nd/3rd row menu buttons
-            jQuery('.mce-toolbar.mce-first').siblings().addClass('hidden');
+            jQuery('.mce-toolbar.mce-first').siblings().addClass('d-none');
             // The tinymce fullscreen mode does not work properly in a transformed container div
             // such as div.vertcentre
             // and IE doesn't like a preset z-index
@@ -589,7 +635,7 @@ EOF;
         }
     }
 
-    $stringjs = '<script type="application/javascript">';
+    $stringjs = '<script>';
     $stringjs .= 'var strings = ' . json_encode($strings) . ';';
     $stringjs .= "\nfunction plural(n) { return " . get_raw_string('pluralrule', 'langconfig') . "; }\n";
     $stringjs .= '</script>';
@@ -661,6 +707,9 @@ EOF;
         $headers = array_merge($headers, $select2headdata);
         $smarty->assign('select2_language', $select2lang);
     }
+    $maxuploadsize = get_max_upload_size(false);
+    $smarty->assign('maxuploadsize', $maxuploadsize);
+    $smarty->assign('maxuploadsizepretty', display_size($maxuploadsize));
 
     $sitename = get_config('sitename');
     if (!$sitename) {
@@ -675,10 +724,11 @@ EOF;
     $smarty->assign('sitelogocustom', $sitelogocustom);
     $sitelogo = $THEME->header_logo();
     $sitelogo = append_version_number($sitelogo);
-    $sitelogosmall = $THEME->header_logo_small();
-    $sitelogosmall = ($sitelogosmall ? append_version_number($sitelogosmall) : null);
+    $sitelogocustomsmall = $THEME->header_logo_small_custom();
+    $sitelogocustomsmall = ($sitelogocustomsmall ? append_version_number($sitelogocustomsmall) : null);
     $smarty->assign('sitelogo', $sitelogo);
-    $smarty->assign('sitelogosmall', $sitelogosmall);
+    $smarty->assign('sitelogosmall', $THEME->header_logo_small());
+    $smarty->assign('sitelogocustomsmall', $sitelogocustomsmall);
     $smarty->assign('sitelogo4facebook', $THEME->facebook_logo());
     $smarty->assign('sitedescription4facebook', get_string('facebookdescription', 'mahara'));
 
@@ -745,6 +795,7 @@ EOF;
         }
         $mainnavsubnav = $SELECTEDSUBNAV;
         $smarty->assign('RIGHTNAV', right_nav());
+        $smarty->assign('MESSAGEBOX', message_nav());
         if (!$mainnavsubnav && $dropdownmenu) {
             // In drop-down navigation, the submenu is only usable if its parent is one of the top-level menu
             // items.  But if the submenu comes from something in right_nav (settings), it's unreachable.
@@ -791,132 +842,28 @@ EOF;
         }
     }
 
-    // ---------- sideblock stuff ----------
+    if (defined('APPS')) {
+       if (!defined('NOAPPSMENU')) {
+            $smarty->assign('SUBPAGENAV', apps_get_menu_tabs());
+        }
+    }
+
+    // ---------- sideblock smarty stuff ----------
     $sidebars = !isset($extraconfig['sidebars']) || $extraconfig['sidebars'] !== false;
-    if ($sidebars && !defined('INSTALLER') && (!defined('MENUITEM') || substr(MENUITEM, 0, 5) != 'admin')) {
-        if (get_config('installed') && !$adminsection) {
-            $data = site_menu();
-            if (!empty($data)) {
-                $smarty->assign('SITEMENU', site_menu());
-                $sideblocks[] = array(
-                    'name'   => 'linksandresources',
-                    'weight' => 10,
-                    'data'   => $data,
-                );
-            }
-        }
-
-        if ($USER->is_logged_in() && defined('MENUITEM') &&
-            (substr(MENUITEM, 0, 11) == 'myportfolio' || substr(MENUITEM, 0, 7) == 'content')) {
-            if (get_config('showselfsearchsideblock')) {
-                $sideblocks[] = array(
-                    'name'   => 'selfsearch',
-                    'weight' => 0,
-                    'data'   => array(),
-                );
-            }
-            if (get_config('showtagssideblock')) {
-                $sideblocks[] = array(
-                    'name'   => 'tags',
-                    'id'     => 'sb-tags',
-                    'weight' => 0,
-                    'data'   => tags_sideblock(),
-                );
-            }
-        }
-
-        if ($USER->is_logged_in() && !$adminsection) {
-            $sideblocks[] = array(
-                'name'   => 'profile',
-                'id'     => 'sb-profile',
-                'class' => 'user-panel',
-                'weight' => -20,
-                'data'   => profile_sideblock()
-            );
-            $showusers = 2;
-            $institutions = $USER->institutions;
-            if (!empty($institutions)) {
-                $showusers = 0;
-                foreach ($institutions as $i) {
-                    if ($i->showonlineusers == 2) {
-                        $showusers = 2;
-                        break;
-                    }
-                    if ($i->showonlineusers == 1) {
-                        $showusers = 1;
-                    }
+    if ($sidebars && !defined('INSTALLER')) {
+        foreach ($sideblock_menu as $sideblock) {
+            if (!empty($sideblock['visible']) && !empty($sideblock['smarty'])) {
+                foreach ($sideblock['smarty'] as $ks => $vs) {
+                    $smarty->assign($ks, $vs);
                 }
             }
-            if (get_config('showonlineuserssideblock') && $showusers > 0) {
-                $sideblocks[] = array(
-                    'name'   => 'onlineusers',
-                    'id'     => 'sb-onlineusers',
-                    'weight' => -10,
-                    'data'   => onlineusers_sideblock(),
-                );
-            }
-            if (get_config('showprogressbar') && $USER->get_account_preference('showprogressbar')) {
-                $sideblocks[] = array(
-                    'name'   => 'progressbar',
-                    'id'     => 'sb-progressbar',
-                    'class'  => 'progressbar',
-                    'weight' => -8,
-                    'data'   => progressbar_sideblock(),
-                );
-            }
         }
-
-        if ($USER->is_logged_in() && $adminsection && defined('SECTION_PAGE') && SECTION_PAGE == 'progressbar') {
-            $sideblocks[] = array(
-                'name'   => 'progressbar',
-                'id'     => 'sb-progressbar',
-                'class'  => 'progressbar',
-                'weight' => -8,
-                'data'   => progressbar_sideblock(true),
-            );
-        }
-
-        if ($isloginblockvisible) {
-            $sideblocks[] = array(
-                'name'   => 'login',
-                'weight' => -10,
-                'id'     => 'sb-loginbox',
-                'data'   => array(
-                    'loginform' => $authgenerateloginform,
-                ),
-            );
-        }
-        $smarty->assign('SHOWLOGINBLOCK', $isloginblockvisible);
-
-        if (get_config('enablenetworking')) {
-            require_once(get_config('docroot') .'api/xmlrpc/lib.php');
-            if ($USER->is_logged_in() && $ssopeers = get_service_providers($USER->authinstance)) {
-                $sideblocks[] = array(
-                    'name'   => 'ssopeers',
-                    'weight' => 1,
-                    'data'   => $ssopeers,
-                );
-            }
-        }
-
-        if (isset($extraconfig['sideblocks']) && is_array($extraconfig['sideblocks'])) {
-            foreach ($extraconfig['sideblocks'] as $sideblock) {
-                $sideblocks[] = $sideblock;
-            }
-        }
-
-        // local_sideblocks_update allows sites to customise the sideblocks by munging the $sideblocks array.
-        if (function_exists('local_sideblocks_update')) {
-            local_sideblocks_update($sideblocks);
-        }
-
-        usort($sideblocks, "sort_menu_by_weight");
 
         // Place all sideblocks on the right. If this structure is munged
         // appropriately, you can put blocks on the left. In future versions of
         // Mahara, we'll make it easy to do this.
-        $sidebars = $sidebars && !empty($sideblocks);
-        $sideblocks = array('left' => array(), 'right' => $sideblocks);
+        $sidebars = $sidebars && !empty($sideblock_menu);
+        $sideblocks = array('left' => array(), 'right' => $sideblock_menu);
 
         $smarty->assign('userauthinstance', $SESSION->get('authinstance'));
         $smarty->assign('MNETUSER', $SESSION->get('mnetuser'));
@@ -1352,20 +1299,22 @@ class Theme {
         return $this->get_image_url('site-logo');
     }
 
+    /* Set the default theme's small logo */
+    public function header_logo_small() {
+        return $this->get_image_url('site-logo-small');
+    }
+
     /**
      * Displaying of the small header logo of an institution
      * false will be returned if no small logo for the institution or site small logo is found
      */
-    public function header_logo_small() {
+    public function header_logo_small_custom() {
         if (!empty($this->headerlogosmall)) {
             return get_config('wwwroot') . 'thumb.php?type=logobyid&id=' . $this->headerlogosmall;
         }
         else {
-            require_once('ddl.php');
-            $table = new XMLDBTable('institution');
-            $field = new XMLDBField('logoxs');
-            if (field_exists($table, $field) && $sitelogosmallid = get_field('institution', 'logoxs', 'name', 'mahara')) {
-                return get_config('wwwroot') . 'thumb.php?type=logobyid&id=' . $sitelogosmallid;
+            if (db_column_exists('institution', 'logoxs') && $sitelogocustomsmallid = get_field('institution', 'logoxs', 'name', 'mahara')) {
+                return get_config('wwwroot') . 'thumb.php?type=logobyid&id=' . $sitelogocustomsmallid;
             }
         }
         return false;
@@ -1440,6 +1389,7 @@ function jsstrings() {
                 'processing',
                 'unknownerror',
                 'loading',
+                'duplicatenamedfield',
                 'showtags',
                 'couldnotgethelp',
                 'password',
@@ -1467,7 +1417,7 @@ function jsstrings() {
                 'element.calendar.opendatepicker',
                 'rule.maxlength.maxlength',
                 'rule.required.required',
-            )
+            ),
         ),
         'tablerenderer' => array(
             'mahara' => array(
@@ -1480,10 +1430,50 @@ function jsstrings() {
         'views' => array(
             'view' => array(
                 'confirmdeleteblockinstance',
-                'blocksinstructionajaxlive',
+                'blocksinstructionajaxlive1',
             ),
         ),
+        'viewmenu' => array(
+            'artefact.comment' => array(
+                'addcomment',
+                'Details',
+                'commentsanddetails',
+                'commentremoved',
+          )
+        )
     );
+}
+
+function sideblock_template($sideblock, &$sideblock_menu) {
+    if ($sideblock === null) {
+        // No side block to add - possibly due to user permissions or config settings so we ignore
+        return;
+    }
+    // If we want to override an already available sideblock, eg quota -> groupqouta
+    if (!empty($sideblock['override']) && array_key_exists($sideblock['name'], $sideblock_menu)) {
+        $sideblock_menu[$sideblock['name']] = array_merge($sideblock_menu[$sideblock['name']], $sideblock);
+    }
+    // Make sure we don't have 2 sideblocks with same name
+    if (empty($sideblock['name']) || (array_key_exists($sideblock['name'], $sideblock_menu) && empty($sideblock['override']))) {
+        throw new MaharaException(get_string('sideblockmenuclash', 'error', $sideblock['name']));
+    }
+    // A sideblock menu can contain the following
+    $defaultsideblock = array(
+        'name' => null,        // Only required option
+        'title' => '',
+        'weight' => 0,
+        'id' => null,
+        'data' => array(),
+        'class' => '',
+        'smarty' => array(),   // If we need to set a smarty variable to a value
+        'template' => null,    // Use a custom template
+        'visible' => false,    // Controls whether the sideblock is visible.
+                               // Examples:
+                               //  to display when logged in:    'visible' => $USER->is_logged_in(),
+                               //  to display for certain pages: 'visible' => (defined('MENUITEM') && in_array(MENUITEM, array('create/view'))),
+    );
+    $sideblock = array_merge($defaultsideblock, $sideblock);
+    $sideblock_menu[$sideblock['name']] = $sideblock;
 }
 
 function themepaths() {
@@ -2137,9 +2127,12 @@ function set_cookie($name, $value='', $expires=0, $access=false) {
     if (!$domain = get_config('cookiedomain')) {
         $domain = $url['host'];
     }
-    setcookie($name, $value, $expires, $url['path'], $domain, is_https(), true);
-    if ($access) {  // View access cookies may be needed on this request
-        $_COOKIE[$name] = $value;
+    // If no headers are sent - to avoid CLI scripts calling logout() problems
+    if (!headers_sent()) {
+        setcookie($name, $value, $expires, $url['path'], $domain, is_https(), true);
+        if ($access) {  // View access cookies may be needed on this request
+            $_COOKIE[$name] = $value;
+        }
     }
 }
 
@@ -2162,6 +2155,25 @@ function getoptions_country() {
     };
     uasort($countries, 'strcoll');
     return $countries;
+}
+
+/**
+ * Returns an assoc array of timezones suitable for use with the "select" form
+ * element
+ *
+ * @return array Associative array of timezone => timezone
+ */
+function getoptions_timezone() {
+    static $timezones;
+    if (!empty($timezones)) {
+        return $timezones;
+    }
+    $zones = DateTimeZone::listIdentifiers(DateTimeZone::ALL);
+
+    foreach ($zones as $z) {
+        $timezones[$z] = $z;
+    };
+    return $timezones;
 }
 
 /**
@@ -2215,6 +2227,14 @@ function pieform_get_help(Pieform $form, $element) {
     return get_help_icon($plugintype, $pluginname, $formname, $element['name'], '', '', (isset($element['title']) ? $element['title'] : null));
 }
 
+function get_block_help(Pieform $form, $element) {
+    $helplink = get_manual_help_link_array(array('blocktype', 'blocks'));
+    $manualhelplink = $helplink['prefix'] . '/' . $helplink['language'] . '/' . $helplink['version'] . '/' .  $helplink['suffix'];
+    $content = get_string('helpfor', 'mahara', $element['legend']);
+    return ' <span class="help"><a href="' . $manualhelplink . '" title="' . get_string('Help') . '" target="_blank"><span class="icon icon-info-circle" role="presentation"></span><span class="sr-only">'. $content . '</span></a></span>';
+}
+
+
 /**
  * Is this a page in the admin area?
  *
@@ -2239,7 +2259,7 @@ function admin_nav() {
             'url'    => 'admin/index.php',
             'title'  => get_string('adminhome', 'admin'),
             'weight' => 10,
-            'accesskey' => 'a',
+            'iconclass' => 'home',
         ),
         'adminhome/home' => array(
             'path'   => 'adminhome/home',
@@ -2258,7 +2278,7 @@ function admin_nav() {
             'url'    => 'admin/site/options.php',
             'title'  => get_string('configsite', 'admin'),
             'weight' => 20,
-            'accesskey' => 's',
+            'iconclass' => 'cogs',
         ),
         'configsite/siteoptions' => array(
             'path'   => 'configsite/siteoptions',
@@ -2323,9 +2343,9 @@ function admin_nav() {
         'configusers' => array(
             'path'   => 'configusers',
             'url'    => 'admin/users/search.php',
-            'title'  => get_string('users'),
+            'title'  => get_string('people'),
             'weight' => 30,
-            'accesskey' => 'u',
+            'iconclass' => 'users',
         ),
         'configusers/usersearch' => array(
             'path'   => 'configusers/usersearch',
@@ -2375,7 +2395,7 @@ function admin_nav() {
             'title'  => get_string('groups', 'admin'),
             'accessibletitle' => get_string('administergroups', 'admin'),
             'weight' => 40,
-            'accesskey' => 'r',
+            'iconclass' => 'comments',
         ),
         'managegroups/groups' => array(
             'path'   => 'managegroups/groups',
@@ -2412,7 +2432,7 @@ function admin_nav() {
             'url'    => 'admin/users/institutions.php',
             'title'  => get_string('Institutions', 'admin'),
             'weight' => 50,
-            'accesskey' => 'i',
+            'iconclass' => 'university',
         ),
         'manageinstitutions/institutions' => array(
             'path'   => 'manageinstitutions/institutions',
@@ -2497,13 +2517,14 @@ function admin_nav() {
             'url'    => 'admin/users/statistics.php',
             'title'  => get_string('reports', 'statistics'),
             'weight' => 60,
+            'iconclass' => 'chart-pie',
         ),
         'configextensions' => array(
             'path'   => 'configextensions',
             'url'    => 'admin/extensions/plugins.php',
             'title'  => get_string('Extensions', 'admin'),
             'weight' => 70,
-            'accesskey' => 'e',
+            'iconclass' => 'puzzle-piece',
         ),
         'configextensions/pluginadmin' => array(
             'path'   => 'configextensions/pluginadmin',
@@ -2547,6 +2568,16 @@ function admin_nav() {
         );
     }
 
+    // Add the menu items for tags, if that feature is enabled in a visible institution.
+    if (($selector = get_institution_selector(false, false, false, false, false, true)) && !empty($selector['options'])) {
+        $menu['manageinstitutions/institutiontags'] = array(
+            'path'   => 'manageinstitutions/tags',
+            'url'    => 'admin/users/institutiontags.php',
+            'title'  => get_string('tags'),
+            'weight' => 95
+        );
+    }
+
     // enable plugins to augment the admin menu structure
     foreach (array('artefact', 'interaction', 'module', 'auth') as $plugintype) {
         if ($plugins = plugins_installed($plugintype)) {
@@ -2577,9 +2608,9 @@ function institutional_admin_nav() {
         'configusers' => array(
             'path'   => 'configusers',
             'url'    => 'admin/users/search.php',
-            'title'  => get_string('users'),
+            'title'  => get_string('people'),
             'weight' => 10,
-            'accesskey' => 'u',
+            'iconclass' => 'users',
         ),
         'configusers/usersearch' => array(
             'path'   => 'configusers/usersearch',
@@ -2617,7 +2648,7 @@ function institutional_admin_nav() {
             'title'  => get_string('groups', 'admin'),
             'accessibletitle' => get_string('administergroups', 'admin'),
             'weight' => 20,
-            'accesskey' => 'g',
+            'iconclass' => 'users',
         ),
         'managegroups/archives' => array(
             'path'   => 'managegroups/archives',
@@ -2642,7 +2673,7 @@ function institutional_admin_nav() {
             'url'    => 'admin/users/institutions.php',
             'title'  => get_string('Institutions', 'admin'),
             'weight' => 30,
-            'accesskey' => 'i',
+            'iconclass' => 'university',
         ),
         'manageinstitutions/institutions' => array(
             'path'   => 'manageinstitutions/institutions',
@@ -2686,6 +2717,12 @@ function institutional_admin_nav() {
             'title'  => get_string('adminnotifications', 'admin'),
             'weight' => 50,
         ),
+        'manageinstitutions/progressbar' => array(
+            'path'   => 'manageinstitutions/progressbar',
+            'url'    => 'admin/users/progressbar.php',
+            'title'  => get_string('progressbar', 'admin'),
+            'weight' => 55,
+        ),
         'manageinstitutions/institutionviews' => array(
             'path'   => 'manageinstitutions/institutionviews',
             'url'    => 'view/institutionviews.php',
@@ -2721,8 +2758,19 @@ function institutional_admin_nav() {
             'url'    => 'admin/users/statistics.php',
             'title'  => get_string('reports', 'statistics'),
             'weight' => 40,
+            'iconclass' => 'chart-pie',
         ),
     );
+
+    // Add the menu items for tags, if that feature is enabled in a visible institution.
+    if (($selector = get_institution_selector(false, false, false, false, false, true)) && !empty($selector['options'])) {
+        $ret['manageinstitutions/institutiontags'] = array(
+            'path'   => 'manageinstitutions/tags',
+            'url'    => 'admin/users/institutiontags.php',
+            'title'  => get_string('tags'),
+            'weight' => 95
+        );
+    }
 
     // enable plugins to augment the institution admin menu structure
     foreach (array('artefact', 'interaction', 'module', 'auth') as $plugintype) {
@@ -2754,14 +2802,14 @@ function staff_nav() {
             'url'    => 'admin/users/search.php',
             'title'  => get_string('usersearch', 'admin'),
             'weight' => 10,
-            'accesskey' => 'u',
+            'iconclass' => 'user',
         ),
         'reports' => array(
             'path'   => 'reports',
             'url'    => 'admin/users/statistics.php',
             'title'  => get_string('reports', 'statistics'),
             'weight' => 30,
-            'accesskey' => 'i',
+            'iconclass' => 'chart-pie',
         ),
     );
 
@@ -2795,14 +2843,14 @@ function institutional_staff_nav() {
             'url'    => 'admin/users/search.php',
             'title'  => get_string('usersearch', 'admin'),
             'weight' => 10,
-            'accesskey' => 'u',
+            'iconclass' => 'user',
         ),
         'reports' => array(
             'path'   => 'reports',
             'url'    => 'admin/users/statistics.php',
             'title'  => get_string('reports', 'statistics'),
             'weight' => 20,
-            'accesskey' => 'i',
+            'iconclass' => 'chart-pie',
         ),
     );
 }
@@ -2827,101 +2875,103 @@ function mahara_standard_nav() {
             'url' => '',
             'title' => get_string('dashboard', 'view'),
             'weight' => 10,
-            'accesskey' => 'd',
+            'iconclass' => 'tachometer-alt',
         ),
-        'content' => array(
-            'path' => 'content',
-            'url'  => 'artefact/internal/index.php', // @todo possibly do path aliasing and dispatch?
-            'title' => get_string('Content'),
+        'create' => array(
+            'path' => 'create',
+            'url'  => null,
+            'title' => get_string('Create'),
             'weight' => 20,
-            'accesskey' => 'c',
+            'iconclass' => 'plus',
         ),
-        'myportfolio' => array(
-            'path' => 'myportfolio',
-            'url' => 'view/index.php',
-            'title' => get_string('myportfolio'),
+        'share' => array(
+            'path' => 'share',
+            'url' => null,
+            'title' => get_string('share'),
             'weight' => 30,
-            'accesskey' => 'p',
+            'iconclass' => 'unlock',
         ),
-        'myportfolio/views' => array(
-            'path' => 'myportfolio/views',
+        'engage' => array(
+            'path' => 'engage',
+            'url' => null,
+            'title' => get_string('Engage'),
+            'weight' => 40,
+            'iconclass' => 'users',
+        ),
+        'create/views' => array(
+            'path' => 'create/views',
             'url' => 'view/index.php',
             'title' => get_string('Viewscollections', 'view'),
             'weight' => 10,
         ),
-        'myportfolio/share' => array(
-            'path' => 'myportfolio/share',
+        'create/tags' => array(
+            'path' => 'create/tags',
+            'url' => 'tags.php',
+            'title' => get_string('tags'),
+            'weight' => 80,
+        ),
+        'share/sharedbyme' => array(
+            'path' => 'share/sharedbyme',
             'url' => 'view/share.php',
             'title' => get_string('sharedbyme', 'view'),
-            'weight' => 30,
+            'weight' => 10,
         ),
-        'myportfolio/sharedviews' => array(
-            'path' => 'myportfolio/sharedviews',
+        'share/sharedviews' => array(
+            'path' => 'share/sharedviews',
             'url' => 'view/sharedviews.php',
             'title' => get_string('sharedwithme', 'view'),
-            'weight' => 60,
+            'weight' => 20,
         ),
-        'myportfolio/export' => array(
-            'path' => 'myportfolio/export',
+        'manage/export' => array(
+            'path' => 'manage/export',
             'url' => 'export/index.php',
             'title' => get_string('Export', 'export'),
             'weight' => 70,
             'ignore' => !$exportenabled,
         ),
-        'myportfolio/import' => array(
-            'path' => 'myportfolio/import',
+        'manage/import' => array(
+            'path' => 'manage/import',
             'url' => 'import/index.php',
             'title' => get_string('Import', 'import'),
             'weight' => 80,
             'ignore' => !$importenabled,
         ),
-        'groups' => array(
-            'path' => 'groups',
-            'url' => 'group/mygroups.php',
-            'title' => get_string('groups'),
+        'manage' => array(
+            'path' => 'manage',
+            'url' => null,
+            'title' => get_string('Manage'),
             'weight' => 40,
-            'accesskey' => 'g',
+            'iconclass' => 'briefcase',
         ),
-        'groups/mygroups' => array(
-            'path' => 'groups/mygroups',
-            'url' => 'group/mygroups.php',
-            'title' => get_string('mygroups'),
+        'engage/people' => array(
+            'path' => 'engage/people',
+            'url' => 'user/index.php',
+            'title' => get_string('people'),
             'weight' => 10,
         ),
-        'groups/find' => array(
-            'path' => 'groups/find',
-            'url' => 'group/find.php',
-            'title' => get_string('findgroups'),
-            'weight' => 20,
-        ),
-        'groups/myfriends' => array(
-            'path' => 'groups/myfriends',
-            'url' => 'user/myfriends.php',
-            'title' => get_string('myfriends'),
+        'engage/index' => array(
+            'path' => 'engage/index',
+            'url' => 'group/index.php',
+            'title' => get_string('groups'),
             'weight' => 30,
         ),
-        'groups/findfriends' => array(
-            'path' => 'groups/findfriends',
-            'url' => 'user/find.php',
-            'title' => get_string('findpeople'),
-            'weight' => 40,
-        ),
-        'groups/institutionmembership' => array(
-            'path' => 'groups/institutions',
+        'engage/institutionmembership' => array(
+            'path' => 'engage/institutions',
             'url' => 'account/institutions.php',
             'title' => get_string('institutionmembership'),
-            'weight' => 50,
+            'weight' => 60,
         ),
     );
 
     if (can_use_skins()) {
-        $menu['myportfolio/skins'] = array(
-           'path' => 'myportfolio/skins',
+        $menu['create/skins'] = array(
+           'path' => 'create/skins',
            'url' => 'skin/index.php',
            'title' => get_string('myskins', 'skin'),
-           'weight' => 65,
+           'weight' => 70,
         );
     }
+
     return $menu;
 }
 
@@ -2931,35 +2981,35 @@ function mahara_standard_nav() {
  * @return array
  */
 function main_nav($type = null) {
-    global $USER;
+    global $USER, $SESSION;
 
     $language = current_language();
     $cachemenu = false;
     // Get the first institution
     $institution = $USER->get_primary_institution();
-    $menutype = '';
+    $menutype = $SESSION->get('handheld_device') ? 'mob_' : '';
     if ($type == 'adminnav') {
         global $USER, $SESSION;
         if ($USER->get('admin')) {
-            $menutype = 'admin_nav';
+            $menutype .= 'admin_nav';
             if (!($cachemenu = get_config_institution($institution, $menutype . '_' . $language))) {
                 $menu = admin_nav();
             }
         }
         else if ($USER->get('staff')) {
-            $menutype = 'staff_nav';
+            $menutype .= 'staff_nav';
             if (!($cachemenu = get_config_institution($institution, $menutype . '_' . $language))) {
                 $menu = staff_nav();
             }
         }
         else if ($USER->is_institutional_admin()) {
-            $menutype = 'instadmin_nav';
+            $menutype .= 'instadmin_nav';
             if (!($cachemenu = get_config_institution($institution, $menutype . '_' . $language))) {
                 $menu = institutional_admin_nav();
             }
         }
         else {
-            $menutype = 'inststaff_nav';
+            $menutype .= 'inststaff_nav';
             if (!($cachemenu = get_config_institution($institution, $menutype . '_' . $language))) {
                 $menu = institutional_staff_nav();
             }
@@ -2967,7 +3017,7 @@ function main_nav($type = null) {
     }
     else {
         // Build the menu structure for the site
-        $menutype = 'standard_nav';
+        $menutype .= 'standard_nav';
         if (!($cachemenu = get_config_institution($institution, $menutype . '_' . $language))) {
             $menu = mahara_standard_nav();
         }
@@ -2977,7 +3027,7 @@ function main_nav($type = null) {
         $menu = json_decode($cachemenu, true);
     }
     else {
-        $menu = array_filter($menu, create_function('$a', 'return empty($a["ignore"]);'));
+        $menu = array_filter($menu, function($a) { return empty($a["ignore"]); });
 
         // enable plugins to augment the menu structure
         foreach (array('artefact', 'interaction', 'module', 'auth') as $plugintype) {
@@ -3027,6 +3077,20 @@ function clear_menu_cache($institution = null) {
     }
 }
 
+function message_nav() {
+    global $USER, $THEME;
+    $menu = array(
+        'inbox' => array(),
+    );
+
+    if (safe_require_plugin('module', 'multirecipientnotification')) {
+        $plugin_nav_menu = call_static_method(generate_class_name('module', 'multirecipientnotification'),
+                                              'messages_menu_items');
+        $menu = array_merge($menu, $plugin_nav_menu);
+    }
+    return $menu;
+}
+
 function right_nav() {
     global $USER, $THEME;
 
@@ -3034,29 +3098,26 @@ function right_nav() {
     $unread = $USER->get('unread');
 
     $menu = array(
-        'settings' => array(
-            'path' => 'settings',
-            'url' => 'account/index.php',
-            'title' => get_string('settings'),
+        'userdashboard' => array(
+            'path' => 'userdashboard',
+            'url' => profile_url($USER, false),
+            'title' => display_default_name($USER),
             'alt' => '',
             'weight' => 10,
-            'iconclass' => 'cogs'
+            'iconclass' => 'user'
         ),
-        'inbox' => array(
-            'path' => 'inbox',
-            'url' => 'account/activity/index.php',
-            'title' => get_string('inbox'),
-            'alt' => get_string('inbox'),
-            'count' => $unread,
-            'countclass' => 'unreadmessagecount',
-            'linkid' => 'mail',
+        'settings' => array(
+            'path' => 'settings',
+            'url' => null,
+            'title' => get_string('settings'),
+            'alt' => '',
             'weight' => 20,
-            'iconclass' => 'envelope'
+            'iconclass' => 'cogs'
         ),
         'settings/account' => array(
             'path' => 'settings/account',
             'url' => 'account/index.php',
-            'title' => get_config('dropdownmenu') ? get_string('general') : get_string('account'),
+            'title' => get_string('preferences'),
             'weight' => 10,
             'iconclass' => 'user'
         ),
@@ -3065,6 +3126,12 @@ function right_nav() {
             'url' => 'account/userprivacy.php',
             'title' => get_string('legal', 'admin'),
             'weight' => 30
+        ),
+        'settings/apps' => array(
+            'path' => 'settings/apps',
+            'url' => 'account/apps.php',
+            'title' => get_string('connectedapps'),
+            'weight' => 50
         ),
         'settings/notifications' => array(
             'path' => 'settings/notifications',
@@ -3076,7 +3143,7 @@ function right_nav() {
     );
 
     // enable plugins to augment the menu structure
-    foreach (array('artefact', 'interaction', 'module') as $plugintype) {
+    foreach (array('artefact', 'blocktype', 'interaction', 'module') as $plugintype) {
         if ($plugins = plugins_installed($plugintype)) {
             foreach ($plugins as &$plugin) {
                 if (safe_require_plugin($plugintype, $plugin->name)) {
@@ -3119,7 +3186,7 @@ function footer_menu($all=false) {
         $helpkey = ($USER->is_logged_in() ? '' : 'loggedout') . MENUITEM;
         $helpkeys = explode('/', $helpkey);
     }
-    if (defined('SECTION_PAGE')) {
+    if (defined('SECTION_PAGE') && !defined('RESUME_SUBPAGE')) {
         $helpkeys[] = SECTION_PAGE;
     }
     if (defined('VIEW_TYPE')) {
@@ -3142,9 +3209,9 @@ function footer_menu($all=false) {
     if (param_exists('pluginname')) {
         $helpkeys[] = param_variable('pluginname');
     }
-    // If we are in resume section
-    if (defined('RESUME_SUBPAGE')) {
-        $helpkeys[] = RESUME_SUBPAGE;
+    // If we are in an arrow submenu
+    if (defined('MENUITEM_SUBPAGE')) {
+        $helpkeys[] = MENUITEM_SUBPAGE;
     }
     // If group is set
     if (param_exists('group')) {
@@ -3159,6 +3226,10 @@ function footer_menu($all=false) {
         if (param_exists('new')) {
             $helpkeys[] = 'new';
         }
+    }
+    // To handle when things have an explicit 'filter' state
+    if (param_exists('filter')) {
+        $helpkeys[] = param_alphanum('filter', null);
     }
 
     $menu['manualhelp'] = array('fullurl' => get_manual_help_link($helpkeys),
@@ -3185,10 +3256,36 @@ function footer_menu($all=false) {
             }
         }
     }
-
     return $menu;
 }
 
+function apps_get_menu_tabs() {
+    $menu = array();
+
+    foreach (plugin_types_installed() as $plugin_type_installed) {
+        foreach (plugins_installed($plugin_type_installed) as $plugin) {
+            safe_require($plugin_type_installed, $plugin->name);
+            if (method_exists(generate_class_name($plugin_type_installed, $plugin->name), 'app_tabs')) {
+                $plugin_menu = call_static_method(
+                    generate_class_name($plugin_type_installed, $plugin->name),
+                    'app_tabs'
+                );
+                $menu = array_merge($menu, $plugin_menu);
+            }
+        }
+    }
+    if (defined('MENUITEM')) {
+        $key = substr(MENUITEM, strlen('settings/'));
+        if ($key && isset($menu[$key])) {
+            $menu[$key]['selected'] = true;
+        }
+    }
+
+    // Sort the menu items by weight
+    uasort($menu, "sort_menu_by_weight");
+
+    return $menu;
+}
 
 /**
  * Given a menu structure and a path, returns a data structure representing all
@@ -3250,6 +3347,46 @@ function menu_sort_items(&$a, &$b) {
     return $a['weight'] > $b['weight'];
 }
 
+function selfsearch_sideblock() {
+    global $USER;
+    if (get_config('showselfsearchsideblock')) {
+        $sideblock = array(
+            'name'   => 'selfsearch',
+            'weight' => 5,
+            'data'   => array(),
+            'template' => 'sideblocks/selfsearch.tpl',
+            'visible' => $USER->is_logged_in() &&
+                         (defined('MENUITEM') &&
+                          in_array(MENUITEM, array('profile',
+                                                   'create/files',
+                                                   'share/sharedbyme',
+                                                   'create/views')
+                                   )
+                         ),
+        );
+        return $sideblock;
+    }
+    return null;
+}
+
+function ssopeer_sideblock() {
+    global $USER;
+
+    if (get_config('enablenetworking')) {
+        require_once(get_config('docroot') .'api/xmlrpc/lib.php');
+        $ssopeers = get_service_providers($USER->authinstance);
+        $sideblock = array(
+            'name'   => 'ssopeers',
+            'weight' => 1,
+            'data'   => $ssopeers,
+            'template' => 'sideblocks/ssopeers.tpl',
+            'visible' => ($USER->is_logged_in() && $ssopeers),
+        );
+        return $sideblock;
+    }
+    return null;
+}
+
 /**
  * Site-level sidebar menu (list of links)
  * There is no admin files table yet so just get the urls.
@@ -3257,9 +3394,20 @@ function menu_sort_items(&$a, &$b) {
  */
 function site_menu() {
     global $USER;
+
+    if (!get_config('installed') || in_admin_section()) {
+        return null;
+    }
     $menu = array();
-    if ($menuitems = get_records_array('site_menu','public',(int) !$USER->is_logged_in(),'displayorder')) {
+    $public = $loggedin = false;
+    if ($menuitems = get_records_array('site_menu','public',(int) !$USER->is_logged_in(), 'displayorder')) {
         foreach ($menuitems as $i) {
+            if ($i->public) {
+                $public = true;
+            }
+            if (!$i->public) {
+                $loggedin = true;
+            }
             if ($i->url) {
                 $safeurl = sanitize_url($i->url);
                 if ($safeurl != '') {
@@ -3273,7 +3421,16 @@ function site_menu() {
             }
         }
     }
-    return $menu;
+
+    $sideblock = array(
+        'name' => 'linksandresources',
+        'weight' => 10,
+        'data' => $menu,
+        'smarty' => array('SITEMENU' => $menu),
+        'visible' => ($loggedin && $USER->is_logged_in() && !in_admin_section()) || ($public && !$USER->is_logged_in()),
+        'template' => 'sideblocks/linksandresources.tpl',
+    );
+    return $sideblock;
 }
 
 /**
@@ -3695,7 +3852,12 @@ function clean_html($text, $xhtml=false) {
         $config->set('Filter.Custom', $customfilters);
     }
 
+    require_once('htmlpurifiercustom/MixedContent.php');
+    $uri = $config->getDefinition('URI');
+    $uri->addFilter(new HTMLPurifier_URIFilter_MixedContent(), $config);
+
     if ($def = $config->maybeGetRawHTMLDefinition()) {
+        $def->addAttribute('a', 'target', 'Enum#_blank,_self');
         # Allow iframes with custom attributes such as fullscreen
         # This overrides lib/htmlpurifier/HTMLPurifier/HTMLModule/Iframe.php
         $def->addElement(
@@ -3829,7 +3991,10 @@ function clean_css($input_css, $preserve_css=false) {
 function html2text($html, $fragment=true) {
     require_once('htmltotext/htmltotext.php');
     if ($fragment) {
-        $html = '<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/></head>' . $html;
+        // Check if fragment is actually a fragment as tinymce can return a valid html page
+        if (!preg_match('/^<(HTML|\!doctype).*?>/i', $html)) {
+            $html = '<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/></head>' . $html;
+        }
     }
     $h2t = new HtmltoText($html, get_config('wwwroot'));
     return $h2t->text();
@@ -4067,12 +4232,11 @@ function build_pagination($params) {
     // Output the count of results
     $resultsstr = ($params['count'] == 1) ? $params['resultcounttextsingular'] : $params['resultcounttextplural'];
     if($params['count'] > 0){
-        $output .= '<div class="lead text-small results pull-right">' . $params['count'] . ' ' . $resultsstr . '</div>';
+        $output .= '<div class="lead text-small results float-right">' . $params['count'] . ' ' . $resultsstr . '</div>';
     }
 
-    $output .= '<ul class="pagination pagination-xs">';
-
     if ($params['limit'] && ($params['limit'] < $params['count'])) {
+        $output .= '<ul class="pagination pagination-sm">';
         $pages = ceil($params['count'] / $params['limit']);
         $page = $params['offset'] / $params['limit'];
 
@@ -4173,7 +4337,7 @@ function build_pagination($params) {
              // add ellipsis if pages skipped
             $text = $i + 1;
             if ($k != 0 && $prevpagenum < $i - 1) {
-                $text = '<span class="metadata hidden-xs">...</span>' . ($i + 1);
+                $text = '<span class="metadata d-none d-md-inline-block">...</span>' . ($i + 1);
             }
 
             if ($i == $page) {
@@ -4212,9 +4376,8 @@ function build_pagination($params) {
             $params['limit'] * $next,
             $params['offsetname']
         );
-
+        $output .= '</ul>';
     }
-
     // Build limitoptions dropbox if results are more than 10 (minimum dropbox pagination) and that we are not in the block editor screen
     if ($params['setlimit'] && $params['count'] > 10 && (!isset($params['editing']) || $params['editing'] === false)) {
         $strlimitoptions = array();
@@ -4227,14 +4390,13 @@ function build_pagination($params) {
                 $strlimitoptions[] = "<option value = '$limitoptions[$i]'> $limitoptions[$i] </option>";
             }
         }
-        $output .= '</ul>';
         $output .= '<form class="form-pagination js-pagination form-inline pagination-page-limit dropdown" action="' . hsc($params['url']) . '" method="POST">
             <label for="setlimitselect" class="set-limit"> ' . $params['limittext'] . ' </label>' .
             '<span class="picker input-sm"><select id="setlimitselect" class="js-pagination input-sm select form-control" name="limit"> '.
                 join(' ', $strlimitoptions) .
             '</select></span>
             <input class="currentoffset" type="hidden" name="' . $params['offsetname'] . '" value="' . $params['offset'] . '"/>
-            <input class="pagination js-hidden hidden" type="submit" name="submit" value="' . get_string('change') . '"/>
+            <input class="pagination js-hidden d-none" type="submit" name="submit" value="' . get_string('change') . '"/>
         </form>';
     }
     // if $params['count'] is less than 10 add the setlimitselect as a hidden field so that elasticsearch js can access it
@@ -4287,9 +4449,8 @@ function build_pagination($params) {
  * - orderby: What order the results will be returned in
  * - databutton: The ID of the 'Show more' button
  *
- * Optional include:
- * - group: Group id the pagination is for
- * - institution: Institution name the pagination is for
+ * Optional:
+ * - extra: An array of key / values that you want to add as data options
  */
 function build_showmore_pagination($params) {
     // Bail if the required attributes are not present
@@ -4303,25 +4464,33 @@ function build_showmore_pagination($params) {
     if ((int) $params['count'] > ((int) $params['offset'] + (int) $params['limit'])) {
         // Need to add 'showmore' button
         $output  = '<div class="showmore">' . "\n";
-        $output .= '    <div id="' . $params['databutton'] . '" class="btn btn-default"';
+        $output .= '    <button id="' . $params['databutton'] . '" class="btn btn-secondary"';
         $output .= ' data-orderby="' . $params['orderby'] . '"';
         $output .= ' data-offset="' . ((int) $params['offset'] + (int) $params['limit']) . '"';
-        $output .= ' data-group="' . (isset($params['group']) ? $params['group'] : '') . '"';
         $output .= ' data-jsonscript="' . $params['jsonscript'] . '"';
-        $output .= ' data-institution="' . (isset($params['institution']) ? $params['institution'] : '') . '"';
+        if (!empty($params['extra']) && is_array($params['extra'])) {
+            foreach ($params['extra'] as $key => $value) {
+                $output .= ' data-' . $key . '="' . $value . '"';
+            }
+        }
         $output .= ' tabindex="0">';
-        $output .= get_string('showmore', 'mahara') . '</div>' . "\n";
+        $output .= get_string('showmore', 'mahara') . '</button>' . "\n";
         $output .= '</div>';
 
-        $js  = 'jQuery("#' . $params['databutton'] . '").on("click", function() {';
+        $js  = 'jQuery("#' . $params['databutton'] . '").on("click", function(e) {';
+        $js .= '    e.preventDefault();';
         $js .= '    pagination_showmore(jQuery(this));';
         $js .= '});' . "\n";
 
         $js .= 'jQuery("#' . $params['databutton'] . '").on("keydown", function(e) {';
         $js .= '    if (e.keyCode == $j.ui.keyCode.SPACE || e.keyCode == $j.ui.keyCode.ENTER) {';
+        $js .= '        e.preventDefault();';
         $js .= '        pagination_showmore(jQuery(this));';
         $js .= '    }';
         $js .= '});' . "\n";
+        if (isset($params['jscall']) && $params['jscall']) {
+            $js .= 'window[\'' . $params['jscall'] . '\']();' . "\n";
+        }
     }
 
     return array('html' => $output, 'javascript' => $js);
@@ -4354,18 +4523,18 @@ function build_pagination_pagelink($class, $text, $title, $disabled=false, $url=
     }
 
 
-    $result = "<li class='$class'>";
+    $result = "<li class='page-item $class'>";
 
     if (!empty($title)) {
         $text .= '<span class="sr-only">' . $title . '</span>';
     }
 
     if ($disabled) {
-        $result .= '<span>';
+        $result .= '<span class="page-link">';
         $result .= $text;
         $result .= '</span>';
     } else {
-        $result .= '<a href="' . hsc($url) . '" title="' . $title . '">';
+        $result .= '<a class="page-link" href="' . hsc($url) . '" title="' . $title . '">';
         $result .= $text;
         $result .= '</a>';
     }
@@ -4406,7 +4575,7 @@ function mahara_http_request($config, $quiet=false) {
         }
     }
 
-    $result = new StdClass();
+    $result = new stdClass();
     $result->data = curl_exec($ch);
     $result->info = curl_getinfo($ch);
     $result->error = curl_error($ch);
@@ -4451,7 +4620,7 @@ function mahara_shorturl_request($url, $quiet=false) {
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
     curl_setopt($ch, CURLOPT_MAXREDIRS, 1);
 
-    $result = new StdClass();
+    $result = new stdClass();
     $result->shorturl = $url;
     $result->data = curl_exec($ch);
     $result->error = curl_error($ch);
@@ -4522,7 +4691,7 @@ function language_select_form() {
                         'changelang' => array(
                             'type' => 'button',
                             'usebuttontag' => true,
-                            'class' => 'btn-default input-group-btn',
+                            'class' => 'btn-secondary input-group-append',
                             'value' => get_string('change'),
                         )
                     )
@@ -4836,6 +5005,7 @@ function is_valid_url($url) {
             CURLOPT_URL => $url,
             CURLOPT_HEADER => true,
             CURLOPT_NOBODY => true,
+            CURLOPT_CONNECTTIMEOUT => 2,
         ),
         true
     );

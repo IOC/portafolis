@@ -10,7 +10,8 @@
  */
 
 define('INTERNAL', 1);
-define('MENUITEM', 'groups/forums');
+define('MENUITEM', 'engage/index');
+define('MENUITEM_SUBPAGE', 'forums');
 define('SECTION_PLUGINTYPE', 'interaction');
 define('SECTION_PLUGINNAME', 'forum');
 define('SECTION_PAGE', 'deletetopic');
@@ -20,12 +21,14 @@ safe_require('interaction' ,'forum');
 require_once('group.php');
 require_once(get_config('docroot') . 'interaction/lib.php');
 require_once('embeddedimage.php');
+define('SUBSECTIONHEADING', get_string('nameplural', 'interaction.forum'));
 
 $topicid = param_integer('id');
 $returnto = param_alpha('returnto', 'topic');
 
 $topic = get_record_sql(
-    'SELECT f.group, f.id AS forumid, f.title, g.name AS groupname, p.poster, p.subject, p.body, COUNT(p2.id), ' . db_format_tsfield('p.ctime', 'ctime') . ', t.closed, m.user AS moderator
+    'SELECT f.group, f.id AS forumid, f.title, g.name AS groupname,
+        p.poster, p.subject, p.body, p.approved, COUNT(p2.id), ' . db_format_tsfield('p.ctime', 'ctime') . ', t.closed, m.user AS moderator
     FROM {interaction_forum_topic} t
     INNER JOIN {interaction_instance} f ON (f.id = t.forum AND f.deleted != 1)
     INNER JOIN {group} g ON (g.id = f.group AND g.deleted = ?)
@@ -40,7 +43,7 @@ $topic = get_record_sql(
     INNER JOIN {interaction_instance} f2 ON (t2.forum = f2.id AND f2.deleted != 1 AND f2.group = f.group)
     WHERE t.id = ?
     AND t.deleted != 1
-    GROUP BY 1, 2, 3, 4, 5, 6, 7, 9, 10, 11',
+    GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12',
     array(0, $topicid)
 );
 
@@ -73,7 +76,7 @@ $form = pieform(array(
         ),
         'submit' => array(
             'type'  => 'submitcancel',
-            'class' => 'btn-primary',
+            'class' => 'btn-secondary',
             'value' => array(get_string('yes'), get_string('no')),
             'goto'  => get_config('wwwroot') . ($returnto == 'view' ? 'interaction/forum/view.php?id=' . $topic->forumid : 'interaction/forum/topic.php?id=' . $topicid),
         ),
@@ -97,7 +100,7 @@ function deletetopic_submit(Pieform $form, $values) {
 
     if ($objectionable !== false) {
         // Trigger activity.
-        $data = new StdClass;
+        $data = new stdClass();
         $data->postid     = $objectionable->id;
         $data->message    = '';
         $data->reporter   = $USER->get('id');
@@ -114,12 +117,15 @@ function deletetopic_submit(Pieform $form, $values) {
     // Delete embedded images in the topic and its posts
     require_once('embeddedimage.php');
     EmbeddedImage::delete_embedded_images('topic', $topicid);
+    // Delete any post attachments for posts in this topic
+    delete_records_select('interaction_forum_post_attachment', "post IN (SELECT p.id FROM {interaction_forum_post} p WHERE p.topic = ?)", array($topicid));
     // mark relevant posts as deleted
     update_record(
         'interaction_forum_post',
         array('deleted' => 1),
         array('topic' => $topicid)
     );
+
     $SESSION->add_ok_msg(get_string('deletetopicsuccess', 'interaction.forum'));
     redirect('/interaction/forum/view.php?id=' . $values['forum']);
 }

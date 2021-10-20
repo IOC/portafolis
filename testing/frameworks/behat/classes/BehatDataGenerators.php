@@ -46,6 +46,11 @@ class BehatDataGenerators extends BehatBase {
                 'role'         => 'text',
                 'authname'     => 'text',
                 'remoteusername' => 'text',
+                'studentid'    => 'text',
+                'preferredname' => 'text',
+                'town'         => 'text',
+                'country'      => 'text',
+                'occupation'   => 'text',
             ),
             'required' => array('username', 'password', 'email', 'firstname', 'lastname')
         ),
@@ -70,8 +75,9 @@ class BehatDataGenerators extends BehatBase {
                 'staff'            => 'text',
                 'admins'           => 'text',
                 'institution'      => 'text',
+                'public'           => 'bool',
             ),
-            'required' => array('name', 'owner'),
+            'required' => array('name', 'owner')
         ),
         'institutions' => array(
             'datagenerator' => 'institution',
@@ -87,7 +93,7 @@ class BehatDataGenerators extends BehatBase {
                 'skins'            => 'bool',
                 'licensemandatory' => 'bool',
                 'licensedefault'   => 'text',
-                'defaultquota'     => 'number',
+                'defaultquota'     => 'text',
                 'defaultmembershipperiod' => 'number',
                 'maxuseraccounts'  => 'number',
                 'expiry'           => 'text',
@@ -97,6 +103,7 @@ class BehatDataGenerators extends BehatBase {
                 'staff'            => 'text',
                 'admins'           => 'text',
                 'authname'         => 'string',
+                'tags'             => 'bool',
             ),
             'required' => array('name', 'displayname')
         ),
@@ -108,8 +115,20 @@ class BehatDataGenerators extends BehatBase {
                 'ownertype'        => 'text',
                 'ownername'        => 'text',
                 'layout'           => 'text',
+                'tags'             => 'text',
             ),
-            'required' => array('title', 'ownertype', 'ownername'),
+            'required' => array('title', 'ownertype', 'ownername')
+        ),
+        'blocks' => array(
+            'datagenerator' => 'block',
+            'available' => array(
+                'title'            => 'text',
+                'type'             => 'text',
+                'data'             => 'text',
+                'page'             => 'text',
+                'retractable'      => 'text'
+            ),
+            'required' => array('title', 'type', 'page')
         ),
         'collections' => array(
             'datagenerator' => 'collection',
@@ -120,7 +139,7 @@ class BehatDataGenerators extends BehatBase {
                 'ownername'        => 'text',
                 'pages'            => 'text',
             ),
-            'required' => array('title', 'ownertype', 'ownername'),
+            'required' => array('title', 'ownertype', 'ownername')
         ),
         'permissions' => array(
             'datagenerator' => 'permission',
@@ -130,8 +149,10 @@ class BehatDataGenerators extends BehatBase {
                 'accessname'       => 'text',
                 'allowcomments'    => 'bool',
                 'approvecomments'  => 'bool',
+                'role'             => 'text',
+                'multiplepermissions'   => 'bool', // Set to true if wanting to add multiple access rules to a view
             ),
-            'required' => array('title', 'accesstype'),
+            'required' => array('title', 'accesstype')
         ),
         'group memberships' => array(
             'datagenerator' => 'group_membership',
@@ -153,10 +174,10 @@ class BehatDataGenerators extends BehatBase {
                 'url'              => 'text',
                 'urltext'          => 'text',
             ),
-           'required' => array('emailtype', 'to', 'subject'),
+           'required' => array('emailtype', 'to', 'subject')
         ),
         'journals' => array(
-            'datagenerator' => 'journal',
+            'datagenerator' => 'blog',
             'available' => array(
                 'owner'            => 'text',
                 'ownertype'        => 'text',
@@ -164,10 +185,10 @@ class BehatDataGenerators extends BehatBase {
                 'description'      => 'text',
                 'tags'             => 'text',
             ),
-           'required' => array('owner', 'ownertype', 'title'),
+           'required' => array('owner', 'ownertype', 'title')
         ),
-        'journalposts' => array(
-            'datagenerator' => 'journalpost',
+        'journalentries' => array(
+            'datagenerator' => 'blogpost',
             'available' => array(
                 'owner'            => 'text',
                 'ownertype'        => 'text',
@@ -177,9 +198,181 @@ class BehatDataGenerators extends BehatBase {
                 'tags'             => 'text',
                 'draft'            => 'bool',
             ),
-           'required' => array('owner', 'ownertype', 'title', 'entry'),
+           'required' => array('owner', 'ownertype', 'title', 'entry')
         ),
-    );
+        'plans' => array(
+            'datagenerator' => 'plan',
+            'available' => array(
+                'owner'            => 'text',
+                'ownertype'        => 'text',
+                'title'            => 'text',
+                'description'      => 'text',
+                'tags'             => 'text',
+            ),
+           'required' => array('owner', 'ownertype', 'title')
+        ),
+        'tasks' => array(
+          'datagenerator' => 'task',
+          'available' => array(
+            'owner'                => 'text',
+            'ownertype'            => 'text',
+            'plan'                 => 'text',
+            'title'                => 'text',
+            'description'          => 'text',
+            'completiondate'       => 'text',
+            'completed'            => 'bool',
+            'tags'                 => 'text'
+          ),
+          'required' => array('owner', 'ownertype', 'plan', 'title', 'completiondate', 'completed')
+        ),
+        'forums' => array(
+          'datagenerator' => 'forum',
+          'available' => array(
+            'title'                => 'text',
+            'description'          => 'text',
+            'group'                => 'text',
+            'creator'              => 'text'
+          ),
+          'required' => array('title','description','group','creator')
+        ),
+        'forumposts' => array(
+          'datagenerator' => 'forumpost',
+          'available' => array(
+            'group'                => 'text',
+            'forum'                => 'text',
+            'subject'              => 'text',
+            'message'              => 'text',
+            'user'                 => 'text',
+            'topic'                => 'text',
+          ),
+          'required' => array('group', 'message', 'user')
+        ),
+        'personalinformation' => array(
+          'datagenerator' => 'resume_personalinformation',
+          'available' => array(
+            'user'                 => 'text',
+            'dateofbirth'          => 'text',
+            'placeofbirth'         => 'text',
+            'citizenship'          => 'text',
+            'visastatus'           => 'text',
+            'gender'               => 'text',
+            'maritalstatus'        => 'text'
+          ),
+          'required' => array('user', 'dateofbirth')
+        ),
+        'goals and skills' => array(
+          'datagenerator' => 'resume_goalsandskills',
+          'available' => array(
+            'user'                 => 'text',
+            'goaltype/skilltype'   => 'text',
+            'title'                => 'text',
+            'description'          => 'text',
+            'attachment'           => 'text'
+          ),
+          'required' => array('user','goaltype/skilltype','title')
+        ),
+        'interests' => array(
+          'datagenerator' => 'resume_interests',
+          'available' => array(
+            'user'                 => 'text',
+            'interest'             => 'text',
+            'description'          => 'text'
+          ),
+          'required' => array('user','interest','description')
+        ),
+        'coverletters' => array(
+          'datagenerator' => 'resume_coverletter',
+          'available' => array(
+            'user'                 => 'text',
+            'content'              => 'text'
+          ),
+          'required' => array('user','content')
+        ),
+        'educationhistory' => array(
+          'datagenerator' => 'resume_educationhistory',
+          'available' => array(
+            'user'                   => 'text',
+            'startdate'              => 'text',
+            'enddate'                => 'text',
+            'institution'            => 'text',
+            'institutionaddress'     => 'text',
+            'qualtype'               => 'text',
+            'qualname'               => 'text',
+            'qualdescription'        => 'text',
+            'attachment'             => 'text'
+          ),
+          'required' => array('user','startdate','institution')
+        ),
+        'employmenthistory' => array(
+          'datagenerator' => 'resume_employmenthistory',
+          'available' => array(
+            'user'                   => 'text',
+            'startdate'              => 'text',
+            'enddate'                => 'text',
+            'employer'               => 'text',
+            'employeraddress'        => 'text',
+            'jobtitle'               => 'text',
+            'positiondescription'    => 'text',
+            'attachment'             => 'text'
+          ),
+          'required' => array ('user','startdate','employer','jobtitle')
+        ),
+        'contactinformation' => array(
+          'datagenerator' => 'resume_contactinformation',
+          'available' => array(
+            'user'                     => 'text',
+            'email'                    => 'text',
+            'officialwebsite'          => 'text',
+            'personalwebsite'          => 'text',
+            'blogaddress'              => 'text',
+            'town'                     => 'text',
+            'city/region'              => 'text',
+            'country'                  => 'text',
+            'homenumber'               => 'text',
+            'businessnumber'           => 'text',
+            'mobilenumber'             => 'text',
+            'faxnumber'                => 'text',
+          ),
+          'required' => array('user','email')
+        ),
+        'achievements' => array(
+          'datagenerator' => 'resume_certification',
+          'available' => array(
+            'user'                    => 'text',
+            'date'                    => 'text',
+            'title'                   => 'text',
+            'description'             => 'text',
+            'attachment'              => 'text'
+          ),
+          'required' => array('user','title')
+        ),
+        'books and publications' => array(
+          'datagenerator' => 'resume_book',
+          'available' => array(
+            'user'                     => 'text',
+            'date'                     => 'text',
+            'title'                    => 'text',
+            'contribution'             => 'text',
+            'description'              => 'text',
+            'url'                      => 'text',
+            'attachment'               => 'text'
+          ),
+          'required' => array('user','date','title','contribution')
+        ),
+        'professionalmemberships' => array(
+          'datagenerator' => 'resume_membership',
+          'available' => array(
+            'user'                     => 'text',
+            'startdate'                => 'text',
+            'enddate'                  => 'text',
+            'title'                    => 'text',
+            'description'              => 'text',
+            'attachment'               => 'text'
+          ),
+          'required' => array('user','startdate','title')
+        )
+      );
+
 
     /**
      * Normalise values in a given record
@@ -187,18 +380,20 @@ class BehatDataGenerators extends BehatBase {
      * @param array ('field' => 'values', ...) $record
      * @return $record
      */
-    public function normalise(&$record) {
-        foreach ($record as &$value) {
-            $value = trim($value);
-            // Normalise boolean values
-            if (strtolower($value) == 'on' || $value == '1') {
-                $value = true;
-            }
-            else if (strtolower($value) == 'off' || $value == '0') {
-                $value = false;
-            }
-        }
-    }
+     public function normalise($availablefields, &$record) {
+         foreach ($record as $fieldname => &$value) {
+             if ($availablefields[$fieldname] == 'bool') {
+                 $value = trim($value);
+                 // Normalise boolean values
+                 if (strtolower($value) == 'on' || $value == '1' || $value == 'yes' || $value == 'true') {
+                     $value = true;
+                 }
+                 else if (strtolower($value) == 'off' || $value == '0' || $value == 'no' || $value == 'false') {
+                     $value = false;
+                 }
+             }
+         }
+     }
 
     /**
      * Validate field values in a given record
@@ -215,7 +410,7 @@ class BehatDataGenerators extends BehatBase {
                                 "All available fields are " . implode(',', array_keys($availablefields)));
             }
             if ($availablefields[$fieldname] == 'bool' && !is_bool($fieldvalue)) {
-                throw new MaharaBehatTestException("The value '" . $fieldvalue . "' of the field '" . $fieldname . "' must be a boolean ('ON'|'OFF', '1'|'0' are accepted boolean values).");
+                throw new MaharaBehatTestException("The value '" . $fieldvalue . "' of the field '" . $fieldname . "' must be a boolean ('ON'|'OFF', '1'|'0', 'true'|'false', 'yes'|'no' are accepted boolean values).");
             }
             if ($availablefields[$fieldname] == 'number' && !is_numeric($fieldvalue)) {
                 throw new MaharaBehatTestException("The value '" . $fieldvalue . "' of the field '" . $fieldname . "' must be a number.");
@@ -254,7 +449,7 @@ class BehatDataGenerators extends BehatBase {
         foreach ($data->getHash() as $elementdata) {
 
             // Normalise field values
-            $this->normalise($elementdata);
+            $this->normalise($availablefields, $elementdata);
             // Validate available fields for given element
             $this->validate_fields($availablefields, $elementdata);
             // Check if all the required fields are there.

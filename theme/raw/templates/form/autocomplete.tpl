@@ -6,7 +6,7 @@
 {{/if}}
 </select>
 
-<script type="application/javascript">
+<script>
 {{if !$inblockconfig}}
     jQuery(window).on('load', function () {
 {{/if}}
@@ -23,6 +23,9 @@
                     'sesskey': "{{$sesskey}}",
                     'offset': 0,
                     'limit': 10,
+                    {{if $institution}}
+                        'institution': "{{$institution}}",
+                    {{/if}}
                 }
             },
             processResults: function(data, page) {

@@ -45,15 +45,22 @@ class upload_manager {
     public $optionalandnotsupplied = false;
 
     /**
+     * Indicate maxfilesize this error should return to the form.
+     * @var bool $optional
+     */
+    public $maxfilesize;
+
+    /**
      * Constructor.
      *
      * @param string $inputname Name in $_FILES.
      */
-    public function __construct($inputname, $handlecollisions=false, $inputindex=null, $optional=false) {
+    public function __construct($inputname, $handlecollisions=false, $inputindex=null, $optional=false, $maxfilesize=null) {
         $this->inputname = $inputname;
         $this->handlecollisions = $handlecollisions;
         $this->inputindex = $inputindex;
         $this->optional = $optional;
+        $this->maxfilesize = $maxfilesize;
     }
 
     /**
@@ -87,8 +94,9 @@ class upload_manager {
             $error = $file['error'];
             $tmpname = $file['tmp_name'];
         }
+        $maxfilesize = !empty($this->maxfilesize) ? display_size($this->maxfilesize) : display_size(get_max_upload_size(false));
         if ($maxsize && $size > $maxsize) {
-            return get_string('uploadedfiletoobig1', 'mahara', display_size(get_max_upload_size(false)));
+            return get_string('uploadedfiletoobig1', 'mahara', $maxfilesize);
         }
 
         if ($error != UPLOAD_ERR_OK) {
@@ -105,7 +113,7 @@ class upload_manager {
                 activity_occurred('maharamessage', $message);
             }
             else if ($error == UPLOAD_ERR_INI_SIZE || $error == UPLOAD_ERR_FORM_SIZE) {
-                return get_string('uploadedfiletoobig1', 'mahara', display_size(get_max_upload_size(false)));
+                return get_string('uploadedfiletoobig1', 'mahara', $maxfilesize);
             }
         }
 
@@ -272,8 +280,7 @@ function clam_handle_infected_file($file) {
         $now = date('YmdHis');
         $newname = $quarantinedir .'/'. $now .'-user-'. $userid .'-infected';
         if (rename($file, $newname)) {
-            clam_log_infected($file, $newname);
-            return get_string('clammovedfile');
+            return clam_log_infected($file, $newname);
         }
     }
     if (unlink($file)) {
@@ -378,7 +385,7 @@ function clam_mail_admins($notice) {
     $adminusers = get_records_array('usr', 'admin', 1);
     if ($adminusers) {
         foreach ($adminusers as $admin) {
-            $message = new StdClass;
+            $message = new stdClass();
             $message->users = array($admin->id);
 
             $message->subject = $subject;
@@ -444,4 +451,5 @@ function clam_log_infected($oldfilepath='', $newfilepath='', $userid=0) {
         . ((empty($newfilepath)) ? '. The file has been deleted ' : '. The file has been moved to a quarantine directory and the new path is '. $newfilepath);
 
     log_debug($errorstr);
+    return $errorstr;
 }

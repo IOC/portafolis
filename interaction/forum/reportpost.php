@@ -10,7 +10,8 @@
  */
 
 define('INTERNAL', 1);
-define('MENUITEM', 'groups/forums');
+define('MENUITEM', 'engage/index');
+define('MENUITEM_SUBPAGE', 'forums');
 define('SECTION_PLUGINTYPE', 'interaction');
 define('SECTION_PLUGINNAME', 'forum');
 define('SECTION_PAGE', 'reportpost');
@@ -19,6 +20,7 @@ require(dirname(dirname(dirname(__FILE__))) . '/init.php');
 safe_require('interaction' ,'forum');
 require_once('group.php');
 require_once(get_config('docroot') . 'interaction/lib.php');
+define('SUBSECTIONHEADING', get_string('nameplural', 'interaction.forum'));
 
 $postid = param_integer('id');
 $post = get_record_sql(
@@ -92,7 +94,7 @@ function reportpost_submit(Pieform $form, $values) {
     insert_record('objectionable',  $objection);
 
     // Trigger activity.
-    $data = new StdClass();
+    $data = new stdClass();
     $data->postid     = $postid;
     $data->message    = $values['message'];
     $data->reporter   = $USER->get('id');

@@ -30,7 +30,7 @@
  */
 
 define('INTERNAL', 1);
-define('MENUITEM', 'myportfolio/import');
+define('MENUITEM', 'manage/import');
 require(dirname(dirname(__FILE__)) . '/init.php');
 define('SECTION_PLUGINTYPE', 'core');
 define('SECTION_PLUGINNAME', 'import');
@@ -159,7 +159,8 @@ function print_upload_form() {
                 'title' => get_string('uploadleap2afile', 'admin'),
                 'rules' => array(
                     'required' => true
-                )
+                ),
+                'maxfilesize'  => get_max_upload_size(true)
             ),
             'submit' => array(
                 'class' => 'btn-primary',
@@ -169,6 +170,7 @@ function print_upload_form() {
         )
     ));
     $smarty = smarty();
+    setpageicon($smarty, 'icon-download');
     $smarty->assign('pagedescription', get_string('importportfoliodescription', 'import'));
     $smarty->assign('form', $form);
     $smarty->display('form.tpl');
@@ -266,6 +268,7 @@ function print_import_items_form() {
     }
 
     $smarty = smarty();
+    setpageicon($smarty, 'icon-download');
     $smarty->assign('PAGEHEADING', get_string('howimportyourportfolio', 'import'));
     $smarty->assign('pagedescription', get_string('howimportportfoliodescription', 'import'));
     $smarty->assign('form', $form);
@@ -321,6 +324,7 @@ function do_import() {
     }
 
     $smarty = smarty();
+    setpageicon($smarty, 'icon-download');
     $smarty->assign('PAGEHEADING', get_string('importresult', 'import'));
     $smarty->assign('form', $result);
     $smarty->display('form.tpl');

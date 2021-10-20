@@ -10,14 +10,16 @@
  */
 
 define('INTERNAL', 1);
-define('MENUITEM', 'myportfolio');
-
 require(dirname(dirname(dirname(__FILE__))) . '/init.php');
 define('TITLE', get_string('editcomment', 'artefact.comment'));
 safe_require('artefact', 'comment');
+require_once('view.php');
 
 $id = param_integer('id');
 $viewid = param_integer('view');
+$view = new View ($viewid);
+View::set_nav($view->get('group'), $view->get('institution'), false, false, false);
+
 $comment = new ArtefactTypeComment($id);
 
 if ($USER->get('id') != $comment->get('author')) {
@@ -53,7 +55,7 @@ $elements['message'] = array(
     'rows'         => 5,
     'cols'         => 80,
     'defaultvalue' => $comment->get('description'),
-    'rules'        => array('maxlength' => 8192),
+    'rules'        => array('maxlength' => 1000000),
 );
 if (get_config_plugin('artefact', 'comment', 'commentratings')) {
     $elements['rating'] = array(
@@ -111,6 +113,7 @@ function edit_comment_submit(Pieform $form, $values) {
     $owner = $view->get('owner');
     $group = $comment->get('group');
     $newdescription = EmbeddedImage::prepare_embedded_images($values['message'], 'comment', $comment->get('id'), $group);
+    $newdescription = ArtefactTypeComment::remove_comments_classes($newdescription);
     $comment->set('description', $newdescription);
     $approvecomments = $view->get('approvecomments');
     if (!empty($group) && ($approvecomments || (!$approvecomments && $view->user_comments_allowed($USER) == 'private')) && $values['ispublic'] && !$USER->can_edit_view($view)) {

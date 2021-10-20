@@ -1,13 +1,12 @@
 // // modifications for list elements such a list of pages, collections
 
-// Left panel
+// Left card
 .list-group {
     margin-bottom: 0;
     a {
         // color: inherit;
         &.tag {
             display:inline-block;
-            @extend .text-success;
         }
         &.text-success {
              @extend .text-success;
@@ -17,12 +16,14 @@
         }
 
     }
-    .panel &,
-    .panel-body & {
+    .card &,
+    .card-body & {
         margin-bottom: 0;
     }
-    .user-panel & {
+    .user-card & {
         min-height: 41px;
+        max-height: 400px;
+        overflow-y: auto;
     }
 
     .list-nested {
@@ -35,6 +36,7 @@
         }
     }
     &.list-group-unbordered {
+        border: 0;
         li {
             border:0;
             padding: 5px 7px;
@@ -53,17 +55,28 @@
     }
 
     &.attachment-incontent {
-        border-left: 1px solid $list-group-border; // Full Journal attachment list block
+        border-left: 1px solid $list-group-border-color; // Full Journal attachment list block
     }
 }
 
+.list-group-item,
+.usericon-heading {
+    .inner-link.with-introduction {
+        span {
+            margin-right: 5px;
+        }
+    }
+}
 
 .list-group-item-heading {
     font-family: $font-family-serif;
     font-weight: 300;
+    margin-top: 0;
+    margin-bottom: 5px;
     a {
         &:hover {
             color: $link-color;
+            text-decoration: none;
             &.inner-link {
                 text-decoration: underline;
             }
@@ -77,29 +90,47 @@
     }
 
     .collection-item & {
-        font-size: $font-size-h3;
+        font-size: $h3-font-size;
+    }
+
+    .postedon {
+        font-family: $font-family-base;
+    }
+
+    .text-small {
+        font-family: $font-family-base;
     }
 }
 
-h4.list-group-item-heading {
-    font-size: $font-size-base + 1;
+.list-group-item h4.list-group-item-heading {
+    font-size: $font-size-base + 0.0715;
+    margin-bottom: 5px;
+    a {
+        padding: 0;
+    }
 }
 
 .list-group-item h5 {
-    font-size: $font-size-base + 1;
+    font-size: $font-size-base + 0.0715;
 }
 
 .list-group-item-warning {
+    background-color: $state-warning-bg;
     .list-group-item-heading {
         color: $state-warning-text;
 
+    }
+}
+.list-group-item-private {
+    background-color: $gray-100;
+    .text-midtone {
+        color: $theme-text-color;
     }
 }
 
 // Sidebar notification item styles
 .list-group-item-profile-notification {
     word-wrap: normal;
-    word-break: break-all;
     white-space: normal;
     &:first-child {
         padding-right: 80px;
@@ -111,13 +142,14 @@ h4.list-group-item-heading {
     padding: 0;
     a {
         @extend .text-default;
-        font-size: $font-size-small;
+        font-size: $font-size-sm;
         display: block;
         padding: 10px 15px;
+        color: $link-color;
         &:hover {
-            background: darken(#f0f0f0, 0.5%);
+            background: #efefef;
             text-decoration: none;
-            color: darken($link-color, 5%);
+            color:$link-hover-color;
         }
         small {
             color: $link-color;
@@ -143,23 +175,32 @@ h4.list-group-item-heading {
         position: relative;
         padding-left: 50px;
         min-height: 50px;
+        line-height: 28px;
 
         .user-icon {
             position: absolute;
             left: 20px;
             top: 15px;
         }
+
+        .user-name {
+            display: inline-block;
+            vertical-align: middle;
+            line-height: 1.5;
+        }
     }
 }
 
 // list-group-item with btn-group
 .list-group-item {
+    border-left-width: 0;
+    border-right-width: 0;
     &.draft,
     &.list-group-item-warning {
         @extend .list-group-item-warning;
     }
     &.published {
-        background: lighten($panel-default-heading-bg, 1%);
+        background: scale-color($card-header-bg, $lightness: 50%);
     }
     &.flush {
         padding: 10px 0;
@@ -169,27 +210,27 @@ h4.list-group-item-heading {
     }
     .list-group-item-heading {
         float: none;
-        @media (min-width: $screen-sm-min) {
+        @include media-breakpoint-up(md) {
             float: left;
         }
-        .panel & {
+        .card & {
             float: none;
         }
     }
     .list-group-item-controls {
         float: none;
-        @media (min-width: $screen-sm-min) {
+        @include media-breakpoint-up(md) {
             float: right;
         }
         // For planlist page
         .btn-group-top {
             margin-top: 0;
             float:none;
-            @media (min-width: $screen-sm-min) {
+            @include media-breakpoint-up(md) {
                 margin-top: 5px;
             }
-            @media (min-width: $screen-md-min) {
-                margin-top: -10px;
+            @include media-breakpoint-up(lg) {
+                margin-top: -13px;
             }
         }
     }
@@ -198,7 +239,7 @@ h4.list-group-item-heading {
     }
     .btn-title {
         padding-left: 5px;
-        @media (max-width: $screen-sm-min) {
+        @include media-breakpoint-down(md) {
             @include sr-only;
         }
     }
@@ -207,15 +248,10 @@ h4.list-group-item-heading {
         padding-bottom: 8px;
         .user-icon {
             display: block;
-            margin: 0 10px 0 0;
-            &.small-icon {
-                width: 35px;
-                height: 35px;
-            }
+            margin: 0 5px 0 0;
         }
         .list-group-item-heading {
             margin: 0;
-            width: 50%;
             &.middle {
                 margin: 10px 0;
             }
@@ -228,18 +264,23 @@ h4.list-group-item-heading {
         @extend .clearfix;
         margin: 10px 0;
     }
+    &.ui-sortable-handle {
+        border-bottom: 1px solid $list-group-border-color;
+    }
 }
 
 .list-group-item-default{
-    background-color: rgba($brand-default, 0.5);
+    background-color: rgba(scale-color(theme-color("secondary"), $lightness: 62.75), 0.5);
 }
 
 .list-group-item-text {
     margin-top: 5px;
+    background-color: transparent;
+    line-height: 1.3;
 }
 
-// Modifiy for list-groups in panels
-.panel > .block {
+// Modifiy for list-groups in cards
+.card > .block {
     > .list-group {
         margin-bottom: 0;
     }
@@ -249,8 +290,8 @@ h4.list-group-item-heading {
         }
         &:last-child .list-group-item:last-child{
             border-bottom: 0;
-            border-bottom-right-radius: 3px;
-            border-bottom-left-radius: 3px;
+            border-bottom-right-radius: $card-border-radius;
+            border-bottom-left-radius: $card-border-radius;
         }
     }
 }
@@ -266,10 +307,11 @@ h4.list-group-item-heading {
     }
     + .pagination-container {
         padding-top: 10px;
+        padding-bottom: 10px;
     }
 }
 
-.panel-heading + .block > .list-group .list-group-item:first-child {
+.list-group + .card-footer {
     border-top-width: 0;
 }
 
@@ -282,15 +324,20 @@ h4.list-group-item-heading {
             border-bottom: 0;
         }
     }
+    .list-group-item {
+        .list-group-item-heading {
+            float: none;
+        }
+    }
 }
 
 .annotation-feedback {
-    border-top: 1px solid $list-group-border !important;
+    border-top: 1px solid $list-group-border-color !important;
 }
 
 .feedback.modal {
     .btn-group-top.comment-item-buttons {
-        margin-top: -10px;
+        margin-top: -13px;
     }
 }
 
@@ -301,7 +348,7 @@ h4.list-group-item-heading {
     -webkit-column-gap: 20px;
     column-count: 3;
     column-gap: 20px;
-    @media (max-width: $screen-sm-min) {
+    @include media-breakpoint-down(md) {
         -moz-column-count: 2;
         -moz-column-gap: 20px;
         -webkit-column-count: 2;
@@ -324,4 +371,150 @@ h4.list-group-item-heading {
 .showmore {
     text-align: center;
     clear: both;
+    width: 100%;
+    cursor: pointer;
+}
+
+.card.bt-wall > .block .list-group:last-child .list-group-item:last-child {
+    border-bottom: 1px solid $list-group-border;
+}
+
+.bt-entireresume,
+.bt-entireresume-editor {
+    .list-group {
+        h4.title {
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .resume-content {
+            h5.title {
+              font-weight: bold;
+            }
+            .card-body {
+              padding: 0 0 15px 0;
+            }
+        }
+    }
+}
+
+.bt-groupviews,
+.bt-groupviews-editor {
+    h4.title {
+        font-weight: bold;
+        font-size: $font-size-base;
+        padding: 10px 0;
+        border-bottom: 1px solid $list-group-border;
+        margin: 0;
+    }
+}
+
+.bt-plans,
+.bt-plans-editor {
+    h4.title {
+        font-weight: bold;
+        font-size: $font-size-base;
+        margin: 0;
+        padding-bottom: 10px;
+    }
+}
+
+.memberswrap,
+#friendslist {
+    .list-group-item {
+        .user-icon {
+            margin-top: 0;
+            margin-left: 0;
+        }
+        h4.list-group-item-heading {
+            font-size: $h4-font-size;
+        }
+        .detail {
+            margin-left: 53px;
+        }
+    }
+}
+
+// filelist in modal
+.modal-body {
+    .list-group-item {
+        .list-group-item-heading {
+            float: none;
+        }
+    }
+}
+
+// files for download and attachment files
+.file-download-list,
+.has-attachment {
+    .card-header {
+        border-bottom: 0;
+    }
+    .list-group {
+        .list-group-item {
+            .icon-on-hover ~ .icon-action {
+                left: 0;
+            }
+            .title {
+                max-width: 80%;
+                display: inline-block;
+            }
+            img.file-icon,
+            .icon.text-default {
+                vertical-align: top;
+            }
+            .icon-download {
+                position: relative;
+                top: 0;
+            }
+        }
+    }
+}
+
+// Rmove some list's first child top border when they don't have anything between card header and list
+.card.card-secondary {
+  > .block,
+  > .block > .listing,
+  > .block .file-download-list,
+  > .block .forumposts,
+  > .block .blog {
+    > .list-group {
+      .list-group-item:first-child,
+      + .list-group-item:first-child,
+      .block-header:first-child + .list-group-item {
+        border-top: 0;
+      }
+    }
+  }
+  // exceptions
+  &.bt-taggedposts > .block > .list-group,
+  &.bt-taggedposts-editor > .block > .list-group,
+  .list-group .list-group {
+    .list-group-item:first-child,
+    + .list-group-item:first-child,
+    .block-header:first-child + .list-group-item {
+      border-top: 1px solid $list-group-border-color;
+    }
+  }
+
+  &.bt-plans .block .listing,
+  &.bt-plans-editor .block .listing {
+    h4 + .list-group,
+    p + .list-group,
+    .tags + .list-group {
+      .list-group-item:first-child,
+      + .list-group-item:first-child,
+      .block-header:first-child + .list-group-item {
+        border-top: 1px solid $list-group-border-color;
+      }
+    }
+  }
+
+  // leave the bottom border in last child in card-secondary
+  .list-group {
+      &:last-child .list-group-item:last-child{
+          border-bottom: 1px solid $list-group-border-color;
+          border-bottom-right-radius: 0;
+          border-bottom-left-radius: 0;
+      }
+  }
 }

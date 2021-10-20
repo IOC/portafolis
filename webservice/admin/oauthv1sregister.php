@@ -117,6 +117,10 @@ function webservices_server_submit(Pieform $form, $values) {
                                 DELETE FROM {oauth_server_token}
                                 WHERE osr_id_ref = ?
                                 ', array($dbserver->id));
+            delete_records_sql('
+                                DELETE FROM {lti_assessment}
+                                WHERE oauthserver = ?
+                                ', array($dbserver->id));
             $store->deleteServer($dbserver->consumer_key, $dbserver->userid, $is_admin);
             $SESSION->add_ok_msg(get_string('oauthserverdeleted', 'auth.webservice'));
         }
@@ -128,6 +132,13 @@ function webservices_server_submit(Pieform $form, $values) {
         }
     }
     redirect('/webservice/admin/oauthv1sregister.php');
+}
+
+function webservice_oauth_server_validate(Pieform $form, $values) {
+    $owner = array_diff($values['user'], array(''));
+    if (empty($owner)) {
+        $form->set_error('user', get_string('needtosetowner', 'auth.webservice'));
+    }
 }
 
 function webservice_oauth_server_submit(Pieform $form, $values) {
@@ -149,6 +160,13 @@ function webservice_oauth_server_submit(Pieform $form, $values) {
                     'consumer_secret'   => $dbserver->consumer_secret,
                     'id'                => $values['id'],
        );
+        if ($USER->get('admin') && isset($values['user'])) {
+            $useridchange = !empty($values['user'][0]) ? $values['user'][0] : false;
+            if ($useridchange) {
+                $app['userid'] = $useridchange;
+            }
+        }
+
         $key = $store->updateConsumer($app, $USER->get('id'), true);
         $c = (object) $store->getConsumer($key, $USER->get('id'), true);
         if (empty($c)) {
@@ -168,7 +186,7 @@ $pieform = pieform_instance($form);
 $form = $pieform->build(false);
 
 $smarty = smarty();
-setpageicon($smarty, 'icon-puzzle-piece');
+setpageicon($smarty, 'icon-external-link-alt');
 safe_require('auth', 'webservice');
 PluginAuthWebservice::menu_items($smarty, 'webservice/oauthconfig');
 $smarty->assign('form', $form);
@@ -178,10 +196,12 @@ function webservice_main_submit(Pieform $form, $values) {
 }
 
 function webservice_server_edit_form($dbserver, $sopts, $iopts, $disabled = array()) {
+    global $USER;
 
     $server_details =
         array(
             'name'             => 'webservice_oauth_server',
+            'validatecallback' => 'webservice_oauth_server_validate',
             'successcallback'  => 'webservice_oauth_server_submit',
             'jsform'           => false,
             'elements'   => array(
@@ -216,11 +236,32 @@ function webservice_server_edit_form($dbserver, $sopts, $iopts, $disabled = arra
         'type'         => 'text',
     );
 
-    $server_details['elements']['user'] = array(
-        'title'        => get_string('serviceuser', 'auth.webservice'),
-        'value'        =>  get_field('usr', 'username', 'id', $dbserver->userid),
-        'type'         => 'html',
-    );
+    if ($USER->get('admin')) {
+        // we can set another user as service owner
+        $server_details['elements']['user'] = array(
+            'title'        => get_string('serviceuser', 'auth.webservice'),
+            'defaultvalue'        => array($dbserver->userid),
+            'type' => 'autocomplete',
+            'ajaxurl' => get_config('wwwroot') . 'webservice/admin/users.json.php',
+            'initfunction' => 'translate_ids_to_names',
+            'multiple' => true,
+            'ajaxextraparams' => array(),
+            'extraparams' => array(
+                'maximumSelectionLength' => 1
+            ),
+            'width' => '280px',
+            'rules' => array(
+                'required' => true,
+            ),
+        );
+    }
+    else {
+        $server_details['elements']['user'] = array(
+            'title'        => get_string('serviceuser', 'auth.webservice'),
+            'value'        => get_field('usr', 'username', 'id', $dbserver->userid),
+            'type'         => 'html',
+        );
+    }
 
     $server_details['elements']['application_uri'] = array(
         'title'        => get_string('application_uri', 'auth.webservice'),
@@ -434,7 +475,7 @@ function webservice_server_list_form($sopts, $iopts) {
                 'value' => pieform(array(
                         'name' => 'webservices_server_edit_' . $consumer->id,
                         'renderer' => 'div',
-                        'class' => 'form-as-button pull-left',
+                        'class' => 'form-as-button float-left',
                         'elementclasses' => false,
                         'successcallback' => 'webservices_server_submit',
                         'jsform' => false,
@@ -444,8 +485,8 @@ function webservice_server_list_form($sopts, $iopts) {
                             'submit' => array(
                                 'type' => 'button',
                                 'usebuttontag' => true,
-                                'class' => 'btn-default btn-xs',
-                                'value' => '<span class="icon icon-pencil icon-lg" role="presentation" aria-hidden="true"></span><span class="sr-only">' . get_string('editspecific', 'mahara', $consumer->application_title) . '</span>',
+                                'class' => 'btn-secondary btn-sm',
+                                'value' => '<span class="icon icon-pencil-alt icon-lg" role="presentation" aria-hidden="true"></span><span class="sr-only">' . get_string('editspecific', 'mahara', $consumer->application_title) . '</span>',
                                 'elementtitle' => get_string('editspecific', 'mahara', $consumer->application_title),
                             ),
                         ),
@@ -454,7 +495,7 @@ function webservice_server_list_form($sopts, $iopts) {
                     pieform(array(
                         'name' => 'webservices_server_delete_' . $consumer->id,
                         'renderer' => 'div',
-                        'class' => 'form-as-button pull-left',
+                        'class' => 'form-as-button float-left',
                         'elementclasses' => false,
                         'successcallback' => 'webservices_server_submit',
                         'jsform' => false,
@@ -464,8 +505,9 @@ function webservice_server_list_form($sopts, $iopts) {
                             'submit' => array(
                                 'type' => 'button',
                                 'usebuttontag' => true,
-                                'class' => 'btn-default btn-xs',
-                                'value' => '<span class="icon icon-trash icon-lg text-danger" role="presentation" aria-hidden="true"></span><span class="sr-only">'.get_string('deletespecific', 'mahara', $consumer->application_title).'</span>',
+                                'class' => 'btn-secondary btn-sm',
+                                'value' => '<span class="icon icon-trash-alt icon-lg text-danger" role="presentation" aria-hidden="true"></span><span class="sr-only">'.get_string('deletespecific', 'mahara', $consumer->application_title).'</span>',
+                                'confirm' => get_string('confirmdeleteexternalapp', 'auth.webservice'),
                                 'elementtitle' => get_string('deletespecific', 'mahara', $consumer->application_title),
                             ),
                         ),
@@ -493,7 +535,7 @@ function webservice_server_list_form($sopts, $iopts) {
                         pieform(array(
                             'name' => 'webservices_server_config_' . $consumer->id,
                             'renderer' => 'div',
-                            'class' => 'form-as-button pull-left',
+                            'class' => 'form-as-button float-left',
                             'elementclasses' => false,
                             'successcallback' => 'webservices_server_submit',
                             'jsform' => false,
@@ -503,7 +545,7 @@ function webservice_server_list_form($sopts, $iopts) {
                                 'submit' => array(
                                     'type' => 'button',
                                     'usebuttontag' => true,
-                                    'class' => 'btn-default btn-xs',
+                                    'class' => 'btn-secondary btn-sm',
                                     'value' => '<span class="icon icon-cog icon-lg " role="presentation" aria-hidden="true"></span><span class="sr-only">'.get_string('managespecific', 'mahara', $consumer->application_title).'</span>',
                                     'elementtitle' => get_string('managespecific', 'mahara', $consumer->application_title),
                                 ),
@@ -658,7 +700,7 @@ function update_oauth_server_config($serverid, $key, $value) {
         }
     }
     else {
-        $config = new StdClass;
+        $config = new stdClass();
         $config->oauthserverregistryid = $serverid;
         $config->field = $key;
         $config->value = $value;
@@ -682,4 +724,14 @@ function get_module_from_serverid($serverid) {
         return explode("/", $consumer->component);
     }
     return array('auth', 'webservice');
+}
+
+/**
+ * Translate the supplied user id to it's display name
+ *
+ * @param array $ids  User id number
+ * @return object $results containing id and text values
+ */
+function translate_ids_to_names(array $ids) {
+    return translate_user_ids_to_names($ids);
 }

@@ -1,16 +1,16 @@
 {if $myviews}
     <div class="list-group">
-        <div id="myviewlist" class="list-group">
+        <div id="myviewlist">
             {$myviews.tablerows|safe}
         </div>
     {if $myviews.pagination}
-        <div id="myviews_page_container" class="hidden">{$myviews.pagination|safe}</div>
+        <div id="myviews_page_container" class="d-none">{$myviews.pagination|safe}</div>
     {/if}
     {if $myviews.pagination_js}
-    <script type="application/javascript">
+    <script>
         jQuery(function($) {literal}{{/literal}
             {$myviews.pagination_js|safe}
-            $('#myviews_page_container').removeClass('hidden');
+            $('#myviews_page_container').removeClass('d-none');
         {literal}}{/literal});
     </script>
     {/if}

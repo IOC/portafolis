@@ -426,7 +426,9 @@ function auth_setup () {
         $authinstance = $SESSION->get('authinstance');
         if ($authinstance) {
             $authobj = AuthFactory::create($authinstance);
-            $authobj->logout();
+            if ($authobj) {
+                $authobj->logout();
+            }
         }
         else {
             log_debug("Strange: user " . $USER->get('username') . " had no authinstance set in their session");
@@ -446,7 +448,7 @@ function auth_setup () {
         // out of the admin section
         if (in_admin_section()) {
             // Reload site admin/staff permissions
-            $realuser = get_record('usr', 'id', $USER->id, null, null, null, null, 'admin,staff');
+            $realuser = get_record('usr', 'id', $USER->id, null, null, null, null, '"admin",staff');
             if (!$USER->get('admin') && $realuser->admin) {
                 // The user has been made into an admin
                 $USER->admin = 1;
@@ -481,8 +483,9 @@ function auth_setup () {
                 // they're using the local login form
                 $mnetuser = $USER->get('id');
             }
-
-            $authobj->logout();
+            if ($authobj) {
+                $authobj->logout();
+            }
             $USER->logout();
 
             if ($mnetuser != 0) {
@@ -523,6 +526,11 @@ function auth_setup () {
             return;
         }
 
+        // Allow auth plugins to try logging in the user.
+        if (auth_plugins_call_pre_loginpage_hook()) {
+            return;
+        }
+
         // Check if the page is public or the site is configured to be public.
         if (defined('PUBLIC') && !param_exists('login')) {
             return;
@@ -536,6 +544,265 @@ function auth_setup () {
         auth_draw_login_page(null, $form);
         exit;
     }
+}
+
+/**
+* Check that the session handlers are okay.
+*
+**/
+function auth_configure_session_handlers($sessiontype) {
+    if ($sessiontype == 'site') {
+        $sessionhandler = get_config('sessionhandler');
+    }
+    else if ($sessiontype == 'saml') {
+        $sessionhandler = get_config('ssphpsessionhandler');
+    }
+    if (empty($sessionhandler)) {
+        if (is_memcache_configured()) {
+            $sessionhandler = 'memcached';
+        }
+        else {
+            require_once(get_config('docroot') . 'auth/saml/lib.php');
+            if (is_redis_configured()) {
+                $sessionhandler = 'redis';
+            }
+            else if (is_sql_configured()) {
+                $sessionhandler = 'sql';
+            }
+        }
+    }
+
+    switch ($sessionhandler) {
+        case 'memcache':
+            if ($sessiontype == 'site') {
+                throw new ConfigSanityException(get_string('memcacheusememcached', 'error'));
+                break;
+            }
+        case 'memcached':
+            if (is_memcache_configured()) {
+                if ($sessiontype == 'site') {
+                    if (!extension_loaded(get_config('sessionhandler'))) {
+                        throw new ConfigSanityException(get_string('nophpextension', 'error', get_config('sessionhandler')));
+                    }
+                    ini_set('session.save_handler', 'memcached');
+                    $memcacheservers = get_memcache_servers(true);
+                    ini_set('session.save_path', $memcacheservers);
+                    $sess = new MemcachedSession();
+                    session_set_save_handler($sess, true);
+                }
+                else if ($sessiontype == 'saml') {
+                    if (is_memcache_configured()) {
+                        return array(
+                            'name' => 'memcached',
+                            'config' => get_memcache_servers(),
+                        );
+                    }
+                }
+            }
+            else {
+                //something is wrong with the memcache config
+                 throw new ConfigSanityException(get_string('nomemcacheserversdefined', 'error', get_config('sessionhandler')));
+            }
+            break;
+        case 'file':
+            if ($sessiontype == 'site') {
+                $sessionpath = get_config('sessionpath');
+                ini_set('session.save_path', '3;' . $sessionpath);
+                // Attempt to create session directories
+                if (!is_dir("$sessionpath/0")) {
+                    // Create three levels of directories, named 0-9, a-f
+                    Session::create_directory_levels($sessionpath);
+                }
+            }
+            break;
+        case 'redis':
+            if (!extension_loaded('redis')) {
+                throw new ConfigSanityException(get_string('nophpextension', 'error', get_config('sessionhandler')));
+            }
+            if (is_redis_configured()) {
+
+                if ($sessiontype == 'site') {
+                    $master = get_redis_master();
+                    ini_set('session.save_handler', 'redis');
+                    ini_set('session.save_path', 'tcp://' . $master->ip . ':' . $master->port . '?prefix=' . get_config('redisprefix'));
+                }
+                else if ($sessiontype == 'saml') {
+                    return array(
+                        'name' => 'redis',
+                        'sessionhandler' => 'redis',
+                        'config' => get_redis_config(),
+                    );
+                }
+            }
+            else {
+                 //something is wrong with the redis config
+                throw new ConfigSanityException(get_string('badsessionhandle', 'error', get_config('sessionhandler')));
+            }
+            break;
+        case 'sql':
+            if ($sessiontype == 'saml') {
+                if (is_sql_configured()) {
+                    return array(
+                        'name' => 'sql',
+                        'config' => get_sql_config(),
+                    );
+                }
+                else {
+                    throw new AuthInstanceException(get_string('errornovalidsessionhandler', 'auth.saml'));
+                }
+            }
+            else {
+                throw new ConfigSanityException(get_string('wrongsessionhandle', 'error', get_config('sessionhandler')));
+            }
+            break;
+        default:
+            throw new ConfigSanityException(get_string('wrongsessionhandle', 'error', get_config('sessionhandler')));
+            break;
+    }
+}
+
+function is_memcache_configured() {
+    $is_configured = false;
+    if (!class_exists('Memcached')) {
+        return $is_configured;
+    }
+
+    foreach (get_memcache_servers() as $server) {
+        $memcached = new Memcached;
+        if (!empty($server['host']) && !empty($server['port'])) {
+            $host = $server['host'];
+            $port = $server['port'];
+            $memcached->addServer($host, $port);
+            // addServer doesn't make a connection to the server
+            // but if the server is added, but not running pid will be -1
+            $server_stats = $memcached->getStats();
+            if ($server_stats[$host . ':' . $port] <= 0) {
+                $server_version = $memcached->getVersion();
+                if (!empty($server_version[$host . ':' . $port])) {
+                    $is_configured = true;
+                }
+            }
+            else if ($server_stats[$host . ':' . $port]['pid'] > 0) {
+                $is_configured = true;
+            }
+        }
+    }
+
+    return $is_configured;
+}
+
+function get_memcache_servers($string = false) {
+    $memcache_servers = array();
+    $servers = get_config('memcacheservers');
+
+    if (!$servers) {
+        $servers = '127.0.0.1:11211';
+    }
+    if ($string) {
+        return $servers;
+    }
+    $servers = explode(',', $servers);
+    foreach ($servers as $server) {
+        $url = parse_url($server);
+        $host = !empty($url['host']) ? $url['host'] : $url['path'];
+        $port = !empty($url['port']) ? $url['port'] : 11211;
+        $memcache_servers[] = array('host' => $host, 'port' => $port);
+    }
+
+    return $memcache_servers;
+}
+
+function is_redis_configured() {
+    return (bool) get_redis_master();
+}
+
+function get_redis_master() {
+    $master = null;
+    foreach (get_redis_servers() as $server) {
+        if (!empty($server['server']) && !empty($server['mastergroup']) && !empty($server['prefix'])) {
+            require_once(get_config('libroot') . 'redis/sentinel.php');
+            $sentinel = new sentinel($server['server']);
+            $master = $sentinel->get_master_addr($server['mastergroup']);
+        }
+    }
+
+    return $master;
+}
+
+function get_redis_servers() {
+    $redissentinelservers = get_config('redissentinelservers');
+    $redismastergroup = get_config('redismastergroup');
+    $redisprefix = get_config('redisprefix');
+    $redis_servers[] = array(
+        'server' => $redissentinelservers,
+        'mastergroup' => $redismastergroup,
+        'prefix' => $redisprefix
+    );
+
+    return $redis_servers;
+}
+
+function get_redis_config() {
+    $servers = get_redis_servers();
+    $master = get_redis_master();
+    return array(
+        'host' => $master->ip,
+        'port' => (int)$master->port,
+        'prefix' => $servers[0]['prefix']
+    );
+}
+
+function is_sql_configured() {
+    $config = get_sql_config();
+    try {
+        $connection = new PDO($config['dsn'], $config['username'], $config['password']);
+        return true;
+    }
+    catch (PDOException $e) {
+        return false;
+    }
+}
+
+function get_sql_config() {
+    return array(
+        'dsn' => get_config('ssphpsqldsn'),
+        'username' => get_config('ssphpsqlusername'),
+        'password' => get_config('ssphpsqlpassword'),
+        'prefix' => get_config('ssphpsqlprefix'),
+    );
+}
+
+/**
+ * Allow auth plugins a chance to authenticate or redirect as needed.
+ *
+ * It will call the 'pre_loginpage_hook' for each auth plugin available,
+ * if any of them completes the login it returns immediately.
+ *
+ * Similar to: https://tracker.moodle.org/browse/MDL-48887
+ *
+ * @return bool If any plugin authenticated the user.
+ */
+function auth_plugins_call_pre_loginpage_hook() {
+    global $USER;
+
+    $methodname = 'pre_loginpage_hook';
+    $instances = auth_get_auth_instances();
+
+    foreach ($instances as $instance) {
+        $auth = AuthFactory::create($instance->id);
+        if ($auth === false) {
+            continue;
+        }
+        if (!method_exists($auth, $methodname)) {
+            continue;
+        }
+        $auth->$methodname();
+        if ($USER->is_logged_in()) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /**
@@ -738,7 +1005,14 @@ function auth_get_available_auth_types($institution=null) {
             $row->description = get_string('notusable', 'auth.' . $row->name);
         }
     }
-    usort($result, create_function('$a, $b', 'if ($a->is_usable != $b->is_usable) return $b->is_usable; return strnatcasecmp($a->title, $b->title);'));
+    usort($result, function($a, $b) {
+        if ($a->is_usable != $b->is_usable) {
+            return $b->is_usable;
+        }
+        else {
+            return strnatcasecmp($a->title, $b->title);
+        }
+    });
 
     return $result;
 }
@@ -797,11 +1071,12 @@ function privacy_form($ignoreagreevalue = false, $ignoreformswitch = false) {
             'value' => $privacy->id,
         );
         if (!$ignoreformswitch) {
+            $description = get_string('register' . $privacy->type, 'admin');
             $elements[$privacy->institution . $privacy->type] = array(
                 'type'         => 'switchbox',
                 'title'        => get_string('privacyagreement', 'admin', get_string($privacy->type . 'lowcase', 'admin')),
                 'description'  => $privacy->agreed ? get_string('privacyagreedto', 'admin',
-                    get_string($privacy->type . 'lowcase', 'admin'), format_date(strtotime($privacy->agreedtime))) : '',
+                    get_string($privacy->type . 'lowcase', 'admin'), format_date(strtotime($privacy->agreedtime))) : $description,
                 'defaultvalue' => $privacy->agreed ? true : false,
                 'disabled'     => ($privacy->agreed && $ignoreagreevalue) ? true : false,
                 'required' => true,
@@ -844,6 +1119,11 @@ function privacy_form($ignoreagreevalue = false, $ignoreformswitch = false) {
  */
 function auth_check_required_fields() {
     global $USER, $SESSION;
+
+    if ($USER->get('id') == 0) {
+        // We shouldn't be checking either logged out user or User = 0
+        throw new ConfigSanityException(get_string('invaliduser', 'error'));
+    }
 
     // for the case we are mascarading as the user and we want to return to be admin user
     $restoreadmin = param_integer('restore', 0);
@@ -1050,6 +1330,7 @@ function auth_check_required_fields() {
         // Display a message if there is only 1 required field and this field is email whose validation has been sent
         $elements['submit'] = array(
                 'type' => 'submit',
+                'class' => 'btn-primary',
                 'value' => get_string('continue', 'admin')
         );
         $form = pieform(array(
@@ -1340,7 +1621,7 @@ function auth_draw_login_page($message=null, Pieform $form=null) {
     }
 
     $externallogin = get_config('externallogin');
-    if ($externallogin) {
+    if ($externallogin && !param_alphanum('override', false)) {
         $externallogin = preg_replace('/{shorturlencoded}/', urlencode(get_relative_script_path()), $externallogin);
         $externallogin = preg_replace('/{wwwroot}/', get_config('wwwroot'), $externallogin);
         redirect($externallogin);
@@ -1365,11 +1646,6 @@ function auth_draw_login_page($message=null, Pieform $form=null) {
  */
 function auth_get_login_form() {
     $elements = auth_get_login_form_elements();
-
-    $elements['login']['elements']['login_submitted'] = array(
-        'type'  => 'hidden',
-        'value' => 1
-    );
 
     // Change login redirection for clean urls
     $url = get_relative_script_path();
@@ -1552,7 +1828,7 @@ function get_login_form_js($form) {
     $strcookiesnotenabled    = json_encode(get_string('cookiesnotenabled'));
     $cookiename = get_config('cookieprefix') . 'ctest';
     $js = <<< EOF
-<script type="application/javascript">
+<script>
 var loginbox = jQuery('#loginform_container');
 document.cookie = "$cookiename=1";
 if (document.cookie) {
@@ -1663,7 +1939,7 @@ class AuthFactory {
  * @param array  $values The submitted values
  */
 function login_validate(Pieform $form, $values) {
-    if (!empty($values['login_submitted'])) {
+    if (isset($values['pieform_login'])) {  // only set by $form->build()
         if (empty($values['login_username']) || empty($values['login_password'])) {
             $form->set_error(null, get_string('loginfailed'));
         }
@@ -1716,86 +1992,91 @@ function login_submit(Pieform $form, $values) {
             $USER->username = $username;
 
             reset($authinstances);
-            while ((list(, $authinstance) = each($authinstances)) && false == $authenticated) {
-                $auth = AuthFactory::create($authinstance->id);
-                if (!$auth->can_auto_create_users()) {
-                    continue;
-                }
-                // catch semi-fatal auth errors, but allow next auth instance to be
-                // tried
-                try {
-                    if ($auth->authenticate_user_account($USER, $password)) {
-                        $authenticated = true;
-                    }
-                    else {
+            foreach ($authinstances as $authinstance) {
+                if (false == $authenticated) {
+                    $auth = AuthFactory::create($authinstance->id);
+                    if (!$auth->can_auto_create_users()) {
                         continue;
                     }
-                }
-                catch  (AuthInstanceException $e) {
-                    continue;
-                }
-                catch (UninitialisedAuthException $ue) {
-                    log_info('Malformed auth instance "' . $auth->instancename . '" for institution "' . $auth->institution . '"');
-                    continue;
-                }
-
-                // Check now to see if the institution has its maximum quota of users
-                require_once('institution.php');
-                $institution = new Institution($authinstance->institution);
-                if ($institution->isFull()) {
-                    $institution->send_admin_institution_is_full_message();
-                    throw new AuthUnknownUserException('Institution has too many users');
-                }
-
-                $USER->authinstance = $authinstance->id;
-                $userdata = $auth->get_user_info($username);
-
-                if (empty($userdata)) {
-                    throw new AuthUnknownUserException("\"$username\" is not known");
-                }
-
-                // Check for a suspended institution
-                if ($authinstance->suspended) {
-                    $sitename = get_config('sitename');
-                    throw new AccessTotallyDeniedException(get_string('accesstotallydenied_institutionsuspended', 'mahara', $authinstance->displayname, $sitename));
-                }
-
-                // We have the data - create the user
-                $USER->lastlogin = db_format_timestamp(time());
-                if (isset($userdata->firstname)) {
-                    $USER->firstname = sanitize_firstname($userdata->firstname);
-                }
-                if (isset($userdata->lastname)) {
-                    $USER->lastname = sanitize_firstname($userdata->lastname);
-                }
-                if (isset($userdata->email)) {
-                    $USER->email = sanitize_email($userdata->email);
-                }
-                else {
-                    // The user will be asked to populate this when they log in.
-                    $USER->email = null;
-                }
-
-                $profilefields = array();
-                foreach (array('studentid', 'preferredname') as $pf) {
-                    if (isset($userdata->$pf)) {
-                        $sanitize = 'sanitize_' . $pf;
-                        if (($USER->$pf = $sanitize($userdata->$pf)) !== '') {
-                            $profilefields[$pf] = $USER->$pf;
+                    // catch semi-fatal auth errors, but allow next auth instance to be
+                    // tried
+                    try {
+                        if ($auth->authenticate_user_account($USER, $password)) {
+                            $authenticated = true;
+                        }
+                        else {
+                            continue;
                         }
                     }
-                }
+                    catch  (AuthInstanceException $e) {
+                        continue;
+                    }
+                    catch (UninitialisedAuthException $ue) {
+                        log_info('Malformed auth instance "' . $auth->instancename . '" for institution "' . $auth->institution . '"');
+                        continue;
+                    }
 
-                try {
-                    // If this authinstance is a parent auth for some xmlrpc authinstance, pass it along to create_user
-                    // so that this username also gets recorded as the username for sso from the remote sites.
-                    $remoteauth = $auth->is_parent_authority();
-                    create_user($USER, $profilefields, $institution, $remoteauth);
-                    $USER->reanimate($USER->id, $authinstance->id);
-                }
-                catch (Exception $e) {
-                    db_rollback();
-                    throw $e;
+                    // Check now to see if the institution has its maximum quota of users
+                    require_once('institution.php');
+                    $institution = new Institution($authinstance->institution);
+                    if ($institution->isFull()) {
+                        $institution->send_admin_institution_is_full_message();
+                        throw new AuthUnknownUserException('Institution has too many users');
+                    }
+
+                    $USER->authinstance = $authinstance->id;
+                    $userdata = $auth->get_user_info($username);
+                    if ($userdata instanceof User) {
+                        $userdata->reanimate($userdata->id, $authinstance->id);
+                        return;
+                    }
+                    if (empty($userdata)) {
+                        throw new AuthUnknownUserException("\"$username\" is not known");
+                    }
+
+                    // Check for a suspended institution
+                    if ($authinstance->suspended) {
+                        $sitename = get_config('sitename');
+                        throw new AccessTotallyDeniedException(get_string('accesstotallydenied_institutionsuspended', 'mahara', $authinstance->displayname, $sitename));
+                    }
+
+                    // We have the data - create the user
+                    $USER->lastlogin = db_format_timestamp(time());
+                    if (isset($userdata->firstname)) {
+                        $USER->firstname = sanitize_firstname($userdata->firstname);
+                    }
+                    if (isset($userdata->lastname)) {
+                        $USER->lastname = sanitize_firstname($userdata->lastname);
+                    }
+                    if (isset($userdata->email)) {
+                        $USER->email = sanitize_email($userdata->email);
+                    }
+                    else {
+                        // The user will be asked to populate this when they log in.
+                        $USER->email = null;
+                    }
+
+                    $profilefields = array();
+                    foreach (array('studentid', 'preferredname') as $pf) {
+                        if (isset($userdata->$pf)) {
+                            $sanitize = 'sanitize_' . $pf;
+                            if (($USER->$pf = $sanitize($userdata->$pf)) !== '') {
+                                $profilefields[$pf] = $USER->$pf;
+                            }
+                        }
+                    }
+
+                    try {
+                        // If this authinstance is a parent auth for some xmlrpc authinstance, pass it along to create_user
+                        // so that this username also gets recorded as the username for sso from the remote sites.
+                        $remoteauth = $auth->is_parent_authority();
+                        create_user($USER, $profilefields, $institution, $remoteauth);
+                        $USER->reanimate($USER->id, $authinstance->id);
+                    }
+                    catch (Exception $e) {
+                        db_rollback();
+                        throw $e;
+                    }
                 }
             }
 
@@ -1824,6 +2105,13 @@ function login_submit(Pieform $form, $values) {
     $scriptname = $_SERVER['SCRIPT_NAME'];
     $scriptname = str_replace($path, '', $scriptname);
     $requesturi = $scriptname . (!empty($_SERVER['QUERY_STRING']) ? '?' . $_SERVER['QUERY_STRING'] : '');
+
+    if ($requesturi == '/' || $requesturi == '/index.php') {
+        // we are going to the homepage
+        if (get_config('homepageredirect') && !empty(get_config('homepageredirecturl'))) {
+            $requesturi = get_config('homepageredirecturl');
+        }
+    }
     redirect($requesturi);
 
 }
@@ -1938,7 +2226,7 @@ function _email_or_notify($user, $subject, $bodytext, $bodyhtml) {
     }
     catch (EmailException $e) {
         // Send a notification instead - email is invalid or disabled for this user
-        $message = new StdClass;
+        $message = new stdClass();
         $message->users = array($user->id);
         $message->subject = $subject;
         $message->message = $bodytext;
@@ -2083,45 +2371,47 @@ function auth_handle_institution_expiries() {
     // The 'expiry' flag on the usr table
     $sitename = get_config('sitename');
     $wwwroot  = get_config('wwwroot');
-    $expire   = get_config('institutionautosuspend');
     $warn     = get_config('institutionexpirynotification');
 
-    $daystoexpire = ceil($warn / 86400) . ' ';
-    $daystoexpire .= ($daystoexpire == 1) ? get_string('day') : get_string('days');
-    $expiredate = format_date(strtotime('+' . $daystoexpire), 'strftimedate');
+    // If warning time for institution expiry is set
+    if ($warn) {
+        $daystoexpire = ceil($warn / 86400) . ' ';
+        $daystoexpire .= ($daystoexpire == 1) ? get_string('day') : get_string('days');
+        $expiredate = format_date(strtotime('+' . $daystoexpire), 'strftimedate');
 
-    // Get site administrators
-    $siteadmins = get_records_sql_array('SELECT u.id, u.username, u.firstname, u.lastname, u.preferredname, u.email, u.admin, u.staff FROM {usr} u WHERE u.admin = 1', array());
+        // Get site administrators
+        $siteadmins = get_records_sql_array('SELECT u.id, u.username, u.firstname, u.lastname, u.preferredname, u.email, u.admin, u.staff FROM {usr} u WHERE u.admin = 1', array());
 
-    // Expiry warning messages
-    if ($institutions = get_records_sql_array(
-      'SELECT i.name, i.displayname FROM {institution} i ' .
-      'WHERE ' . db_format_tsfield('i.expiry', false) . ' < ? AND suspended != 1 AND expirymailsent != 1',
-      array(time() + $warn))) {
-        foreach ($institutions as $institution) {
-            $institution_displayname = $institution->displayname;
-            // Email site administrators
-            foreach ($siteadmins as $user) {
-                $user_displayname  = display_name($user);
-                _email_or_notify($user, get_string('institutionexpirywarning'),
-                    get_string('institutionexpirywarningtext_site1', 'mahara', $user_displayname, $institution_displayname, $expiredate, $sitename, $sitename),
-                    get_string('institutionexpirywarninghtml_site1', 'mahara', $user_displayname, $institution_displayname, $expiredate, $sitename, $sitename)
+        // Expiry warning messages
+        if ($institutions = get_records_sql_array(
+          'SELECT i.name, i.displayname FROM {institution} i ' .
+          'WHERE ' . db_format_tsfield('i.expiry', false) . ' < ? AND suspended != 1 AND expirymailsent != 1',
+          array(time() + $warn))) {
+            foreach ($institutions as $institution) {
+                $institution_displayname = $institution->displayname;
+                // Email site administrators
+                foreach ($siteadmins as $user) {
+                    $user_displayname  = display_name($user);
+                    _email_or_notify($user, get_string('institutionexpirywarning'),
+                        get_string('institutionexpirywarningtext_site1', 'mahara', $user_displayname, $institution_displayname, $expiredate, $sitename, $sitename),
+                        get_string('institutionexpirywarninghtml_site1', 'mahara', $user_displayname, $institution_displayname, $expiredate, $sitename, $sitename)
+                    );
+                }
+
+                // Email institutional administrators
+                $institutionaladmins = get_records_sql_array(
+                  'SELECT u.id, u.username, u.expiry, u.staff, u.admin AS siteadmin, ui.admin AS institutionadmin, u.firstname, u.lastname, u.email ' .
+                  'FROM {usr_institution} ui JOIN {usr} u ON (ui.usr = u.id) WHERE ui.admin = 1', array()
                 );
+                foreach ($institutionaladmins as $user) {
+                    $user_displayname  = display_name($user);
+                    _email_or_notify($user, get_string('institutionexpirywarning'),
+                        get_string('institutionexpirywarningtext_institution1', 'mahara', $user_displayname, $institution_displayname, $sitename, $expiredate, $wwwroot . 'contact.php', $sitename),
+                        get_string('institutionexpirywarninghtml_institution1', 'mahara', $user_displayname, $institution_displayname, $sitename, $expiredate, $wwwroot . 'contact.php', $sitename)
+                    );
+                }
+                set_field('institution', 'expirymailsent', 1, 'name', $institution->name);
             }
-
-            // Email institutional administrators
-            $institutionaladmins = get_records_sql_array(
-              'SELECT u.id, u.username, u.expiry, u.staff, u.admin AS siteadmin, ui.admin AS institutionadmin, u.firstname, u.lastname, u.email ' .
-              'FROM {usr_institution} ui JOIN {usr} u ON (ui.usr = u.id) WHERE ui.admin = 1', array()
-            );
-            foreach ($institutionaladmins as $user) {
-                $user_displayname  = display_name($user);
-                _email_or_notify($user, get_string('institutionexpirywarning'),
-                    get_string('institutionexpirywarningtext_institution1', 'mahara', $user_displayname, $institution_displayname, $sitename, $expiredate, $wwwroot . 'contact.php', $sitename),
-                    get_string('institutionexpirywarninghtml_institution1', 'mahara', $user_displayname, $institution_displayname, $sitename, $expiredate, $wwwroot . 'contact.php', $sitename)
-                );
-            }
-            set_field('institution', 'expirymailsent', 1, 'name', $institution->name);
         }
     }
 
@@ -2634,7 +2924,7 @@ function auth_generate_registration_form_js($aform, $registerconfirm) {
             }
 
             // For when select changes
-            $("#' . $institutionid . '").change(function() {
+            $("#' . $institutionid . '").on("change", function() {
                 if (this.value) {
                     if (registerconfirm[this.value] == 1) {
                         show_reason(reasonid, this.value);
@@ -2724,10 +3014,14 @@ function auth_register_validate(Pieform $form, $values) {
     }
 
     // The e-mail address cannot already be in the system
-    if (!$form->get_error('email')
-        && (record_exists('usr', 'email', $values['email'])
-        || record_exists('artefact_internal_profile_email', 'email', $values['email']))) {
-        $form->set_error('email', get_string('emailalreadytaken', 'auth.internal'));
+    if (!$form->get_error('email')) {
+        if (!$form->get_error('email') && empty($values['email'])) {
+            $form->set_error('email', get_string('invalidemailaddress', 'artefact.internal'));
+        }
+
+        if (check_email_exists($values['email'])) {
+            $form->set_error('email', get_string('emailalreadytaken', 'auth.internal'));
+        }
     }
 
     $institution = get_record_sql('
@@ -2778,7 +3072,7 @@ function auth_register_submit(Pieform $form, $values) {
         }
         if ($confirm) {
             $values['pending'] = 1;
-            $values['expiry'] = db_format_timestamp(time() + (86400 * 14)); // now + 2 weeks
+            $values['expiry'] = db_format_timestamp(time() + (int)get_config('defaultregistrationexpirylifetime'));
         }
         else {
             $values['pending'] = 0;
@@ -2798,7 +3092,7 @@ function auth_register_submit(Pieform $form, $values) {
         $extra = unserialize($values['extra']);
     }
     else {
-        $extra = new StdClass();
+        $extra = new stdClass();
     }
     $extraprivacy = array();
     if (isset($values['privacyid']) && !empty($values['privacyid'])) {
@@ -2848,23 +3142,23 @@ function auth_register_submit(Pieform $form, $values) {
                 $expirystring = get_config('defaultregistrationexpirylifetime') . ' ' . get_string('seconds', 'performance');
             }
             else if ($expirytime['units'] == 'noenddate') {
-                $expirystring = get_string('element.expiry.noenddate', 'pieforms');
+                $expirystring = get_string('element.expiry.noenddate.lowercase', 'pieforms');
             }
             else {
-                $expirystring = $expirytime['number'] . ' ' . get_string('element.expiry.' . $expirytime['units'], 'pieforms');
+                $expirystring = get_string('element.expiry.' . $expirytime['units'] . '.lowercase', 'pieforms', $expirytime['number'], $expirytime['number']);
             }
-
             // email each admin
             // @TODO Respect the notification preferences of the admins.
             foreach ($admins as $admin) {
                 $adminuser = new User();
                 $adminuser->find_by_id($admin);
+                $ownerlang = get_user_language($adminuser->get('id'));
                 email_user($adminuser, null,
-                    get_string('pendingregistrationadminemailsubject', 'auth.internal', $institution->displayname, get_config('sitename')),
-                    get_string('pendingregistrationadminemailtext', 'auth.internal',
+                    get_string_from_language($ownerlang, 'pendingregistrationadminemailsubject', 'auth.internal', $institution->displayname, get_config('sitename')),
+                    get_string_from_language($ownerlang, 'pendingregistrationadminemailtext', 'auth.internal',
                         $adminuser->firstname, $institution->displayname, $pendingregistrationslink,
                         $expirystring, $fullname, $values['email'], $values['reason'], get_config('sitename')),
-                    get_string('pendingregistrationadminemailhtml', 'auth.internal',
+                    get_string_from_language($ownerlang, 'pendingregistrationadminemailhtml', 'auth.internal',
                         $adminuser->firstname, $institution->displayname, $pendingregistrationslink, $pendingregistrationslink,
                         $expirystring, $fullname, $values['email'], $values['reason'], get_config('sitename'))
                     );
@@ -2905,7 +3199,7 @@ class PluginAuth extends Plugin {
     public static function get_event_subscriptions() {
         $subscriptions = array();
 
-        $activecheck = new StdClass;
+        $activecheck = new stdClass();
         $activecheck->plugin = 'internal';
         $activecheck->event  = 'suspenduser';
         $activecheck->callfunction = 'update_active_flag';

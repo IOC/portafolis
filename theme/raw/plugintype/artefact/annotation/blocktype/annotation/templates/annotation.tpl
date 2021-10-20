@@ -1,4 +1,4 @@
-<div class="panel-body flush">
+<div class="card-body flush">
     {$text|clean_html|safe}
 
     {if $artefact->get('tags')}
@@ -13,5 +13,5 @@
 </div>
 
 {if $addannotationscript}
-    <script type="application/javascript" src="{$addannotationscript}"></script>
+    <script src="{$addannotationscript}"></script>
 {/if}

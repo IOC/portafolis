@@ -177,14 +177,14 @@ if ($usertype == 'lastinstitution') {
 if ($usertype == 'requesters') {
     $userlistform['elements']['reject'] = array(
         'type' => 'submit',
-        'class' => 'btn-default',
+        'class' => 'btn-secondary',
         'value' => get_string('declinerequests', 'admin'),
     );
 }
 if (($usertype == 'nonmembers' || $usertype == 'lastinstitution') && $USER->get('admin')) {
     $userlistform['elements']['add'] = array(
         'type' => 'submit',
-         'class' => 'btn-default',
+         'class' => 'btn-secondary',
         'value' => get_string('addmembers', 'admin'),
     );
 }
@@ -314,7 +314,7 @@ $institutionselector = pieform(array(
 ));
 
 $smarty = smarty();
-setpageicon($smarty, 'icon-university');
+setpageicon($smarty, 'icon-user-friends');
 $smarty->assign('INLINEJAVASCRIPT', $js);
 $smarty->assign('usertypeselector', $usertypeselector);
 $smarty->assign('instructions', get_string('institutionusersinstructions' . $usertype . '1', 'admin', $userlistelement['lefttitle'], $userlistelement['righttitle']));

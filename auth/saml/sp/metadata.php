@@ -42,42 +42,39 @@ if (get_field('auth_installed', 'active', 'name', 'saml') != 1) {
     redirect();
 }
 
-if (get_config('memcacheservers') && !extension_loaded('mcrypt')) {
-    throw new AuthInstanceException(get_string_php_version('errornomcrypt', 'auth.saml'));
-}
-
 PluginAuthSaml::init_simplesamlphp();
 
-$config = SimpleSAML_Configuration::getInstance();
+$config = SimpleSAML\Configuration::getInstance();
 if ($config->getBoolean('admin.protectmetadata', false)) {
     SimpleSAML\Utils\Auth::requireAdmin();
 }
 $sourceId = 'default-sp';
-$source = SimpleSAML_Auth_Source::getById($sourceId);
+$source = SimpleSAML\Auth\Source::getById($sourceId);
 if ($source === null) {
-    throw new SimpleSAML_Error_NotFound('Could not find authentication source with id ' . $sourceId);
+    throw new SimpleSAML\Error\AuthSource($sourceId, 'Could not find authentication source.');
 }
 
-if (!($source instanceof sspmod_saml_Auth_Source_SP)) {
-    throw new SimpleSAML_Error_NotFound('Source isn\'t a SAML SP: ' . var_export($sourceId, true));
+if (!($source instanceof \SimpleSAML\Module\saml\Auth\Source\SP)) {
+    throw new SimpleSAML\Error\AuthSource($sourceId,
+        'The authentication source is not a SAML Service Provider.');
 }
 
 $entityId = $source->getEntityId();
 $spconfig = $source->getMetadata();
-$store = SimpleSAML_Store::getInstance();
+$store = \SimpleSAML\Store::getInstance();
 
 $metaArray20 = array();
 
 $slosvcdefault = array(
-    SAML2_Const::BINDING_HTTP_REDIRECT,
-    SAML2_Const::BINDING_SOAP,
+    \SAML2\Constants::BINDING_HTTP_REDIRECT,
+    \SAML2\Constants::BINDING_SOAP,
 );
 
 $slob = $spconfig->getArray('SingleLogoutServiceBinding', $slosvcdefault);
 $slol = get_config('wwwroot') . "auth/saml/sp/module.php/saml/sp/saml2-logout.php/{$sourceId}";
 
 foreach ($slob as $binding) {
-    if ($binding == SAML2_Const::BINDING_SOAP && !($store instanceof SimpleSAML_Store_SQL)) {
+    if ($binding == \SAML2\Constants::BINDING_SOAP && !($store instanceof \SimpleSAML\Store\SQL)) {
         // we cannot properly support SOAP logout
         continue;
     }
@@ -107,7 +104,7 @@ foreach ($assertionsconsumerservices as $services) {
     $acsArray = array('index' => $index);
     switch ($services) {
         case 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST':
-            $acsArray['Binding'] = SAML2_Const::BINDING_HTTP_POST;
+            $acsArray['Binding'] = \SAML2\Constants::BINDING_HTTP_POST;
             $acsArray['Location'] = get_config('wwwroot') . "auth/saml/sp/module.php/saml/sp/saml2-acs.php/{$sourceId}";
             break;
         case 'urn:oasis:names:tc:SAML:1.0:profiles:browser-post':
@@ -125,7 +122,7 @@ foreach ($assertionsconsumerservices as $services) {
         case 'urn:oasis:names:tc:SAML:2.0:profiles:holder-of-key:SSO:browser':
             $acsArray['Binding'] = 'urn:oasis:names:tc:SAML:2.0:profiles:holder-of-key:SSO:browser';
             $acsArray['Location'] = get_config('wwwroot') . "auth/saml/sp/module.php/saml/sp/saml2-acs.php/{$sourceId}";
-            $acsArray['hoksso:ProtocolBinding'] = SAML2_Const::BINDING_HTTP_REDIRECT;
+            $acsArray['hoksso:ProtocolBinding'] = \SAML2\Constants::BINDING_HTTP_REDIRECT;
             break;
     }
     $eps[] = $acsArray;
@@ -210,7 +207,7 @@ if ($orgName !== null) {
 
     $metaArray20['OrganizationURL'] = $spconfig->getLocalizedString('OrganizationURL', null);
     if ($metaArray20['OrganizationURL'] === null) {
-        throw new SimpleSAML_Error_Exception('If OrganizationName is set, OrganizationURL must also be set.');
+        throw new SimpleSAML\Error\Exception('If OrganizationName is set, OrganizationURL must also be set.');
     }
 }
 
@@ -269,7 +266,7 @@ $supported_protocols = array('urn:oasis:names:tc:SAML:1.1:protocol', SAML2_Const
 $metaArray20['metadata-set'] = 'saml20-sp-remote';
 $metaArray20['entityid'] = $entityId;
 
-$metaBuilder = new SimpleSAML_Metadata_SAMLBuilder($entityId);
+$metaBuilder = new SimpleSAML\Metadata\SAMLBuilder($entityId);
 $metaBuilder->addMetadataSP20($metaArray20, $supported_protocols);
 $metaBuilder->addOrganizationInfo($metaArray20);
 
@@ -285,16 +282,16 @@ if (isset($metaArray20['attributes']) && is_array($metaArray20['attributes'])) {
 }
 
 // sign the metadata if enabled
-$xml = SimpleSAML_Metadata_Signer::sign($xml, $spconfig->toArray(), 'SAML 2 SP');
+$xml = SimpleSAML\Metadata\Signer::sign($xml, $spconfig->toArray(), 'SAML 2 SP');
 
 if (array_key_exists('output', $_REQUEST) && $_REQUEST['output'] == 'xhtml') {
 
-    $t = new SimpleSAML_XHTML_Template($config, 'metadata.php', 'admin');
+    $t = new SimpleSAML\XHTML\Template($config, 'metadata.php', 'admin');
 
     $t->data['clipboard.js'] = true;
     $t->data['available_certs'] = $availableCerts;
     $t->data['header'] = 'saml20-sp'; // TODO: Replace with headerString in 2.0
-    $t->data['headerString'] = $t->noop('metadata_saml20-idp');
+    $t->data['headerString'] = $t->noop('metadata_saml20-sp');
     $t->data['metaurl'] = get_config('wwwroot') . "auth/saml/sp/metadata.php";
     $t->data['metadata'] = htmlspecialchars($xml);
     $t->data['metadataflat'] = '$metadata[' . var_export($entityId, true) . '] = ' . var_export($metaArray20, true) . ';';

@@ -2,13 +2,14 @@
 <h2 class="title">
     {str tag=Preview section=artefact.file}
 </h2>
-<div class="filedata-icon">
-    <a href="{$downloadpath}">
-        <img src="{$downloadpath}&maxwidth=400&maxheight=180" alt="">
-    </a>
-</div>
+<div class="flexbox">
+    <div class="filedata-icon modal-segment-heading">
+        <a href="{$downloadpath}">
+            <img src="{$downloadpath}&maxwidth=400&maxheight=180" alt="">
+        </a>
+    </div>
 {/if}
-<table class="filedata table-condensed">
+<table class="filedata table-sm modal-segment-heading">
     <tr>
         <th>{str tag=Type section=artefact.file}:</th>
         <td>{$filetype}</td>
@@ -22,13 +23,19 @@
     {if $tags}
     <tr>
         <th>{str tag=tags}:</th>
-        <td>{list_tags owner=$owner tags=$tags}</td>
+        <td>{list_tags owner=$owner tags=$tags view=$view}</td>
     </tr>
     {/if}
     {if $ownername}
     <tr>
         <th>{str tag=Owner section=artefact.file}:</th>
         <td>{$ownername}</td>
+    </tr>
+    {/if}
+    {if $uploadedby}
+    <tr>
+        <th>{str tag=uploadedby section=artefact.file}:</th>
+        <td>{$uploadedby}</td>
     </tr>
     {/if}
     <tr>
@@ -52,7 +59,10 @@
     <tr>
         <th class="sr-only">{str tag=Download section=artefact.file}:</th>
         <td>
-            <a class="btn btn-default btn-sm" href="{$downloadpath}">{str tag=Download section=artefact.file}</a>
+            <a class="btn btn-secondary btn-sm" href="{$downloadpath}">{str tag=Download section=artefact.file}</a>
         </td>
     </tr>
 </table>
+{if $artefacttype == 'image' || $artefacttype == 'profileicon'}
+</div>
+{/if}

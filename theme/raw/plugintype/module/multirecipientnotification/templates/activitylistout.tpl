@@ -1,8 +1,8 @@
 <div class="collapsible-group">
 {foreach from=$data item=item name='notification'}
-    <div class="panel panel-default collapsible notification collapsible-group {if $dwoo.foreach.notification.first}first{/if} {if $dwoo.foreach.notification.last}last{/if}">
-        <h4 class="panel-heading">
-            <label class="panel-control">
+    <div class="card collapsible notification collapsible-group {if $dwoo.foreach.notification.first}first{/if} {if $dwoo.foreach.notification.last}last{/if}">
+        <h4 class="card-header">
+            <label class="card-control">
                 {if $item->table === 'module_multirecipient_notification'}
                 <span class="control">
                     <input type="checkbox" class="tocheck" name="select-{$item->table}-{$item->id}" id="select-{$item->table}-{$item->id}">
@@ -31,16 +31,16 @@
                         </span>
                     {/if}
 
-                    {$item->subject|truncate:40}
+                    {$item->subject|str_shorten_html:50:true|safe}
 
                     <span class="metadata"> -
                         <span>
                             {str section='module.multirecipientnotification' tag='touser'}:
                         </span>
                         <span class="username">
-                            {if count($item->tousr) > 0}
+                            {if is_array($item->tousr) && count($item->tousr) > 0}
                                 {assign var="tousr" value=$item->tousr[0]}
-                                {if count($tousr['username']) > 0}
+                                {if is_array($tousr['username']) && count($tousr['username']) > 0}
                                     {$tousr['username']|truncate:$maxnamestrlength}
                                 {else}
                                     {$tousr['display']|truncate:$maxnamestrlength}
@@ -56,18 +56,18 @@
                         , {$item->date}
                         </span>
                     </span>
-                    <span class="icon icon-chevron-down collapse-indicator pull-right" role="presentation" aria-hidden="true"></span>
+                    <span class="icon icon-chevron-down collapse-indicator float-right" role="presentation" aria-hidden="true"></span>
                  </span>
             </a>
         </h4>
         <div id="notification-{$item->id}" class="collapse">
             {if $item->message}
-            <div class="panel-body {if !($item->canreplyall)} no-footer{/if}">
+            <div class="card-body {if !($item->canreplyall)} no-footer{/if}">
                 <p class="tousers recipientlist">
                         <strong>
                             {str section='module.multirecipientnotification' tag='touser'}:
                         </strong>
-                        {if count($item->tousr) > 1}
+                        {if is_array($item->tousr) && count($item->tousr) > 1}
                         <span>
                             {foreach from=$item->tousr item=tousr key=break}
                             {if ($tousr['link'])}<a href="{$tousr['link']}">{/if}
@@ -92,7 +92,7 @@
             </div>
             {/if}
             {if (($item->canreply && !$item->self) || $item->canreplyall)}
-            <div class="actions panel-footer">
+            <div class="actions card-footer">
                 <div class="url">
                     {if $item->canreply && !$item->self}
                     <a class="action" href="{$WWWROOT}module/multirecipientnotification/sendmessage.php?id={$item->fromusr}{if !$item->startnewthread}&replyto={$item->id}{/if}&returnto=outbox">

@@ -34,7 +34,7 @@
 
     /* Hide the buttons */
     .btn-group,
-    .btn-default,
+    .btn-secondary,
     .btn-primary {
         display: none !important;
     }
@@ -78,7 +78,7 @@
 
     @page {
         size: A4;
-        margin: 0;
+        margin: 1.5cm 1cm;
     }
 
     .page {
@@ -98,5 +98,31 @@
         border: 5px red solid;
         height: 256mm;
         outline: 2cm #FFEAEA solid;
+    }
+
+    .peerinstructions,
+    .pageinstructions {
+        display: none;
+    }
+
+    .pageactions {
+        display: none;
+    }
+
+    .pageheader {
+        margin: 0;
+
+        .main {
+            padding: 0;
+            margin: 0;
+
+            h1 {
+                margin: 0;
+            }
+        }
+    }
+
+    .row {
+        display: block;
     }
 }

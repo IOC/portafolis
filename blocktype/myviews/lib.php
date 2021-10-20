@@ -25,6 +25,10 @@ class PluginBlocktypeMyviews extends MaharaCoreBlocktype {
         return true;
     }
 
+    public static function single_artefact_per_block() {
+        return false;
+    }
+
     public static function get_categories() {
         return array('internal' => 33000);
     }
@@ -48,7 +52,7 @@ class PluginBlocktypeMyviews extends MaharaCoreBlocktype {
 
         $items['tablerows'] = $smarty->fetch($template);
 
-        if ($items['limit'] && $pagination) {
+        if ($items['count'] && $items['limit'] && $pagination) {
             $pagination = build_pagination(array(
                 'id' => $pagination['id'],
                 'class' => 'center',
@@ -68,7 +72,7 @@ class PluginBlocktypeMyviews extends MaharaCoreBlocktype {
         }
     }
 
-    public static function render_instance(BlockInstance $instance, $editing=false) {
+    public static function render_instance(BlockInstance $instance, $editing=false, $versioning=false) {
         $userid = $instance->get_view()->get('owner');
         if (!$userid) {
             return '';
@@ -123,7 +127,7 @@ class PluginBlocktypeMyviews extends MaharaCoreBlocktype {
      * Myviews only makes sense for personal views
      */
     public static function allowed_in_view(View $view) {
-        return $view->get('owner') != null;
+        return in_array($view->get('type'), self::get_viewtypes());
     }
 
     public static function override_instance_title(BlockInstance $instance) {

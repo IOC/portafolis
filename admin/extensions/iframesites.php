@@ -19,9 +19,20 @@ define('SECTION_PAGE', 'iframesites');
 require(dirname(dirname(dirname(__FILE__))) . '/init.php');
 require_once('upgrade.php');
 define('TITLE', get_string('allowediframesites', 'admin'));
-
+safe_require('blocktype', 'externalvideo');
 $iframesources = get_records_menu('iframe_source', '', '', 'name,prefix');
 $iframedomains = get_records_menu('iframe_source_icon');
+$fa_domains = PluginBlocktypeExternalvideo::get_fa_brand_icons();
+$data = array();
+foreach ($iframedomains as $name => $domain) {
+    $data[$name]['name'] = $domain;
+    $data[$name]['icon'] = favicon_display_url($domain);
+    $lname = strtolower($name);
+    if (isset($fa_domains[$lname])) {
+        $data[$name]['faicon'] = $fa_domains[$lname]['faicon'];
+        $data[$name]['style'] = $fa_domains[$lname]['style'];
+    }
+}
 
 $newform = pieform(array(
     'name'     => 'newurl',
@@ -85,7 +96,7 @@ foreach ($iframesources as $url => $name) {
         'id'         => $i,
         'url'        => $url,
         'name'       => $name,
-        'icon'       => favicon_display_url($iframedomains[$name]),
+        'icon'       => $data[$name],
         'editform'   => pieform(array(
             'name'             => 'editurl_' . $i,
             'successcallback'  => 'editurl_submit',
@@ -95,13 +106,13 @@ foreach ($iframesources as $url => $name) {
             'name'             => 'deleteurl_' . $i,
             'successcallback'  => 'deleteurl_submit',
             'renderer'         => 'div',
-            'class'            => 'form-inline form-as-button pull-right btn-group',
+            'class'            => 'form-inline form-as-button float-right btn-group',
             'elements'         => array(
                 'submit' => array(
                     'type'         => 'button',
-                    'class'        => 'btn-default btn-sm',
+                    'class'        => 'btn-secondary btn-sm',
                     'usebuttontag' => true,
-                    'value'          => '<span class="icon icon-trash icon-lg text-danger" role="presentation" aria-hidden="true"></span><span class="sr-only">'. get_string('delete') . '</span>',
+                    'value'          => '<span class="icon icon-trash-alt icon-lg text-danger" role="presentation" aria-hidden="true"></span><span class="sr-only">'. get_string('delete') . '</span>',
 
                     'confirm'      => get_string('confirmdeletemenuitem', 'admin'),
                 ),
@@ -250,7 +261,7 @@ function process_allowed_iframe_url($url) {
 
 $js = <<<EOF
 jQuery(function($) {
-    $('.url-open-editform').click(function(e) {
+    $('.url-open-editform').on("click", function(e) {
         e.preventDefault();
         $('#' + this.id).addClass('collapse-indicator');
         $('#' + this.id).toggleClass('open');
@@ -261,7 +272,7 @@ jQuery(function($) {
 EOF;
 
 $smarty = smarty();
-setpageicon($smarty, 'icon-puzzle-piece');
+setpageicon($smarty, 'icon-regular icon-file-code');
 
 $smarty->assign('INLINEJAVASCRIPT', $js);
 $smarty->assign('editurls', $editurls);

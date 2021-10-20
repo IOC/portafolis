@@ -1,12 +1,15 @@
 .drag-default-button {
-    @extend .btn-default; // Button like styling for drag element
+    @extend .btn-secondary; // Button like styling for drag element
     background-color: #fff;
-    border-color: $list-group-border;
+    border-color: $list-group-border-color;
 }
 
 .drag-default-button:not(.ui-draggable-dragging) {
-    border-left: none; // Don't need side borders because the elements are inside panel
+    border-left: none; // Don't need side borders because the elements are inside card
     border-right: none;
+}
+.btn-draggable .btn-group-vertical > .ui-draggable {
+    margin-left: 0;
 }
 
 .btn-draggable .btn-group-vertical > .btn,
@@ -16,26 +19,28 @@
     font-size: $font-size-base;
     padding: 10px 12px 10px 35px;
     text-align: left;
+    border-radius: 0;
 
     &:before {
+        @include fonttype(solid);
+        content: fa-content($fa-var-arrows-alt);
         box-sizing: border-box;
-        color: $gray-light;
+        color: $gray-300;
         opacity: 0.7;
-        content: "";
-        font-family: FontAwesome;
         line-height: 1;
         text-rendering: auto;
         display: block;
         height: 100%;
-        left: 0px;
+        left: 0;
         line-height: 1.3em;
         padding: 10px 15px 5px;
         position: absolute;
-        top: 0px;
+        top: 0;
         width: 22px;
     }
     &.checkbox {
         margin-top: -1px;
+        margin-bottom: 0;
     }
     .checkbox {
         right: 10px;
@@ -62,16 +67,21 @@
     float: left;
     margin-right: 10px;
     height: 100%;
-    color: rgba($gray, 0.4);
+    color: $gray-400;
 }
 
 .icon-drag-current {
-    border: 1px dashed darken($panel-default-border, 5%);
+    border: 1px dashed scale-color($card-border-color, $lightness: -6%);
     min-width: 200px;
 }
 
-#addviews .ui-draggable-dragging {
-    width: 100% !important;
+#addviews {
+    .btn-group {
+        margin-left: 0;
+    }
+    .ui-draggable-dragging {
+        width: 100% !important;
+    }
 }
 
 // Edit page sortable - hide everything but title
@@ -79,13 +89,8 @@
 .ui-sortable-helper .blockinstance-controls {
     display: none;
 }
-.ui-sortable-helper.panel-secondary.blockinstance > .panel-heading > .blockinstance-header {
+.ui-sortable-helper.card-secondary.blockinstance > .card-header > .blockinstance-header {
     padding-right: 0;
-}
-
-// Droppable area background indicator
-.block-drop-on {
-    background: darken($panel-default-heading-bg, 5%);
 }
 
 .drag-handle,

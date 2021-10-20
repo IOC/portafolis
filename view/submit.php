@@ -10,7 +10,7 @@
  */
 
 define('INTERNAL', 1);
-define('MENUITEM', 'myportfolio/views');
+define('MENUITEM', 'create/views');
 require(dirname(dirname(__FILE__)) . '/init.php');
 require_once('view.php');
 require_once('collection.php');
@@ -29,7 +29,7 @@ $group = get_record_sql(
     array($USER->get('id'), $groupid)
 );
 
-if (!$group || !group_within_edit_window($group)) {
+if (!$group || !group_within_edit_window($groupid)) {
     throw new AccessDeniedException(get_string('cantsubmittogroup', 'view'));
 }
 
@@ -57,7 +57,7 @@ $form = pieform(array(
     'method' => 'post',
     'elements' => array(
         'submit' => array(
-            'class' => 'btn-default',
+            'class' => 'btn-secondary',
             'type' => 'submitcancel',
             'value' => array(get_string('yes'), get_string('no')),
             'goto' => get_config('wwwroot') . returnto(),

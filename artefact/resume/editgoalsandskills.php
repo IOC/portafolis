@@ -10,10 +10,11 @@
  */
 
 define('INTERNAL', true);
-define('MENUITEM', 'content/resume');
+define('MENUITEM', 'create/resume');
 define('SECTION_PLUGINTYPE', 'artefact');
 define('SECTION_PLUGINNAME', 'resume');
-define('RESUME_SUBPAGE', 'goalsandskills');
+define('SECTION_PAGE', 'goalsandskills');
+define('MENUITEM_SUBPAGE', 'goalsandskills');
 
 require_once(dirname(dirname(dirname(__FILE__))) . '/init.php');
 require_once('pieforms/pieform/elements/calendar.php');
@@ -77,7 +78,7 @@ $form = pieform(array(
             'rows' => 20,
             'cols' => 65,
             'defaultvalue' => $artefact->get('description'),
-            'rules' => array('maxlength' => 65536),
+            'rules' => array('maxlength' => 1000000),
         ),
         'filebrowser' => array(
             'type'         => 'filebrowser',
@@ -124,19 +125,21 @@ $javascript = <<<EOF
 function editgoalsandskills_callback(form, data) {
     editgoalsandskills_filebrowser.callback(form, data);
 };
+
+$(function($) {
+    $('#page-modal').on('hidden.bs.modal', function (e) {
+        // check if the upload file modal is still visible and if so put the body class back to allow scrolling
+        if ($('#editgoalsandskills_filebrowser_upload_browse').hasClass('show')) {
+            $('body').addClass('modal-open');
+        }
+    });
+});
 EOF;
 
 $smarty = smarty(array(), array(), array(), array(
     'tinymceconfig' => '
         image_filebrowser: "editgoalsandskills_filebrowser",
     ',
-    'sideblocks' => array(
-        array(
-            'name'   => 'quota',
-            'weight' => -10,
-            'data'   => array(),
-        ),
-    ),
 ));
 $smarty->assign('INLINEJAVASCRIPT', $javascript);
 $smarty->assign('SUBPAGENAV', PluginArtefactResume::submenu_items());
@@ -157,33 +160,8 @@ function editgoalsandskills_submit(Pieform $form, array $values) {
     $artefact->commit();
 
     // Attachments
-    $old = $artefact->attachment_id_list();
-    $new = is_array($values['filebrowser']) ? $values['filebrowser'] : array();
-    // only allow the attaching of files that exist and are editable by user
-    foreach ($new as $key => $fileid) {
-        $file = artefact_instance_from_id($fileid);
-        if (!($file instanceof ArtefactTypeFile) || !$USER->can_publish_artefact($file)) {
-            unset($new[$key]);
-        }
-    }
-    if (!empty($new) || !empty($old)) {
-        foreach ($old as $o) {
-            if (!in_array($o, $new)) {
-                try {
-                    $artefact->detach($o);
-                }
-                catch (ArtefactNotFoundException $e) {}
-            }
-        }
-        foreach ($new as $n) {
-            if (!in_array($n, $old)) {
-                try {
-                    $artefact->attach($n);
-                }
-                catch (ArtefactNotFoundException $e) {}
-            }
-        }
-    }
+    update_attachments($artefact, $values['filebrowser'], null, null, true);
+
     db_commit();
 
     $result = array(

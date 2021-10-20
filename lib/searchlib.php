@@ -86,7 +86,7 @@ function search_all($query_string, $limit, $offset = 0, $data = array(), $type =
  */
 
 function get_institutional_admin_search_results($search, $limit) {
-    $institution = new StdClass;
+    $institution = new stdClass();
     $institution->name = $search->institution;
     foreach (array('member', 'requested', 'invitedby', 'lastinstitution') as $p) {
         $institution->{$p} = $search->{$p};
@@ -300,6 +300,33 @@ function get_admin_user_search_results($search, $offset, $limit) {
             'string' => $duplicateemailartefacts
         );
     }
+    // Filter by users with objectionable content
+    if (!empty($search->objectionable)) {
+        $objectionableartefacts = get_column_sql('
+            SELECT u.id
+            FROM {usr} u
+            JOIN {artefact} a ON a.owner = u.id
+            JOIN {objectionable} o ON o.objectid = a.id
+            WHERE o.objecttype = \'artefact\' AND resolvedtime IS NULL
+        ');
+        $objectionableviews = get_column_sql('
+            SELECT u.id
+            FROM {usr} u
+            JOIN {view} v ON v.owner = u.id
+            JOIN {objectionable} o ON o.objectid = v.id
+            WHERE o.objecttype = \'view\' AND resolvedtime IS NULL
+        ');
+        $objectionable = array_unique(array_merge($objectionableartefacts, $objectionableviews));
+        if ($objectionable === false || !is_array($objectionable)) {
+            $objectionable = array();
+        }
+
+        $constraints[] = array(
+            'field'  => 'objectionable',
+            'type'   => 'in',
+            'string' => $objectionable
+        );
+    }
 
     // Filter by viewable institutions:
     global $USER;
@@ -397,7 +424,7 @@ function get_admin_user_search_results($search, $offset, $limit) {
 function build_admin_user_search_results($search, $offset, $limit) {
     global $USER, $THEME;
 
-    $wantedparams = array('query', 'f', 'l', 'loggedin', 'loggedindate', 'duplicateemail', 'institution', 'authname');
+    $wantedparams = array('query', 'f', 'l', 'loggedin', 'loggedindate', 'duplicateemail', 'objection', 'institution', 'authname');
     $params = array();
     foreach ($search as $k => $v) {
         if (!in_array($k, $wantedparams)) {
@@ -431,7 +458,7 @@ function build_admin_user_search_results($search, $offset, $limit) {
     $cols = array(
         'select' =>  array(
             'mergefirst' => true,
-            'headhtml' => '<div class="btn-group" role="group"><a class="btn btn-xs btn-default" href="" id="selectall">' . get_string('All') . '</a>&nbsp;<a class="btn active btn-xs btn-default" href="" id="selectnone">' . get_string('none') . '</a></div>',
+            'headhtml' => '<div class="btn-group" role="group"><a class="btn btn-sm btn-secondary" href="" id="selectall">' . get_string('All') . '</a><a class="btn active btn-sm btn-secondary" href="" id="selectnone">' . get_string('none') . '</a></div>',
             'template' => 'admin/users/searchselectcolumn.tpl',
             'class'    => 'nojs-hidden with-checkbox',
             'accessible' => get_string('bulkselect'),
@@ -690,13 +717,13 @@ function build_admin_export_queue_results($search, $offset, $limit) {
             'template' => 'admin/users/searchexportstatuscolumn.tpl',
         ),
         'exportselect' => array(
-            'headhtml' => get_string('requeue', 'export') . '<br><div class="btn-group" role="group"><a class="btn btn-xs btn-default" href="" id="selectallexport">' . get_string('All') . '</a>&nbsp;<a class="btn btn-xs btn-default" href="" id="selectnoneexport">' . get_string('none') . '</a></div>',
+            'headhtml' => get_string('requeue', 'export') . '<br><div class="btn-group" role="group"><a class="btn btn-sm btn-secondary" href="" id="selectallexport">' . get_string('All') . '</a>&nbsp;<a class="btn btn-sm btn-secondary" href="" id="selectnoneexport">' . get_string('none') . '</a></div>',
             'template' => 'admin/users/searchselectcolumnexport.tpl',
             'class'    => 'nojs-hidden-table-cell with-selectall',
             'accessible' => get_string('bulkselect'),
         ),
         'deleteselect' => array(
-            'headhtml' => get_string('delete') . '<br><div class="btn-group" role="group"><a class="btn btn-xs btn-default" href="" id="selectalldelete">' . get_string('All') . '</a>&nbsp;<a class="btn btn-xs btn-default" href="" id="selectnonedelete">' . get_string('none') . '</a></div>',
+            'headhtml' => get_string('delete') . '<br><div class="btn-group" role="group"><a class="btn btn-sm btn-secondary" href="" id="selectalldelete">' . get_string('All') . '</a>&nbsp;<a class="btn btn-sm btn-secondary" href="" id="selectnonedelete">' . get_string('none') . '</a></div>',
             'template' => 'admin/users/searchselectcolumnexportdelete.tpl',
             'class'    => 'nojs-hidden-table-cell with-selectall',
             'accessible' => get_string('bulkselect'),
@@ -950,7 +977,7 @@ function get_group_user_search_results($group, $query, $offset, $limit, $members
     );
 
     if ($results['count']) {
-        $userids = array_map(create_function('$a', 'return $a["id"];'), $results['data']);
+        $userids = array_map(function($a) { return $a["id"];}, $results['data']);
         $introductions = get_records_sql_assoc("SELECT \"owner\", description
             FROM {artefact}
             WHERE artefacttype = 'introduction'
@@ -1021,17 +1048,26 @@ function get_portfolio_types_from_param($filter) {
     if (is_null($filter) || $filter == 'all') {
         return null;
     }
+    $types = array('view' => false, 'collection' => false, 'artefact' => false, 'blocktype' => false);
     if ($filter == 'view') {
-        return array('view' => true, 'collection' => false, 'artefact' => false);
+        $types['view'] = true;
+        return $types;
     }
     if ($filter == 'collection') {
-        return array('view' => false, 'collection' => true, 'artefact' => false);
+        $types['collection'] = true;
+        return $types;
     }
     require_once(get_config('docroot') . 'artefact/lib.php');
-    return array('view' => false, 'collection' => false, 'artefact' => artefact_get_types_from_filter($filter));
+    $artefactfilter = artefact_get_types_from_filter($filter);
+    $types['artefact'] = $artefactfilter;
+
+    require_once(get_config('docroot') . 'blocktype/lib.php');
+    $blocktypefilter = blocktype_get_types_from_filter($filter);
+    $types['blocktype'] = $blocktypefilter;
+    return $types;
 }
 
-function get_portfolio_items_by_tag($tag, $owner, $limit, $offset, $sort='name', $type=null, $returntags=true) {
+function get_portfolio_items_by_tag($tag, $owner, $limit, $offset, $sort='name', $type=null, $returntags=true, $viewids=array()) {
     // For now, can only be used to search a user's portfolio
     if (empty($owner->id) || empty($owner->type)) {
         throw new SystemException('get_views_and_artefacts_by_tag: invalid owner');
@@ -1045,7 +1081,7 @@ function get_portfolio_items_by_tag($tag, $owner, $limit, $offset, $sort='name',
     $plugin = 'internal';
     safe_require('search', $plugin);
 
-    $result = call_static_method(generate_class_name('search', $plugin), 'portfolio_search_by_tag', $tag, $owner, $limit, $offset, $sort, $types, $returntags);
+    $result = call_static_method(generate_class_name('search', $plugin), 'portfolio_search_by_tag', $tag, $owner, $limit, $offset, $sort, $types, $returntags, $viewids);
     $result->filter = $result->type = $type ? $type : 'all';
     return $result;
 }
@@ -1095,24 +1131,59 @@ function get_search_plugins() {
  *               ),
  *           );
  */
-function search_friend($filter, $limit = null, $offset = 0) {
+function search_friend($filter, $limit = null, $offset = 0, $query='') {
     global $USER;
     $userid = $USER->get('id');
 
-    if (!in_array($filter, array('all','current','pending'))) {
+    if (get_config('friendsnotallowed')) {
+        return array(
+            'count'  => 0,
+            'limit'  => $limit,
+            'offset' => $offset,
+            'data'   => array(),
+        );
+    }
+
+    if (!in_array($filter, array('allmy','current','pending'))) {
         throw new SystemException('Invalid search filter');
     }
 
     $sql = array();
     $count = 0;
 
-    if (in_array($filter, array('all', 'current'))) {
-        $count += count_records_sql('SELECT COUNT(usr1) FROM {usr_friend}
-            JOIN {usr} u1 ON (u1.id = usr1 AND u1.deleted = 0)
-            JOIN {usr} u2 ON (u2.id = usr2 AND u2.deleted = 0)
-            WHERE usr1 = ? OR usr2 = ?',
-            array($userid, $userid)
-        );
+    $extravalues = array();
+    $querystr = "";
+    if ($query) {
+        $querystr.=' AND (u.username ' . db_ilike() . " '%' || ? || '%' " .
+        'OR u.firstname ' . db_ilike() . " '%' || ? || '%' " .
+        'OR u.lastname ' . db_ilike() . " '%' || ? || '%' )";
+        $extravalues = array($query, $query, $query);
+    }
+
+    if (in_array($filter, array('allmy', 'current'))) {
+        $where = array($userid, $userid);
+        if ($query) {
+            $where = array($userid, $query, $query, $query, $userid, $query, $query, $query);
+            $count += count_records_sql('SELECT COUNT(usr1) FROM {usr_friend}
+                JOIN {usr} u1 ON (u1.id = usr1 AND u1.deleted = 0)
+                JOIN {usr} u2 ON (u2.id = usr2 AND u2.deleted = 0)
+                WHERE (usr1 = ? AND u1.username ' . db_ilike() . " '%' || ? || '%' " .
+                'OR u1.firstname ' . db_ilike() . " '%' || ? || '%' " .
+                'OR u1.lastname ' . db_ilike() . " '%' || ? || '%' )
+                 OR (usr2 = ? AND u2.username " . db_ilike() . " '%' || ? || '%' " .
+                'OR u2.firstname ' . db_ilike() . " '%' || ? || '%' " .
+                'OR u2.lastname ' . db_ilike() . " '%' || ? || '%' )",
+                $where
+            );
+        }
+        else {
+            $count += count_records_sql('SELECT COUNT(usr1) FROM {usr_friend}
+                JOIN {usr} u1 ON (u1.id = usr1 AND u1.deleted = 0)
+                JOIN {usr} u2 ON (u2.id = usr2 AND u2.deleted = 0)
+                WHERE usr1 = ? OR usr2 = ?',
+                $where
+            );
+        }
 
         array_push($sql, 'SELECT usr2 AS id, 2 AS status FROM {usr_friend} WHERE usr1 = ?
         ');
@@ -1120,32 +1191,41 @@ function search_friend($filter, $limit = null, $offset = 0) {
         ');
     }
 
-    if (in_array($filter, array('all', 'pending'))) {
+    if (in_array($filter, array('allmy', 'pending'))) {
         // For the friends being requested
-        $count += count_records_sql('SELECT COUNT("owner") FROM {usr_friend_request}
-            JOIN {usr} u ON (u.id = requester AND u.deleted = 0)
-            WHERE "owner" = ?',
-            array($userid)
+        $where = array($userid);
+        if ($query) {
+            $where = array_merge($where, $extravalues);
+        }
+        $count += count_records_sql('SELECT COUNT(ufr.owner) FROM {usr_friend_request} ufr
+            JOIN {usr} u ON (u.id = ufr.requester AND u.deleted = 0)
+            WHERE ufr.owner = ?' . $querystr,
+            $where
         );
 
         array_push($sql, 'SELECT requester AS id, 1 AS status FROM {usr_friend_request} WHERE "owner" = ?
         ');
         // For the one doing the request
-        $count += count_records_sql('SELECT COUNT("requester") FROM {usr_friend_request}
-            JOIN {usr} u ON (u.id = "owner" AND u.deleted = 0)
-            WHERE requester = ?',
-            array($userid)
+        $where = array($userid);
+        if ($query) {
+            $where = array_merge($where, $extravalues);
+        }
+        $count += count_records_sql('SELECT COUNT(ufr.requester) FROM {usr_friend_request} ufr
+            JOIN {usr} u ON (u.id = ufr.owner AND u.deleted = 0)
+            WHERE ufr.requester = ?' . $querystr,
+            $where
         );
-
         array_push($sql, 'SELECT "owner" AS id, 1 AS status FROM {usr_friend_request} WHERE requester = ?
         ');
     }
-    $sqlstr = 'SELECT f.id FROM (' . join('UNION ', $sql) . ') f
-            JOIN {usr} u ON (f.id = u.id AND u.deleted = 0)
-            ORDER BY status, firstname, lastname, u.id';
+
+    $sqlstr = 'SELECT f.id FROM (' . join('UNION ', $sql) . ') AS f
+            JOIN {usr} u ON (f.id = u.id AND u.deleted = 0)';
+            $sqlstr .= 'WHERE u.deleted = 0 ' . $querystr . ' ORDER BY status, firstname, lastname, u.id';
     if ($limit) {
+        $extravalues = array_merge($extravalues, array($limit, $offset));
         $data = get_column_sql($sqlstr . ' LIMIT ? OFFSET ?',
-            array_merge(array_pad($values=array(), count($sql), $userid), array($limit, $offset)));
+            array_merge(array_pad($values=array(), count($sql), $userid), $extravalues));
     }
     else {
         $data = get_column_sql($sqlstr,
@@ -1157,9 +1237,9 @@ function search_friend($filter, $limit = null, $offset = 0) {
     }
 
     return array(
-    'count'   => $count,
-    'limit'   => $limit,
-    'offset'  => $offset,
-    'data'    => $data,
+        'count'  => $count,
+        'limit'  => $limit,
+        'offset' => $offset,
+        'data'   => $data,
     );
 }

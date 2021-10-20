@@ -30,6 +30,10 @@ class PluginBlocktypeWall extends MaharaCoreBlocktype {
         return true;
     }
 
+    public static function single_artefact_per_block() {
+        return false;
+    }
+
     public static function get_categories() {
         return array('internal' => 28000);
     }
@@ -38,7 +42,7 @@ class PluginBlocktypeWall extends MaharaCoreBlocktype {
         return array('profile');
     }
 
-    public static function render_instance(BlockInstance $instance, $editing=false) {
+    public static function render_instance(BlockInstance $instance, $editing=false, $versioning=false) {
         global $USER;
         $owner = $instance->get_view()->get('owner');
         if (!$owner) {
@@ -142,15 +146,18 @@ class PluginBlocktypeWall extends MaharaCoreBlocktype {
         }
         return pieform(array(
             'name'      => 'wallpost_'.$instance->get('id'),
-            'renderer'  => 'dev',
+            'renderer'  => 'div',
             'autofocus' => false,
             'jsform'    => true,
-            'template'  => 'wallpost.php',
-            'templatedir' => pieform_template_dir('wallpost.php', 'blocktype/wall'),
             'validatecallback' => array('PluginBlocktypeWall', 'wallpost_validate'),
             'successcallback' => array('PluginBlocktypeWall', 'wallpost_submit'),
             'jssuccesscallback' => 'wallpost_success',
             'elements' => array(
+                'postsizelimit' => array(
+                    'type' => 'html',
+                    'class' => 'metadata',
+                    'value' => get_string('maxcharacters', 'blocktype.wall', get_config_plugin('blocktype', 'wall', 'defaultpostsizelimit'))
+                ),
                 'text' => array(
                     'type' => 'wysiwyg',
                     'title' => get_string('Post', 'blocktype.wall'),
@@ -159,14 +166,11 @@ class PluginBlocktypeWall extends MaharaCoreBlocktype {
                     'cols' => 50,
                     'defaultvalue' => '',
                     'width' => '100%',
+                    'class' => 'html',
                     'rules' => array(
                         'required' => true,
                         'maxlength' => get_config_plugin('blocktype', 'wall', 'defaultpostsizelimit'),
                     ),
-                ),
-                'postsizelimit' => array(
-                    'type' => 'html',
-                    'value' => get_string('maxcharacters', 'blocktype.wall', get_config_plugin('blocktype', 'wall', 'defaultpostsizelimit'))
                 ),
                 'private' => array(
                     'type' => 'switchbox',
@@ -194,7 +198,8 @@ class PluginBlocktypeWall extends MaharaCoreBlocktype {
     public function wallpost_js() {
         $js = <<<EOF
 function wallpost_success(form, data) {
-    if (jQuery('#wall').length && data.posts && data.block) {
+    var wall = jQuery('#wall');
+    if (wall.length && data.posts && data.block) {
         var wall = jQuery('#blockinstance_' + data.block + ' div.wall').first();
         var temp = jQuery('<div>');
         var textareaid = 'wallpost_' + data.block + '_text';
@@ -209,8 +214,21 @@ function wallpost_success(form, data) {
             }
         }
         formSuccess(form, data);
+        $(window).trigger('colresize');
     }
 }
+jQuery( function() {
+    // needs to initialize the tinyMCE editor when the block is loaded
+    PieformManager.signal('onload');
+    if (typeof(tinyMCE) != 'undefined') {
+        tinyMCE.activeEditor.on('ResizeEditor', function(e) {
+            $(window).trigger('colresize');
+        });
+        tinyMCE.activeEditor.on('init', function(e) {
+            $(window).trigger('colresize');
+        });
+    }
+});
 EOF;
         return "<script>$js</script>";
     }
@@ -233,6 +251,7 @@ EOF;
             'postdate' => db_format_timestamp(time()),
             'text'     => clean_html($values['text']),
         );
+        $activityrecord = clone $record;
 
         $newid = insert_record('blocktype_wall_post', $record, 'id', true);
 
@@ -246,7 +265,7 @@ EOF;
               update_record('blocktype_wall_post', $updatedwallpost, 'id');
         }
 
-        activity_occurred('wallpost', $record, 'blocktype', 'wall');
+        activity_occurred('wallpost', $activityrecord, 'blocktype', 'wall');
 
         $instance = new BlockInstance($values['instance']);
         $owner = $instance->get_view()->get('owner');
@@ -307,7 +326,7 @@ EOF;
      * Wall only makes sense on profile viewtypes
      */
     public static function allowed_in_view(View $view) {
-        return $view->get('type') == 'profile';
+        return in_array($view->get('type'), self::get_viewtypes());
     }
 
     public static function override_instance_title(BlockInstance $instance) {

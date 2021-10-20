@@ -1,7 +1,7 @@
 {if $controls}
-<div class="panel panel-default">
+<div class="card">
     {if !$hidetitle}
-    <h3 class="resumeh3 panel-heading">
+    <h3 class="resumeh3 card-header">
         {str tag='book' section='artefact.resume'}
         {contextualhelp plugintype='artefact' pluginname='resume' section='addbook'}
     </h3>{/if}
@@ -13,7 +13,7 @@
                     <span class="accessible-hidden sr-only">{str tag=move}</span>
                 </th>
                 <th>{str tag='title' section='artefact.resume'}</th>
-                <th class="resumeattachments text-center">
+                <th class="resumeattachments">
                     <span>{str tag=Attachments section=artefact.resume}</span>
                 </th>
                 <th class="resumecontrols">
@@ -24,11 +24,11 @@
         <!-- Table body is rendered by javascript on content-> resume -->
     </table>
 
-    <div class="panel-footer has-form">
+    <div class="card-footer has-form">
         <div id="bookform" class="js-expanded-form collapse" data-action='focus-on-open reset-on-collapse'>
             {$compositeforms.book|safe}
         </div>
-        <button id="addbookbutton" data-toggle="collapse" data-target="#bookform" aria-expanded="false" aria-controls="bookform" class="pull-right btn btn-default btn-sm collapsed expand-add-button">
+        <button id="addbookbutton" data-toggle="collapse" data-target="#bookform" aria-expanded="false" aria-controls="bookform" class="float-right btn btn-secondary btn-sm collapsed expand-add-button">
             <span class="show-form">
                 {str tag='add'}
                 <span class="icon icon-chevron-down right" role="presentation" aria-hidden="true"></span>
@@ -57,7 +57,7 @@
         {if $row->description || $row->attachments || $row->url}
             <a href="#book-content-{$row->id}{if $artefactid}-{$artefactid}{/if}" class="text-left collapsed collapsible" aria-expanded="false" data-toggle="collapse">
                 {$row->title}
-                <span class="icon icon-chevron-down pull-right collapse-indicator" role="presentation" aria-hidden="true"></span>
+                <span class="icon icon-chevron-down float-right collapse-indicator" role="presentation" aria-hidden="true"></span>
                 <br />
                 {if $row->date}
                 <span class="text-small text-muted">
@@ -90,37 +90,53 @@
             {/if}
 
             {if $row->attachments}
-            <h5 class="list-group-item-heading">
-                <span class="icon icon-paperclip left" role="presentation" aria-hidden="true"></span>
-                <span>{str tag='attachedfiles' section='artefact.blog'}</span>
-                ({$row->clipcount})
-            </h5>
-            <ul class="list-group list-group-unbordered">
-                {foreach from=$row->attachments item=item}
-                <li class="list-group-item">
-                    <a href="{$item->downloadpath}" class="outer-link icon-on-hover">
-                        <span class="sr-only">{str tag=Download section=artefact.file} {$item->title}</span>
-                    </a>
-
-                    {if $item->iconpath}
-                    <img class="file-icon" src="{$item->iconpath}" alt="">
-                    {else}
-                    <span class="icon icon-{$item->artefacttype} left icon-lg text-default" role="presentation" aria-hidden="true"></span>
-                    {/if}
-
-                    <span class="title text-inline">
-                        <a href="{$item->viewpath}" class="text-small inner-link">
-                            {$item->title}
+            <div class="has-attachment card">
+                <div class="card-header">
+                    <span class="icon icon-paperclip left icon-sm" role="presentation" aria-hidden="true"></span>
+                    <span class="text-small">{str tag='attachedfiles' section='artefact.blog'}</span>
+                    <span class="metadata">({$row->clipcount})</span>
+                </div>
+                <ul class="list-unstyled list-group">
+                    {foreach from=$row->attachments item=item}
+                        {if !$item->allowcomments}
+                            {assign var="justdetails" value=true}
+                        {/if}
+                        {include
+                            file='header/block-comments-details-header.tpl'
+                            artefactid=$item->id
+                            commentcount=$item->commentcount
+                            allowcomments=$item->allowcomments
+                            justdetails=$justdetails
+                            displayiconsonly = true}
+                    <li class="list-group-item">
+                        <a href="{$item->downloadpath}" class="outer-link icon-on-hover">
+                            <span class="sr-only">{str tag=Download section=artefact.file} {$item->title}</span>
                         </a>
-                        <span class="metadata"> -
-                            [{$item->size}]
-                        </span>
-                    </span>
 
-                    <span class="icon icon-download icon-lg pull-right text-watermark icon-action inner-link" role="presentation" aria-hidden="true"></span>
-                </li>
-                {/foreach}
-            </ul>
+                        {if $item->iconpath}
+                        <img class="file-icon" src="{$item->iconpath}" alt="">
+                        {else}
+                        <span class="icon icon-{$item->artefacttype} left icon-lg text-default" role="presentation" aria-hidden="true"></span>
+                        {/if}
+
+                        <span class="title">
+                            {if !$editing}
+                            <a class="modal_link text-small inner-link" data-toggle="modal-docked" data-target="#configureblock" href="#" data-artefactid="{$item->id}">
+                                {$item->title}
+                            </a>
+                            {else}
+                                <span class="text-small inner-link">{$item->title}</span>
+                            {/if}
+                            <span class="metadata"> -
+                                [{$item->size}]
+                            </span>
+                        </span>
+
+                        <span class="icon icon-download icon-lg float-right text-watermark icon-action" role="presentation" aria-hidden="true"></span>
+                    </li>
+                    {/foreach}
+                </ul>
+            </div>
             {/if}
         </div>
     </div>

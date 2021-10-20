@@ -1,6 +1,6 @@
 .sidebar {
-    .profile-block.panel-heading {
-        min-height: 80px;
+    .profile-block.card-header {
+        min-height: 92px;
 
         .username {
             &:hover {
@@ -9,16 +9,13 @@
         }
     }
 
-    .user-panel {
-        > .panel-default {
+    .user-card {
+        > .card {
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 
-            .panel-heading {
-              background-color: #2e3a1c;
+            .card-header {
+              background-color: $theme-secondary-color;
             }
-        }
-        .panel .list-group {
-            border: 0;
         }
     }
 }

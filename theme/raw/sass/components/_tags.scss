@@ -7,13 +7,18 @@
     }
 }
 
+.card-body, .card {
+    .tags {
+        margin-bottom: 10px;
+    }
+}
 
 // Tag result page
 .mytags {
     margin-top: 25px;
     .tagfreq.badge {
         color: inherit;
-        border: 1px solid $brand-primary;
+        border: 1px solid theme-color("primary");
         background-color: transparent;
     }
     .tag {
@@ -23,21 +28,29 @@
 .mytags .selected,
 .tag-results .selected {
     font-weight: bold;
-    color: $gray;
+    color: $gray-500;
     .badge {
         border: 1px solid transparent;
         color: #fff;
-        background-color: $gray;
+        background-color: $gray-500;
     }
 }
 .tag-results .btn-top-right {
     margin-right: -1px;
-    margin-top: -41px;
+    margin-top: -42px;
+    height: 40px;
+    margin-left: 70%;
+
+    @include media-breakpoint-down(xs) {
+        margin: 0;
+        height: auto;
+    }
 }
 .tag-filters {
     @extend .clearfix;
-    background-color: darken($panel-default-heading-bg, 1%);
+    background: scale-color($card-bg, $lightness: -1.5%);
     padding: 10px 15px;
+    border-bottom: 1px solid $list-group-border-color;
 }
 
 //Edit tag page
@@ -51,4 +64,11 @@
     margin-top: 25px;
     margin-left: 30px;
     margin-bottom: 15px;
+}
+
+.moretags {
+    .icon-ellipsis-h {
+        vertical-align: -3px;
+        padding-left: 2px;
+    }
 }

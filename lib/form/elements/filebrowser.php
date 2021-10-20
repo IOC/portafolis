@@ -44,7 +44,7 @@ function pieform_element_filebrowser(Pieform $form, $element) {
     $prefix = $formid . '_' . $element['name'];
 
     if (!empty($element['tabs'])) {
-        $tabdata = pieform_element_filebrowser_configure_tabs($element['tabs'], $prefix);
+        $tabdata = pieform_element_filebrowser_configure_tabs($element, $prefix);
         $smarty->assign('tabs', $tabdata);
         if (!$group && $tabdata['owner'] == 'group') {
             $group = $tabdata['ownerid'];
@@ -153,8 +153,9 @@ function pieform_element_filebrowser(Pieform $form, $element) {
         $config['pluginname'] = $form->get_property('pluginname');
         $config['browsehelp'] = $element['browsehelp'];
     }
+    $config['showtags'] = !empty($config['tag']) ? 1 : 0;
+    $config['tagsowner'] = !empty($config['tag']) ? (int) $userid : 0;
 
-    $config['showtags'] = !empty($config['tag']) ? (int) $userid : 0;
     $config['editmeta'] = (int) ($userid && !$config['edit'] && !empty($config['tag']));
 
     $smarty->assign('config', $config);
@@ -192,12 +193,13 @@ function pieform_element_filebrowser(Pieform $form, $element) {
 
     $_PIEFORM_FILEBROWSERS[$prefix]['views_js'] = $initjs;
 
-    $initjs .= "jQuery(window).load({$prefix}.init);";
-    $initjs .= "upload_max_filesize = '" . get_real_size(ini_get('upload_max_filesize')) . "';";
+    $initjs .= "jQuery({$prefix}.init);";
     if ($form->is_submitted() && $form->has_errors()) {
         // need to reapply bootstrap file browser stuff
         $initjs .= "jQuery('.js-filebrowser').each(function() {";
-        $initjs .= "  jQuery(this).wrapInner('<div class=\"modal-dialog modal-lg\"><div class=\"modal-content modal-filebrowser\"></div></div>');";
+        $initjs .= "  if (jQuery(this).find('.modal-filebrowser').length == 0) {";
+        $initjs .= "      jQuery(this).wrapInner('<div class=\"modal-dialog modal-lg\"><div class=\"modal-content modal-filebrowser\"></div></div>');";
+        $initjs .= "  }";
         $initjs .= "  jQuery(this).modal('hide');";
         $initjs .= "});";
     }
@@ -214,6 +216,7 @@ function pieform_element_filebrowser(Pieform $form, $element) {
 
     $smarty->assign('folderparams', $params);
 
+
     // Add mobile media-capture form tags when users are on mobile or tablet
     if ($SESSION->get('mobile') || $SESSION->get('tablet')) {
         $supportedmediatypes = array('image/*');
@@ -223,13 +226,27 @@ function pieform_element_filebrowser(Pieform $form, $element) {
                 if (in_array($type, $supportedmediatypes)) {
                     switch ($type) {
                         case 'image/*':
-                            $smarty->assign('capturedevice', 'camera');
+                            $smarty->assign('capturedevice', true);
                             break;
                     }
                 }
             }
         }
     }
+    $colspan = 4;
+    if (!$config['showtags'] && !$config['editmeta']) {
+        $colspan++;
+    }
+    if (!$config['select']) {
+        $colspan++;
+    }
+    if (($config['showtags'] && $config['editmeta']) || $config['select']) {
+        $colspan++;
+    }
+    if ($config['edit']) {
+        $colspan++;
+    }
+    $smarty->assign('colspan', $colspan);
 
     return $smarty->fetch('artefact:file:form/filebrowser.tpl');
 }
@@ -333,7 +350,8 @@ function pieform_element_filebrowser_build_filelist($form, $element, $folder, $h
     $selectable = (int) $element['config']['select'];
     $selectfolders = (int) !empty($element['config']['selectfolders']);
     $publishing = (int) !empty($element['config']['publishing']);
-    $showtags = !empty($element['config']['tag']) ? (int) $userid : 0;
+    $showtags = !empty($element['config']['tag']) ? 1 : 0;
+    $tagsowner = !empty($element['config']['tag']) ? (int) $userid : 0;
     $editmeta = (int) ($userid && !$editable && !empty($element['config']['tag']));
     $querybase = $element['page'] . (strpos($element['page'], '?') === false ? '?' : '&');
     $prefix = $form->get_name() . '_' . $element['name'];
@@ -351,6 +369,20 @@ function pieform_element_filebrowser_build_filelist($form, $element, $folder, $h
         }
     }
 
+    $colspan = 4;
+    if (!$showtags && !$editmeta) {
+        $colspan++;
+    }
+    if (!$selectable) {
+        $colspan++;
+    }
+    if (($showtags && $editmeta) || $selectable) {
+        $colspan++;
+    }
+    if ($editable) {
+        $colspan++;
+    }
+
     $smarty->assign('downloadfolderaszip', $addzipdownloadlink);
     $smarty->assign('edit', -1);
     $smarty->assign('highlight', $highlight);
@@ -363,7 +395,7 @@ function pieform_element_filebrowser_build_filelist($form, $element, $folder, $h
     $smarty->assign('filelist', $filedata);
     $smarty->assign('querybase', $querybase);
     $smarty->assign('prefix', $prefix);
-
+    $smarty->assign('colspan', $colspan);
     $params = 'folder=' . ($folder === null ? 0 : $folder);
     if ($group !== null) {
         $params .= '&group=' . $group;
@@ -381,7 +413,11 @@ function pieform_element_filebrowser_build_filelist($form, $element, $folder, $h
 }
 
 
-function pieform_element_filebrowser_configure_tabs($viewowner, $prefix) {
+function pieform_element_filebrowser_configure_tabs($element, $prefix) {
+    if (empty($element['tabs'])) {
+        return null;
+    }
+    $viewowner = $element['tabs'];
     if ($viewowner['type'] == 'institution' && $viewowner['id'] == 'mahara') {
         // No filebrowser tabs for site views
         return null;
@@ -418,6 +454,11 @@ function pieform_element_filebrowser_configure_tabs($viewowner, $prefix) {
                 }
                 foreach ($groups as &$g) {
                     $subtabs[$g->id] = $g->name;
+                }
+                // Also allow upload form on group tab
+                $uploadplaces = !empty($element['config']['uploadplaces']) ? $element['config']['uploadplaces'] : array();
+                if (in_array('group', $uploadplaces)) {
+                    $upload = 1;
                 }
             }
         }
@@ -623,7 +664,7 @@ function pieform_element_filebrowser_doupdate(Pieform $form, $element) {
             foreach ($_POST as $k => $v) {
                 if (preg_match('/^' . $prefix . '_permission:([a-z]+):([a-z]+)$/', $k, $m)) {
                     if (!isset($data['permissions'][$m[1]])) {
-                        $data['permissions'][$m[1]] = new stdClass;
+                        $data['permissions'][$m[1]] = new stdClass();
                     }
                     $data['permissions'][$m[1]]->{$m[2]} = (bool) $v;
                 }
@@ -885,9 +926,23 @@ function pieform_element_filebrowser_doupdate(Pieform $form, $element) {
 function pieform_element_filebrowser_upload(Pieform $form, $element, $data) {
     global $USER;
 
+    $prefix = $form->get_name() . '_' . $element['name'];
+    $owner = param_variable($prefix . '_owner', '');
+    $ownerid = param_variable($prefix . '_ownerid', '');
+    if ($owner == 'group' && empty($ownerid)) {
+        require_once(get_config('libroot') . 'group.php');
+        $groups = group_get_user_groups($USER->get('id'));
+        $ownerid = $groups[0]->id;
+    }
     $parentfolder     = $data['uploadfolder'] ? (int) $data['uploadfolder'] : null;
     $institution      = !empty($element['institution']) ? $element['institution'] : $form->get_property('institution');
     $group            = !empty($element['group']) ? $element['group'] : $form->get_property('group');
+    // If allowed upload form on group tab + user tab
+    $uploadplaces = !empty($element['config']['uploadplaces']) ? $element['config']['uploadplaces'] : array();
+    if (empty($group) && $owner == 'group' && !empty($ownerid) && in_array('group', $uploadplaces)) {
+        $group = $ownerid;
+    }
+
     if (get_config('licensemetadata')) {
         $license          = $data['license'];
         $licensor         = $data['licensor'];
@@ -897,7 +952,7 @@ function pieform_element_filebrowser_upload(Pieform $form, $element, $data) {
     $editable         = (int) $element['config']['edit'];
     $selectable       = (int) $element['config']['select'];
     $querybase        = $element['page'] . (strpos($element['page'], '?') === false ? '?' : '&');
-    $prefix           = $form->get_name() . '_' . $element['name'];
+
     $userfileindex    = isset($data['userfileindex']) ? $data['userfileindex'] : null;
     $resizeonuploadenable = get_config_plugin('artefact', 'file', 'resizeonuploadenable');
     $resizeonuploaduseroption = get_config_plugin('artefact', 'file', 'resizeonuploaduseroption');
@@ -909,7 +964,7 @@ function pieform_element_filebrowser_upload(Pieform $form, $element, $data) {
         $parentfolder = null;
     }
 
-    $data             = new StdClass;
+    $data             = new stdClass();
     $data->parent     = $parentfolder;
     $data->owner = $data->group = $data->institution = null;
     if (get_config('licensemetadata')) {
@@ -1223,6 +1278,10 @@ function pieform_element_filebrowser_update(Pieform $form, $element, $data) {
     $newtags = $data['tags'];
     $updatetags = $oldtags != $newtags;
     if ($updatetags) {
+        require_once(get_config('docroot') . 'lib/form/elements/tags.php');
+        if (!empty($newtags)) {
+            $newtags = array_map('remove_prefix', $newtags);
+        }
         $artefact->set('tags', $newtags);
     }
 
@@ -1243,13 +1302,13 @@ function pieform_element_filebrowser_update(Pieform $form, $element, $data) {
     $artefact->commit();
 
     $prefix = $form->get_name() . '_' . $element['name'];
-    $newtabdata = (isset($element['tabs']) ? pieform_element_filebrowser_configure_tabs($element['tabs'], $prefix) : null);
+    $newtabdata = (isset($element['tabs']) ? pieform_element_filebrowser_configure_tabs($element, $prefix) : null);
 
     $group = null;
     $institution = null;
     $user = null;
     if (!empty($element['tabs'])) {
-        $newtabdata = pieform_element_filebrowser_configure_tabs($element['tabs'], $prefix);
+        $newtabdata = pieform_element_filebrowser_configure_tabs($element, $prefix);
 
         if ($newtabdata['owner'] == 'site') {
             $institution = 'mahara';
@@ -1268,14 +1327,17 @@ function pieform_element_filebrowser_update(Pieform $form, $element, $data) {
     $returndata = array(
         'error' => false,
         'message' => get_string('changessaved', 'artefact.file'),
+        'folder' => $artefact->get('parent'),
         'newlist' => pieform_element_filebrowser_build_filelist($form, $element, $artefact->get('parent'), null, $user, $group, $institution),
     );
 
     if ($updatetags && $form->submitted_by_js()) {
-        $smarty = smarty_core();
         $tagdata = tags_sideblock();
-        $smarty->assign('sbdata', $tagdata);
-        $returndata['tagblockhtml'] = $smarty->fetch('sideblocks/tags.tpl');
+        if ($tagdata) {
+            $smarty = smarty_core();
+            $smarty->assign('sbdata', $tagdata['data']);
+            $returndata['tagblockhtml'] = $smarty->fetch($tagdata['template']);
+        }
     }
 
     return $returndata;
@@ -1473,7 +1535,7 @@ function pieform_element_filebrowser_view_group_folder($group, $folder) {
 
 function pieform_element_filebrowser_changeowner(Pieform $form, $element) {
     $prefix = $form->get_name() . '_' . $element['name'];
-    $newtabdata = pieform_element_filebrowser_configure_tabs($element['tabs'], $prefix);
+    $newtabdata = pieform_element_filebrowser_configure_tabs($element, $prefix);
     $smarty = smarty_core();
     $smarty->assign('prefix', $prefix);
     $smarty->assign('querybase', $element['page'] . (strpos($element['page'], '?') === false ? '?' : '&'));
@@ -1586,13 +1648,14 @@ function pieform_element_filebrowser_views_js(Pieform $form, $element) {
 function pieform_element_filebrowser_get_headdata($element) {
     global $THEME;
     // TODO : need a better dependancy injection, jquery ui might be also inserted by other scripts ...
-    $headdata = array('<script type="application/javascript" src="' . get_config('wwwroot') . 'js/jquery/jquery-ui/js/jquery-ui.min.js"></script>',
-        '<script type="application/javascript" src="' . get_config('wwwroot') . 'artefact/file/js/filebrowser.js"></script>');
+    $cacheversion = get_config('cacheversion', 0);
+    $headdata = array('<script src="' . get_config('wwwroot') . 'js/jquery/jquery-ui/js/jquery-ui.min.js?v=' . $cacheversion . '"></script>',
+        '<script src="' . get_config('wwwroot') . 'artefact/file/js/filebrowser.js?v=' . $cacheversion . '"></script>');
     if ($element['config']['upload']) {
         // only add dropzone if filebrowser is allowed to upload
-        $headdata[] = '<script type="application/javascript" src="' . get_config('wwwroot') . 'js/dropzone/dropzone.min.js"></script>';
-        $headdata[] = '<link href="' . get_config('wwwroot') . 'js/dropzone/css/dropzone.css" type="text/css" rel="stylesheet">';
-        $headdata[] = '<script type="application/javascript" src="' . get_config('wwwroot') . 'artefact/file/js/filedropzone.js"></script>';
+        $headdata[] = '<script>var upload_max_filesize = ' . get_real_size(ini_get('upload_max_filesize')) . '</script>';
+        $headdata[] = '<script src="' . get_config('wwwroot') . 'js/dropzone/min/dropzone.min.js?v=' . $cacheversion . '"></script>';
+        $headdata[] = '<script src="' . get_config('wwwroot') . 'artefact/file/js/filedropzone.js?v=' . $cacheversion . '"></script>';
     }
     if ($element['config']['edit']) {
         // Add switchbox css if filebrowser is allowed to edit
@@ -1606,7 +1669,7 @@ function pieform_element_filebrowser_get_headdata($element) {
             $jsstrings .= "strings.$s=" . json_encode(get_raw_string($s, $section)) . ';';
         }
     }
-    $headdata[] = '<script type="application/javascript">' . $jsstrings . '</script>';
+    $headdata[] = '<script>' . $jsstrings . '</script>';
 
     $pluginsheets = $THEME->get_url('style/style.css', true, 'artefact/file');
     foreach (array_reverse($pluginsheets) as $sheet) {

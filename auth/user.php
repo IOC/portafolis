@@ -194,17 +194,17 @@ class User {
                     ) AS f
                 )';
 
-        $user = get_record_sql($sql, array('email', $email, $email));
+        $users = get_records_sql_array($sql, array('email', $email, $email));
 
-        if (false == $user) {
+        if (false == $users) {
             throw new AuthUnknownUserException("User with email \"$email\" is not known");
         }
 
-        if (count($user) > 1) {
+        if (count($users) > 1) {
             throw new UserException("More than one user with email \"$email\" found");
         }
 
-        $this->populate($user);
+        $this->populate($users[0]);
         $this->reset_institutions();
         return $this;
     }
@@ -215,6 +215,9 @@ class User {
      *
      * If the authentication instance is a child or a parent, its relation is
      * checked too, because the user can enter the system by either method.
+     * NOTE: This method has changed !!!!
+     * - it used to check on auth_remote_user table OR on usr table
+     * - now it first checks auth_remote_user table if required THEN / ELSE usr table
      */
     public function find_by_instanceid_username($instanceid, $username, $remoteuser=false) {
 
@@ -271,23 +274,25 @@ class User {
                             . '
                         )';
             $user = get_record_sql($sql, array($username, $instanceid));
+            if ($user) {
+                $this->populate($user);
+                return $this;
+            }
         }
-        else {
-            $sql = 'SELECT
-                        *,
-                        ' . db_format_tsfield('expiry') . ',
-                        ' . db_format_tsfield('lastlogin') . ',
-                        ' . db_format_tsfield('lastlastlogin') . ',
-                        ' . db_format_tsfield('lastaccess') . ',
-                        ' . db_format_tsfield('suspendedctime') . ',
-                        ' . db_format_tsfield('ctime') . '
-                    FROM
-                        {usr}
-                    WHERE
-                        LOWER(username) = ? AND
-                        authinstance = ?';
-            $user = get_record_sql($sql, array($username, $instanceid));
-        }
+        $sql = 'SELECT
+                    *,
+                    ' . db_format_tsfield('expiry') . ',
+                    ' . db_format_tsfield('lastlogin') . ',
+                    ' . db_format_tsfield('lastlastlogin') . ',
+                    ' . db_format_tsfield('lastaccess') . ',
+                    ' . db_format_tsfield('suspendedctime') . ',
+                    ' . db_format_tsfield('ctime') . '
+                FROM
+                    {usr}
+                WHERE
+                    LOWER(username) = ? AND
+                    authinstance = ?';
+        $user = get_record_sql($sql, array($username, $instanceid));
 
         if (false == $user) {
             throw new AuthUnknownUserException("User with username \"$username\" is not known at auth instance \"$instanceid\"");
@@ -317,7 +322,8 @@ class User {
      */
     protected function populate($data) {
         reset($this->defaults);
-        while(list($key, ) = each($this->defaults)) {
+        $keys = array_keys($this->defaults);
+        foreach ($keys as $key) {
             if (property_exists($data, $key)) {
                 $this->set($key, $data->{$key});
             }
@@ -621,7 +627,7 @@ class User {
         // We need to check if table exists otherwise we get error message about usr_agreement table
         // not existing.
         require_once('ddl.php');
-        if (!table_exists(new XMLDBTable("usr_agreement"))) {
+        if (!db_table_exists("usr_agreement")) {
             return true;
         }
 
@@ -643,7 +649,7 @@ class User {
     }
 
     public function to_stdclass() {
-        $this->stdclass = new StdClass;
+        $this->stdclass = new stdClass();
         reset($this->defaults);
         foreach (array_keys($this->defaults) as $k) {
             if ($k == 'expiry' || $k == 'lastlogin' || $k == 'lastlastlogin' || $k == 'lastaccess' || $k == 'suspendedctime' || $k == 'ctime') {
@@ -1288,6 +1294,33 @@ class User {
     }
 
     /**
+     * Function to check if the user can add peer assessments to the view
+     *
+     * @param $v  View object where to add the peer assessment
+     */
+     public function can_peer_assess($v) {
+        $user_roles = get_column('view_access', 'role', 'usr', $this->get('id'), 'view', $v->get('id'));
+        if (!empty($user_roles)) {
+            foreach ($user_roles as $i => $role) {
+               if ($role == 'peer' || $role == 'peermanager') {
+                  return true;
+               }
+            }
+        }
+        return false;
+     }
+
+   /**
+    * Function to check if the user has access role as peer only
+    *
+    * @param $v  View object to check the access to
+    */
+    public function has_peer_role_only($v) {
+       $user_roles = get_column('view_access', 'role', 'usr', $this->get('id'), 'view', $v->get('id'));
+       return (!empty($user_roles) && count($user_roles) == 1 && $user_roles[0] == 'peer');
+    }
+
+    /**
      * Function to check current user can edit collection
      *
      * This is fairly straightforward at the moment but it might require more
@@ -1408,9 +1441,11 @@ class User {
     /**
      * Makes a literal copy of a list of views for this user.
      *
-     * @param array $templateids A list of viewids to copy.
+     * @param array   $templateids      A list of viewids to copy.
+     * @param boolean $checkviewaccess  Check that the user can see the view before copying it.
+     * @param boolean $onlyonce         Check that the user already has a copy of the view.
      */
-    public function copy_views($templateids, $checkviewaccess=true) {
+    public function copy_views($templateids, $checkviewaccess=true, $onlyonce=false) {
         if (!$templateids) {
             // Nothing to do
             return;
@@ -1428,23 +1463,31 @@ class User {
 
         db_begin();
         $artefactcopies = array();
+        $copied = array();
         foreach ($templateids as $tid) {
-            View::create_from_template(array(
+            if ($onlyonce && get_field('existingcopy', 'id', 'view', $tid, 'usr', $this->get('id'))) {
+                continue;
+            }
+            list($view) = View::create_from_template(array(
                 'owner' => $this->get('id'),
                 'title' => $views[$tid]->title,
                 'description' => $views[$tid]->description,
                 'type' => $views[$tid]->type == 'profile' && $checkviewaccess ? 'portfolio' : $views[$tid]->type,
             ), $tid, $this->get('id'), $checkviewaccess, false, $artefactcopies);
+            $copied[$tid] = $view->get('id');
         }
         db_commit();
+        return $copied;
     }
 
     /**
      * Makes a literal copy of a list of collections for this user.
      *
      * @param array $templateids A list of collectionids to copy.
+     * @param boolean $checkviewaccess  Check that the user can see the view before copying it.
+     * @param boolean $onlyonce         Check that the user already has a copy of the collection and all views within it.
      */
-    public function copy_collections($templateids, $checkviewaccess=true) {
+    public function copy_collections($templateids, $checkviewaccess=true, $onlyonce=false) {
         if (!$templateids) {
             // Nothing to do
             return;
@@ -1462,10 +1505,42 @@ class User {
 
         db_begin();
         foreach ($templateids as $tid) {
-            Collection::create_from_template(array(
-                'owner' => $this->get('id'),
-                'title' => $collections[$tid]->name,
-            ), $tid, $this->get('id'), $checkviewaccess);
+            $anyexistingviews = get_records_sql_array("
+               SELECT cv.*, (
+                   CASE WHEN EXISTS (
+                       SELECT 1 FROM {existingcopy} ec
+                       WHERE ec.collection = cv.collection
+                       AND ec.view = cv.view
+                       AND ec.usr = ?) THEN 1 ELSE 0 END
+                   ) AS hascopy
+               FROM {collection_view} cv
+               WHERE cv.collection = ?", array($this->get('id'), $tid));
+            $sum = 0;
+            foreach ($anyexistingviews as $item) {
+                $sum += $item->hascopy;
+            }
+            if ($onlyonce && $sum > 0 && $sum === count($anyexistingviews)) {
+                // We have all views for this collection so skip
+                continue;
+            }
+            else if ($onlyonce && $sum > 0 && $sum < count($anyexistingviews)) {
+                // We have some but not all views so we need to add missing ones to the collection
+                foreach ($anyexistingviews as $ev) {
+                    if (!$ev->hascopy) {
+                        $copied = $this->copy_views(array($ev->view), $checkviewaccess, $onlyonce);
+                        // @TODO add copied page to user's collection
+                        // We can't do this yet as we don't know what id of collection that was made or if it still exists
+                        // so we just add the singular page - the user can add it their collection if they wish
+                    }
+                }
+            }
+            else {
+                // Copy full collection
+                Collection::create_from_template(array(
+                    'owner' => $this->get('id'),
+                    'title' => $collections[$tid]->name,
+                ), $tid, $this->get('id'), $checkviewaccess);
+            }
         }
         db_commit();
     }
@@ -1529,6 +1604,48 @@ class User {
         $this->copy_collections($templatecollectionids, false);
     }
 
+    /**
+     * Makes a literal copy of a list of views and collections for existing group members.
+     *
+     * @param array    $templateids Array of either view ids or collection ids
+     * @param boolean  $collection  Are the supplied ids collection ids
+     */
+    public function copy_group_views_collections_to_existing_members($templateids, $collection = false) {
+        if (empty($templateids)) {
+            return;
+        }
+
+        if ($collection) {
+            // Copy the collection to the current users portfolio
+            $this->copy_collections($templateids, false, true);
+            // Need to loop thru collections to find the list of viewids
+            $results = get_records_select_array('collection_view', 'collection IN (' . implode(', ', db_array_to_ph($templateids)) . ')', $templateids, '', 'collection, view, displayorder');
+            foreach ($results as $result) {
+                $where = new stdClass();
+                $where->view = $result->view;
+                $where->collection = $result->collection;
+                $where->usr = $this->id;
+
+                $record = clone $where;
+                $record->ctime = db_format_timestamp(time());
+                ensure_record_exists('existingcopy', $where, $record);
+            }
+        }
+        else {
+            // Copy the page to the current users portfolio
+            $this->copy_views($templateids, false, true);
+            // Loop thru viewids to add them to the done table
+            foreach ($templateids as $id) {
+                $where = new stdClass();
+                $where->view = $id;
+                $where->usr = $this->id;
+
+                $record = clone $where;
+                $record->ctime = db_format_timestamp(time());
+                ensure_record_exists('existingcopy', $where, $record);
+            }
+        }
+    }
 }
 
 
@@ -1543,7 +1660,8 @@ class LiveUser extends User {
 
         if ($this->SESSION->is_live()) {
             $this->authenticated  = true;
-            while(list($key,) = each($this->defaults)) {
+            $keys = array_keys($this->defaults);
+            foreach ($keys as $key) {
                 $this->get($key);
             }
         }
@@ -1679,7 +1797,7 @@ class LiveUser extends User {
         $this->SESSION->set('remoteavatar', null);
         $this->SESSION->set('nocheckrequiredfields', null);
         if (get_config('installed') && !defined('INSTALLER') && $this->get('sessionid')
-            && table_exists(new XMLDBTable('usr_session'))) {
+            && db_table_exists('usr_session')) {
             delete_records('usr_session', 'session', $this->get('sessionid'));
         }
 
@@ -1908,7 +2026,7 @@ class LiveUser extends User {
             throw new UserException(get_string('loginastwice', 'admin'));
         }
 
-        $olduser = new StdClass;
+        $olduser = new stdClass();
         $olduser->id = $this->get('id');
         $olduser->name = display_name($this, null, true);
 

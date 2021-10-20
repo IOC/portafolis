@@ -8,7 +8,7 @@
                     {$plan.title|str_shorten_text:80:true}
                 </h3>
                 {if $plan.description}
-                <div id="{$plan.id}_desc" class="detail hidden">
+                <div id="{$plan.id}_desc" class="detail d-none">
                     {$plan.description|clean_html|safe}
                 </div>
                 {/if}{if $plan.tags}
@@ -20,7 +20,7 @@
                     <strong>{str tag=tasks section=artefact.plans}:</strong>
                     {str tag=ntasks section=artefact.plans arg1=count($plan.entrytasks)}
                 </div>
-                <!-- TODO Display existing plans and plan count with section title -->
+                <!-- TODO Display existplans and plan count with section title -->
                 <!-- {if $plan.existingitems}
                 <div class="existingplans">
                     <strong>{str tag=existingplans section=artefact.plans}</strong>
@@ -63,7 +63,7 @@
                             ({str tag=completed section=artefact.plans})
                         </span>
                         {/if}
-                        <div id="{$task.id}_desc" class="detail hidden">
+                        <div id="{$task.id}_desc" class="detail d-none">
                             {$task.description|clean_html|safe}
                         </div>
                         <div class="completiondate text-small">
@@ -91,11 +91,11 @@
 </div>
 <script type="application/javascript">
     jQuery(function() {
-        jQuery("a.tasktitle").click(function(e) {
+        jQuery("a.tasktitle").on("click", function(e) {
             e.preventDefault();
-            jQuery("#" + this.id + "_desc").toggleClass("hidden");
+            jQuery("#" + this.id + "_desc").toggleClass("d-none");
         });
-        jQuery("input.plandecision").change(function(e) {
+        jQuery("input.plandecision").on("change", function(e) {
             e.preventDefault();
             if (this.value == '1') {
             // The import decision for the plan is IGNORE

@@ -26,16 +26,17 @@
 
 // Header search form
 .navbar-form.navbar-collapse {
-    padding: 15px;
+    padding: 15px 0;
     margin-bottom: 0;
     border: 0;
-    @media (min-width: $screen-sm-min) {
+    height: 65px;
+    @include media-breakpoint-up(md) {
         position: absolute;
         display: block;
         max-width: none;
         visibility: visible;
         top: 10px;
-        right: 163px;
+        right: 230px;
         margin: 0 30px 0 0;
         padding: 0;
         box-shadow: none;
@@ -44,20 +45,24 @@
 
     .header-search-form {
         input[type=text] {
-            width: calc(100% - 43px);
+            width: calc(100% - 75px);
             float: left;
-            @media (min-width: $screen-sm-min) {
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+            margin-left: 15px;
+            @include media-breakpoint-up(md) {
                 width: auto;
+                margin-left: 0;
             }
         }
-        .input-group-btn {
+        .input-group-append {
             display: block !important;
             float: left;
             border-top-left-radius: 0;
             border-bottom-left-radius: 0;
-            border-left: 1px solid $btn-default-border;
+            border-left: 1px solid $btn-secondary-border;
             margin-left: -1px;
-            @media (min-width: $screen-sm-min) {
+            @include media-breakpoint-up(md) {
                 float: right;
             }
         }
@@ -66,8 +71,8 @@
 // Allowing the public search to sit in right place
 // when lang selector exists or not
 .loggedout .navbar-form.navbar-collapse {
-    @media (min-width: $screen-sm-min) {
-        right: 0px;
+    @include media-breakpoint-up(md) {
+        right: 0;
         margin-right: 15px;
 
         &.with-langform {
@@ -79,8 +84,38 @@
     }
 }
 
+.navbar {
+    border: 1px solid transparent;
+    padding: 0;
+    > .container {
+        display: block;
+    }
+}
+
 .navbar-default {
     border-left: 0;
     border-right: 0;
     border-top: 0;
+    background-color: $navbar-default-bg;
+    border-color: $navbar-default-border;
+}
+
+// Header messagebox form
+.navbar-messages {
+    &:hover,
+    &:focus {
+        color: $navbar-default-link-hover-color;
+        text-decoration: none;
+    }
+
+    .navbar-messages-count {
+      position: absolute;
+      top: -3px;
+      right: 5px;
+      background-color: $navbar-messages-count-bg;
+      border-radius: $border-radius;
+      padding: 0 3px;
+      color: $navbar-messages-count-color;
+      font-size: 12px;
+    }
 }

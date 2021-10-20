@@ -1,7 +1,7 @@
 {if !$editing}
     <div id="annotationfeedbackview_{$blockid}" class="annotation-feedback">
         {if $annotationfeedbackcount > 0}
-            <a class="commentlink link-blocktype" id="block_{$blockid}" data-toggle="modal-docked" data-target="#annotation_feedbacktable_{$blockid}" href="#">
+            <a class="commentlink link-blocktype" id="block_{$blockid}" data-toggle="modal-docked" data-target="#annotation_feedbacktable_{$blockid}" href="#" data-artefactid="{$artefactid}" data-blockid="{$blockid}">
                 <span class="icon icon-comments" role="presentation" aria-hidden="true"></span>
                 {str tag=Annotationfeedback section=artefact.annotation} ({$annotationfeedbackcount})
             </a>
@@ -22,7 +22,7 @@
                         <span class="times">&times;</span>
                         <span class="sr-only">{str tag=Close}</span>
                     </button>
-                    <h4 class="modal-title pull-left">
+                    <h4 class="modal-title float-left">
                         <span class="icon icon-lg icon-comments left" role="presentation" aria-hidden="true"></span>
                         {str tag=Annotationfeedback section=artefact.annotation} - {$annotationtitle}
                     </h4>

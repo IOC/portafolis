@@ -45,7 +45,7 @@ else {
 
 $subtitle = get_string('copyvieworcollection', 'view');
 
-$views = new StdClass;
+$views = new stdClass();
 $views->query      = trim(param_variable('viewquery', ''));
 $views->ownerquery = trim(param_variable('ownerquery', ''));
 $views->offset     = param_integer('viewoffset', 0);
@@ -142,7 +142,7 @@ jQuery(function($) {
 EOF;
 
 $smarty = smarty(
-    array('js/preview.js', 'searchtable', 'paginator'),
+    array('js/preview.js', 'searchtable', 'paginator', 'js/lodash/lodash.js', 'js/gridstack/gridstack.js', 'js/gridlayout.js'),
     array(),
     array('stylesheets' => array('style/views.css'))
 );

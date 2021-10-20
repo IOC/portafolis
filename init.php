@@ -15,7 +15,7 @@ if (defined('CLI') && php_sapi_name() != 'cli') {
     die();
 }
 
-$CFG = new StdClass;
+$CFG = new stdClass();
 $CFG->docroot = dirname(__FILE__) . DIRECTORY_SEPARATOR;
 //array containing site options from database that are overrided by $CFG
 $OVERRIDDEN = array();
@@ -251,6 +251,7 @@ if (isset($CFG->wwwroot)) {
     }
 }
 
+require_once('auth/lib.php');
 // Start up a session object, in case we need to use it to print messages
 require_once('auth/session.php');
 $SESSION = Session::singleton();
@@ -279,10 +280,20 @@ if ((!isset($_SERVER['HTTP_X_FORWARDED_PROTO']) || (isset($_SERVER['HTTP_X_FORWA
     redirect(get_relative_script_path());
 }
 // Fi PATCH
+/** OLD CODE
+if ($CFG->sslproxy === false && isset($_SERVER['REMOTE_ADDR']) && (!isset($_SERVER['HTTPS']) || strtolower($_SERVER['HTTPS']) == 'off') &&
+    parse_url($CFG->wwwroot, PHP_URL_SCHEME) === 'https'){
+    redirect(get_relative_script_path());
+}
+**/
 if (!isset($CFG->noreplyaddress) && isset($CFG->wwwroot)) {
     $noreplyaddress = 'noreply@' . parse_url($CFG->wwwroot, PHP_URL_HOST);
+
     try {
-        set_config('noreplyaddress', $noreplyaddress);
+      if (!sanitize_email($noreplyaddress)) {
+          $noreplyaddress = 'noreply@example.org';
+      }
+      set_config('noreplyaddress', $noreplyaddress);
     }
     catch (Exception $e) {
         // Do nothing again, same reason as above
@@ -337,11 +348,10 @@ if (get_config('installed')) {
     // from logins
     require(get_config('libroot') . 'version.php');
     $upgradeavailable = $config->version > get_config('version');
-    if ($upgradeavailable) {
-        ensure_upgrade_sanity();
-    }
-    else if ($config->version < get_config('version')) {
+    if ($config->version < get_config('version')) {
         if (get_config('productionmode')) {
+            $coreversion = get_config('version');
+            $corerelease = get_config('release');
             throw new ConfigSanityException("Database version of Mahara $corerelease ($coreversion) is newer "
                                             . "than files version $config->release ($config->version). "
                                             . "Please make sure you have the correct Mahara files in place.");
@@ -369,7 +379,7 @@ if (!defined('CLI')) {
     header('Pragma: no-cache');
 
     // Security headers. See https://www.owasp.org/index.php/List_of_useful_HTTP_headers
-    header('X-Frame-Options: SAMEORIGIN');
+
     header('X-XSS-Protection: 1; mode=block');
     header('X-Content-Type-Options: nosniff');
     header('X-Permitted-Cross-Domain-Policies: master-only');
@@ -378,11 +388,18 @@ if (!defined('CLI')) {
     }
     // Don't print precise PHP version as an HTTP header
     header_remove('x-powered-by');
+
+    // Allow LTI to load in an iframe
+    if ($csp_ancestor_exemption = $SESSION->get('csp-ancestor-exemption')) {
+        header("Content-Security-Policy: frame-ancestors 'self' $csp_ancestor_exemption");
+        header('X-Frame-Options: ALLOW-FROM '. $csp_ancestor_exemption);
+    }
+    else {
+        header("Content-Security-Policy: frame-ancestors 'self'");
+        header('X-Frame-Options: SAMEORIGIN');
+    }
 }
 
-// Only do authentication once we know the page theme, so that the login form
-// can have the correct theming.
-require_once('auth/lib.php');
 $USER    = new LiveUser();
 
 if (function_exists('local_init_user')) {
@@ -469,8 +486,7 @@ if (!$mobile_detection_done) {
 // Run modules bootstrap code.
 if (!defined('INSTALLER')) {
     // make sure the table exists if upgrading from older version
-    require_once('ddl.php');
-    if (table_exists(new XMLDBTable('module_installed'))) {
+    if (db_table_exists('module_installed')) {
         if ($plugins = plugins_installed('module')) {
             foreach ($plugins as &$plugin) {
                 if (safe_require_plugin('module', $plugin->name)) {
@@ -478,7 +494,27 @@ if (!defined('INSTALLER')) {
                 }
             }
         }
+
+        // Make sure that multirecipient notifications is installed and active
+        safe_require('module', 'multirecipientnotification');
+        if (!PluginModuleMultirecipientnotification::is_active()) {
+            throw new ConfigSanityException(get_string('multirecipientnotificationnotenabled',
+                                                       'module.multirecipientnotification'));
+        }
+        if (!$siteclosedforupgrade) {
+            // Make sure that placeholder block is installed and active
+            safe_require('blocktype', 'placeholder');
+            if (!PluginBlocktypePlaceholder::is_active()) {
+                throw new ConfigSanityException(get_string('placeholderblocktypenotenabled',
+                                                           'blocktype.placeholder'));
+            }
+        }
     }
+}
+
+if (get_config('installed')) {
+    // Check if we need to set/unset isolated institution related things
+    is_isolated();
 }
 
 if (get_config('disableexternalresources')) {
@@ -519,7 +555,7 @@ function init_performance_info() {
 
     global $PERF;
 
-    $PERF = new StdClass;
+    $PERF = new stdClass();
     $PERF->dbreads = $PERF->dbwrites = $PERF->dbcached = 0;
     $PERF->logwrites = 0;
     if (function_exists('microtime')) {

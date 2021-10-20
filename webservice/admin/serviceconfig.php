@@ -205,9 +205,9 @@ $form['name'] = 'serviceconfig';
 $form['successcallback'] = 'serviceconfig_submit';
 $form = pieform($form);
 $inlinejs = <<<EOF
-<script type="application/javascript">
+<script>
 jQuery(function($) {
-    $(".dialogue").click(function(e) {
+    $(".dialogue").on("click", function(e) {
         e.preventDefault();
         e.stopPropagation();
         // fetch the info for the method
@@ -381,5 +381,5 @@ function serviceconfig_submit(Pieform $form, $values) {
         }
     }
     $SESSION->add_ok_msg(get_string('configsaved', 'auth.webservice'));
-    redirect('/webservice/admin/serviceconfig.php?service=' . $service);
+    redirect('/webservice/admin/index.php?open=webservices_function_groups');
 }

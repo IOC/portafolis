@@ -243,6 +243,12 @@ $cfg->bounceprefix    = 'AAA-';
 //$cfg->bouncedomain    = '';
 
 /**
+ * @global number $cfg->bounces_resetdays number of days before reseting the
+ * emailsent and emailbounced values for each email
+ */
+ $cfg->bounces_resetdays = 30;
+
+/**
  * @global string $cfg->imapserver The imap server to check for bounced emails
  * @global int $cfg->imapport The port for the imap server
  */
@@ -391,6 +397,10 @@ $cfg->sslproxy = false;
  *
  * A point to note about the example below. Moodle doesn't strip the trailing slash from wwwroot
  * Bug MDL-30042 fixes this, if this patch isn't applied, just hard code the login url you want instead
+ *
+ * Another point to note is if you need some system to render the local login page when accessing a restricted page
+ * rather than automatically redirect to externallogin you can override this by adding a 'override=1' to the URL of the page you are
+ * trying to access.
  */
 // $cfg->externallogin = 'http://moodle.example.com/auth/mnet/jump.php?hostwwwroot={wwwroot}&wantsurl={shorturlencoded}';
 
@@ -552,7 +562,7 @@ $cfg->plugin_search_elasticsearch_redolimit = '500';
  * to use a PHP nowdoc: http://www.php.net/manual/en/language.types.string.php#language.types.string.syntax.nowdoc
  */
 // $cfg->additionalhtmlhead = <<<'HTML'
-// <script type="application/javascript">
+// <script>
 //   var _gaq = _gaq || [];
 //   _gaq.push(['_setAccount', 'UA-XXXXX-X']);
 //   _gaq.push(['_trackPageview']);
@@ -616,14 +626,6 @@ $cfg->usersuniquebyusername = false;
  * Due to database name length limits, the dbprefix MUST be no longer than 19 characters.
  */
 $cfg->dbprefix = '';
-
-/**
- * @global string $cfg->dbtimezone Sets the timezone for your database connection. This is only necessary if your
- * database server has a different timezone than your web server (which is most likely to happen in cloud hosting).
- * Consult your database's manual for legal values.
- */
-// $cfg->dbtimezone = '+10:00';
-// $cfg->dbtimezone = 'Europe/Rome';
 
 /**
  * @global bool $cfg->publicsearchallowed Activates the display of the search box for logged-out users
@@ -717,7 +719,7 @@ $cfg->passwordsaltalt1 = 'old salt value';
  * @global array $cfg->openbadgedisplayer_source The open badge sources
  * The default sources are Mozilla Backpack and openbadgepassport.com
  */
-$cfg->openbadgedisplayer_source = '{"backpack":"https://backpack.openbadges.org/","passport":"https://openbadgepassport.com/"}';
+$cfg->openbadgedisplayer_source = '{"backpack":"https://backpack.openbadges.org/","passport":"https://openbadgepassport.com/","badgr":"https://api.badgr.io/"}';
 
 /**
  * @global string $cfg->memcacheservers
@@ -729,19 +731,20 @@ $cfg->openbadgedisplayer_source = '{"backpack":"https://backpack.openbadges.org/
 /**
  * @global string $cfg->sessionhandler
  * An alternative session handler for Mahara if you do not wish to use files.
- * Specify the name of the session handler.
+ * Specify the name of the session handler. Will be used for SAML session handling unless $cfg->ssphpsessionhandler set
  */
 $cfg->sessionhandler = 'file';
 //$cfg->sessionhandler = 'memcached'; // also set the $cfg->memcacheservers setting if using this one
-//$cfg->sessionhandler = 'redis'; // also set the $cfg->redis* ssettings if using this one
+//$cfg->sessionhandler = 'redis'; // also set the $cfg->redis* settings if using this one
 
 /**
  * @global string $cfg->ssphpsessionhandler
  * An alternative session handler for SimpleSAMLphp if you do not wish to use memcache.
  * Specify the name of the session handler.
  */
-// $cfg->ssphpsessionhandler = 'memcached';
-
+// $cfg->ssphpsessionhandler = 'memcached'; // also set the $cfg->memcacheservers setting if using this one
+// $cfg->ssphpsessionhandler = 'redis'; // also set the $cfg->redis* setting if using this one
+// $cfg->ssphpsessionhandler = 'sql'; // also set the $cfg->ssphpsql* settings if using this one
 
 /**
  * Redis session handling
@@ -749,6 +752,17 @@ $cfg->sessionhandler = 'file';
 //$cfg->redissentinelservers = "localhost:26379";  // A comma seperated string of hosts:ports
 //$cfg->redismastergroup = 'mymaster';
 //$cfg->redisprefix = 'mahara';
+
+/**
+ * SQL session store configs for SimpleSAMLphp
+ * Specify the SQL database connection string, credentials and table prefix
+ */
+/*
+ $cfg->ssphpsqldsn = "mysql:host=localhost;dbname=simplesamlphp";
+ $cfg->ssphpsqlusername = null;
+ $cfg->ssphpsqlpassword = null;
+ $cfg->ssphpsqlprefix = 'ssphp';
+*/
 
 /**
  * @global array $cfg->saml_custommappingfile
@@ -771,3 +785,26 @@ $cfg->sessionhandler = 'file';
     "class" : "s3_file_system",
  }';
 */
+
+/**
+ * @global string $cfg->dwoocachedir
+ * The location of the dwoo cache directory
+ */
+//$cfg->customdwoocachedir = '/var/cache/appcache/testing';
+
+/**
+ * Uncomment the following line if you wish to lock down access for members of institutions
+ * so that they are separated entirely and disallow contact between members of one institution
+ * with members of another institution.
+ *
+ * Users can only be in one institution at one point in time. Being a member of multiple
+ * institutions is not allowed. Only institution staff, institution admins, site staff and
+ * site admins can create groups. No friends allowed.
+ */
+//$cfg->isolatedinstitutions = true;
+
+/**
+ * Uncomment the following line if you do not wish to allow friends and friend related
+ * activites on your install of Mahara. No friends allowed - this is a site-wide setting.
+ */
+//$cfg->friendsnotallowed = true;

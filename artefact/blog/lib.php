@@ -66,10 +66,11 @@ class PluginArtefactBlog extends PluginArtefact {
         }
         else if ($groupid) {
             define('GROUP', $groupid);
-            define('MENUITEM', 'groups/blogs');
+            define('MENUITEM', 'engage/index');
+            define('MENUITEM_SUBPAGE', 'blogs');
         }
         else {
-            define('MENUITEM', 'content/blogs');
+            define('MENUITEM', 'create/blogs');
         }
     }
 
@@ -80,12 +81,12 @@ class PluginArtefactBlog extends PluginArtefact {
     public static function menu_items() {
         global $USER;
         $tab = array(
-            'path'   => 'content/blogs',
-            'weight' => 40,
+            'path'   => 'create/blogs',
+            'weight' => 30,
             'url'    => 'artefact/blog/index.php',
             'title'  => get_string('Blogs', 'artefact.blog'),
         );
-        return array('content/blogs' => $tab);
+        return array('create/blogs' => $tab);
     }
 
     public static function get_cron() {
@@ -145,7 +146,8 @@ class PluginArtefactBlog extends PluginArtefact {
 
     public static function get_artefact_type_content_types() {
         return array(
-            'blogpost' => array('text'),
+            'blog' => array('blog'),
+            'blogpost' => array('blogpost'),
         );
     }
 
@@ -153,15 +155,20 @@ class PluginArtefactBlog extends PluginArtefact {
         return 'artefact/blog/view/index.php';
     }
 
-    public static function group_tabs($groupid) {
-        return array(
-            'blogs' => array(
-                'path' => 'groups/blogs',
-                'url' => 'artefact/blog/index.php?group=' . $groupid,
-                'title' => get_string('Blogs', 'artefact.blog'),
-                'weight' => 65,
-            ),
-        );
+    public static function group_tabs($groupid, $role) {
+        if ($role) {
+            return array(
+                'blogs' => array(
+                    'path' => 'groups/blogs',
+                    'url' => 'artefact/blog/index.php?group=' . $groupid,
+                    'title' => get_string('Blogs', 'artefact.blog'),
+                    'weight' => 65,
+                ),
+            );
+        }
+        else {
+            return array();
+        }
     }
 }
 
@@ -336,27 +343,21 @@ class ArtefactTypeBlog extends ArtefactType {
 
         $template = 'artefact:blog:viewposts.tpl';
 
-        $baseurl = get_config('wwwroot') . 'artefact/artefact.php?artefact=' . $this->id;
-        if (!empty($options['viewid'])) {
-            $baseurl .= '&view=' . $options['viewid'];
-        }
         $pagination = array(
-            'baseurl' => $baseurl,
+            //baseurl will be set in the jsonscript
+            'baseurl' => '',
             'id' => 'blogpost_pagination',
             'datatable' => 'postlist',
             'jsonscript' => 'artefact/blog/posts.json.php',
         );
 
         ArtefactTypeBlogpost::render_posts($posts, $template, $options, $pagination);
-
         $smarty = smarty_core();
         if (isset($options['viewid'])) {
-            $smarty->assign('artefacttitle', '<a href="' . get_config('wwwroot') . 'artefact/artefact.php?artefact='
-                                             . $this->get('id') . '&view=' . $options['viewid']
-                                             . '">' . hsc($this->get('title')) . '</a>');
+            $smarty->assign('view', $options['viewid']);
         }
         else {
-            $smarty->assign('artefacttitle', hsc($this->get('title')));
+            $smarty->assign('view', null);
         }
 
         if (!empty($options['details']) and get_config('licensemetadata')) {
@@ -491,6 +492,7 @@ class ArtefactTypeBlog extends ArtefactType {
         $newdescription = EmbeddedImage::prepare_embedded_images($artefact->get('description'), 'blog', $blogid);
         $artefact->set('description', $newdescription);
         db_commit();
+        return $blogid;
     }
 
     /**
@@ -583,16 +585,16 @@ class ArtefactTypeBlog extends ArtefactType {
             'name' => 'delete_' . $id,
             'successcallback' => 'delete_blog_submit',
             'renderer' => 'div',
-            'class' => 'form-as-button pull-left btn-group-item',
+            'class' => 'form-as-button float-left btn-group-item',
             'elements' => array(
                 'submit' => array(
                     'type' => 'button',
                     'usebuttontag' => true,
-                    'class' => 'btn-default btn-sm last',
+                    'class' => 'btn-secondary btn-sm last',
                     'alt' => get_string('deletespecific', 'mahara', $title),
                     'elementtitle' => get_string('delete'),
                     'confirm' => $confirm,
-                    'value' => '<span class="icon icon-trash icon-lg text-danger" role="presentation" aria-hidden="true"></span><span class="sr-only">' . get_string('deletespecific', 'mahara', $title) . '</span>',
+                    'value' => '<span class="icon icon-trash-alt icon-lg text-danger" role="presentation" aria-hidden="true"></span><span class="sr-only">' . get_string('deletespecific', 'mahara', $title) . '</span>',
                 ),
                 'delete' => array(
                     'type' => 'hidden',
@@ -863,19 +865,8 @@ class ArtefactTypeBlogPost extends ArtefactType {
             }
             $smarty->assign('notpublishedblogpost', $notpublishedblogpoststr);
         }
-        $artefacturl = get_config('wwwroot') . 'artefact/artefact.php?artefact=' . $this->get('id');
-        if (isset($options['viewid'])) {
-            $artefacturl .= '&view=' . $options['viewid'];
-        }
-        $smarty->assign('artefacturl', $artefacturl);
-        if (empty($options['hidetitle'])) {
-            if (isset($options['viewid'])) {
-                $smarty->assign('artefacttitle', '<a href="' . $artefacturl . '">' . hsc($this->get('title')) . '</a>');
-            }
-            else {
-                $smarty->assign('artefacttitle', hsc($this->get('title')));
-            }
-        }
+        $smarty->assign('artefacttitle', hsc($this->get('title')));
+
 
         // We need to make sure that the images in the post have the right viewid associated with them
         $postcontent = $this->get('description');
@@ -886,12 +877,16 @@ class ArtefactTypeBlogPost extends ArtefactType {
         $smarty->assign('artefactdescription', $postcontent);
         $smarty->assign('artefacttags', $this->get('tags'));
         $smarty->assign('artefactowner', $this->get('owner'));
+        $smarty->assign('artefactview', (isset($options['viewid']) ? $options['viewid'] : null));
         if (!empty($options['details']) and get_config('licensemetadata')) {
             $smarty->assign('license', render_license($this));
         }
         else {
             $smarty->assign('license', false);
         }
+        $smarty->assign('commentsallowed', $this->get('allowcomments'));
+        $smarty->assign('licensemetadata', get_config('licensemetadata') ? true : false);
+        $smarty->assign('editing',  isset($options['editing']) ? $options['editing'] : false);
 
         $attachments = $this->get_attachments();
         if ($attachments) {
@@ -900,7 +895,6 @@ class ArtefactTypeBlogPost extends ArtefactType {
                 $f = artefact_instance_from_id($attachment->id);
                 $attachment->size = $f->describe_size();
                 $attachment->iconpath = $f->get_icon(array('id' => $attachment->id, 'viewid' => isset($options['viewid']) ? $options['viewid'] : 0));
-                $attachment->viewpath = get_config('wwwroot') . 'artefact/artefact.php?artefact=' . $attachment->id . '&view=' . (isset($options['viewid']) ? $options['viewid'] : 0);
                 $attachment->downloadpath = get_config('wwwroot') . 'artefact/file/download.php?file=' . $attachment->id;
                 if (isset($options['viewid'])) {
                     $attachment->downloadpath .= '&view=' . $options['viewid'];
@@ -912,11 +906,30 @@ class ArtefactTypeBlogPost extends ArtefactType {
             }
             $smarty->assign('postid', $this->get('id'));
         }
-        $smarty->assign('postedbyon', ArtefactTypeBlog::display_postedby($this->ctime, display_name($this->owner)));
+        $by = $this->author ? display_default_name($this->author) : $this->authorname;
+        $smarty->assign('postedbyon', ArtefactTypeBlog::display_postedby($this->ctime, $by));
         if ($this->ctime != $this->mtime) {
             $smarty->assign('updatedon', get_string('updatedon', 'artefact.blog') . ' ' . format_date($this->mtime));
         }
-        return array('html' => $smarty->fetch('artefact:blog:render/blogpost_renderfull.tpl'),
+
+        if (!empty($options['modal'])) {
+            if ($parent = artefact_instance_from_id($this->get('parent'))) {
+                $smarty->assign('parentblogtitle', $parent->get('title'));
+            }
+            if ($this->get('owner') != $USER->get('id')) {
+                $smarty->assign('postedby', $by);
+            }
+            $smarty->assign('postedon', format_date($this->ctime));
+            if ($this->ctime != $this->mtime) {
+                $smarty->assign('lastmodifieddate', format_date($this->mtime));
+            }
+            if (isset($options['viewid'])) {
+                $smarty->assign('view', $options['viewid']);
+            }
+        }
+
+        $template = empty($options['modal']) ? 'artefact:blog:render/blogpost_renderfull.tpl' : 'artefact:blog:render/blogpost_render_in_modal.tpl';
+        return array('html' => $smarty->fetch($template),
                      'javascript' => '',
                      'attachments' => $attachments);
     }
@@ -1006,6 +1019,9 @@ class ArtefactTypeBlogPost extends ArtefactType {
             }
             $draftentries = count_records_sql('SELECT COUNT(*) ' . $from, array($id));
             $from .= ' AND bp.published = 1';
+            if (!empty($viewoptions['existing_artefacts'])) {
+                $from .= ' AND bp.blogpost IN (' . join(',', (array)$viewoptions['existing_artefacts']) . ')';
+            }
         }
 
         $results['count'] = count_records_sql('SELECT COUNT(*) ' . $from, array($id));
@@ -1031,7 +1047,7 @@ class ArtefactTypeBlogPost extends ArtefactType {
         }
 
         // Get the attached files.
-        $postids = array_map(create_function('$a', 'return $a->id;'), $data);
+        $postids = array_map(function ($a) { return $a->id; }, $data);
         $files = ArtefactType::attachments_from_id_list($postids);
         if ($files) {
             safe_require('artefact', 'file');
@@ -1047,7 +1063,7 @@ class ArtefactTypeBlogPost extends ArtefactType {
 
         if ($tags = ArtefactType::tags_from_id_list($postids)) {
             foreach($tags as &$at) {
-                $data[$at->artefact]->tags[] = $at->tag;
+                $data[$at->resourceid]->tags[] = $at->tag;
             }
         }
 
@@ -1061,15 +1077,23 @@ class ArtefactTypeBlogPost extends ArtefactType {
             else {
                 $by = $post->author ? display_default_name($post->author) : $post->authorname;
                 $post->postedby = ArtefactTypeBlog::display_postedby($post->ctime, $by);
+                $post->owner = $post->author;
                 // Get comment counts
                 if (!empty($viewoptions['countcomments'])) {
                     safe_require('artefact', 'comment');
                     require_once(get_config('docroot') . 'lib/view.php');
                     $view = new View($viewoptions['viewid']);
                     $artefact = artefact_instance_from_id($post->id);
-                    list($commentcount, $comments) = ArtefactTypeComment::get_artefact_comments_for_view($artefact, $view, null, false);
+
+                    if (!isset ($viewoptions['versioning'])) {
+                        $viewoptions['versioning'] = false;
+                    }
+                    list($commentcount, $comments) = ArtefactTypeComment::get_artefact_comments_for_view($artefact, $view, null, false, false, $viewoptions['versioning']);
                     $post->commentcount = $commentcount;
                     $post->comments = $comments;
+                    if ($viewoptions['versioning']) {
+                        $post->allowcomments = false;
+                    }
                 }
             }
             if ($post->ctime != $post->mtime) {
@@ -1107,6 +1131,8 @@ class ArtefactTypeBlogPost extends ArtefactType {
         $smarty = smarty_core();
         $smarty->assign('options', $options);
         $smarty->assign('posts', $posts['data']);
+        $smarty->assign('modal', (isset($options['modal']) ? $options['modal'] : false));
+        $smarty->assign('license', get_config('licensemetadata') ? true : false);
 
         $posts['tablerows'] = $smarty->fetch($template);
 
@@ -1206,7 +1232,7 @@ class ArtefactTypeBlogPost extends ArtefactType {
                 ),'submit' => array(
                     'type' => 'button',
                     'usebuttontag' => true,
-                    'class' => 'btn-default btn-sm publish',
+                    'class' => 'btn-secondary btn-sm publish',
                     'value' => $strchangepoststatus,
                 ),
             ),
@@ -1222,7 +1248,7 @@ class ArtefactTypeBlogPost extends ArtefactType {
             'jsform' => true,
             'jssuccesscallback' => 'delete_success',
             'renderer' => 'div',
-            'class' => 'form-as-button pull-left',
+            'class' => 'form-as-button float-left',
             'elements' => array(
                 'delete' => array(
                     'type' => 'hidden',
@@ -1232,10 +1258,10 @@ class ArtefactTypeBlogPost extends ArtefactType {
                 'submit' => array(
                     'type' => 'button',
                     'usebuttontag' => true,
-                    'class' => 'btn-default btn-sm last',
+                    'class' => 'btn-secondary btn-sm last',
                     'elementtitle' => get_string('delete'),
                     'confirm' => get_string('deleteblogpost?', 'artefact.blog'),
-                    'value' => '<span class="icon icon-trash icon-lg text-danger" role="presentation" aria-hidden="true"></span><span class="sr-only">' . get_string('deletespecific', 'mahara', $title) . '</span>',
+                    'value' => '<span class="icon icon-trash-alt icon-lg text-danger" role="presentation" aria-hidden="true"></span><span class="sr-only">' . get_string('deletespecific', 'mahara', $title) . '</span>',
                 ),
             ),
         ));

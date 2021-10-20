@@ -27,7 +27,7 @@ if ($group = param_integer('group', null)) {
     define('GROUP', $group);
     require_once('group.php');
     if (!group_user_can_edit_views($group, $USER->get('id'))) {
-        throw new AccessDeniedException(get_string('accessdenied', 'error'));
+        throw new AccessDeniedException();
     }
     $groupobj = group_current_group();
     $pageheading = get_string('notesfor', 'artefact.internal', $groupobj->name);
@@ -49,14 +49,14 @@ else if ($institution = param_alpha('institution', null)) {
         $pageheading = get_string('notesfor', 'artefact.internal', $institutionobj->displayname);
     }
     if (!$USER->can_edit_institution($institution)) {
-        throw new AccessDeniedException(get_string('accessdenied', 'error'));
+        throw new AccessDeniedException();
     }
     $where = 'institution = ?';
     $values = array($institution);
     $params['institution'] = $institution;
 }
 else {
-    define('MENUITEM', 'content/notes');
+    define('MENUITEM', 'create/notes');
     $pageheading = get_string('mynotes', 'artefact.internal');
     $where = 'owner = ?';
     $values = array($USER->get('id'));
@@ -210,9 +210,9 @@ function deletenote_form($id, $notedata) {
             'submit' => array(
                 'type' => 'button',
                 'usebuttontag' => true,
-                'class' => 'btn-default btn-xs last',
+                'class' => 'btn-secondary btn-sm last',
                 'elementtitle' => get_string('delete'),
-                'value' => '<span class="icon icon-trash text-danger icon-lg" role="presentation" aria-hidden="true"></span> ',
+                'value' => '<span class="icon icon-trash-alt text-danger icon-lg" role="presentation" aria-hidden="true"></span> ',
             ),
         ),
     );

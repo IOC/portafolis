@@ -54,22 +54,32 @@ if (!defined('CRON')) {
                 // default colours the graph jsondata was saved in.
                 $colours = get_graph_colours($data, $colours);
                 $x = 0;
-                foreach ($jsondata[0] as $key => $option) {
-                    foreach ($option as $optkey => $optval) {
-                        if (preg_match('/^rgba\(/', $optval)) {
-                            $jsondata[0][$key]->$optkey = preg_replace('/\((.*\,)/', '(' . $colours[$x] . ',', $optval);
+                foreach ($jsondata->datasets as $datasetkey => $dataset) {
+                    for ($i=0; $i < count($dataset->data) ; $i++) {
+                        foreach ($dataset as $property => $values) {
+                            if (preg_match('/^rgba\(/', $values[$i])) {
+                                $jsondata->datasets[$datasetkey]->$property[$i] = preg_replace('/\((.*\,)/', '(' . $colours[$x] . ',', $values[$i]);
+                            }
                         }
+                        $x = empty($colours[$x+1]) ? 0 : $x + 1;
                     }
-                    $x = empty($colours[$x+1]) ? 0 : $x + 1;
                 }
             }
-            $data['datastr'] = json_encode($jsondata[0]);
+            // in case any cached data get cached with a broken label string
+            if (isset($jsondata->labels) && is_array($jsondata->labels)) {
+                foreach ($jsondata->labels as $key => $label) {
+                    if (preg_match('/^\[\[(.*?)\/(.*?)\]\]$/', $label, $matches)) {
+                        $jsondata->labels[$key] = get_string($matches[1], $matches[2]);
+                    }
+                }
+            }
+
+            $data['datastr'] = json_encode($jsondata);
             $data['configstr'] = json_encode($data['configs']);
             json_reply(false, array('data' => $data));
         }
 
         $graphdata = array();
-        $data['colours'] = get_graph_colours($data, $colours);
 
         // Now covert it to something Chart.js can understand
         switch ($data['graph']) {

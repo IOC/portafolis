@@ -56,58 +56,65 @@ class Behat2Renderer
     public function renderAfterExercise($obj) {
         //--> features results
         $strFeatPassed = '' ;
-        if (count($obj->getPassedFeatures()) > 0) {
+        $featTotal = 0;
+        $sceTotal = 0;
+        $stepsTotal = 0;
+
+        if (null!==$obj->getPassedFeatures() && count($obj->getPassedFeatures()) > 0) {
             $strFeatPassed = ' <strong class="passed">'.count($obj->getPassedFeatures()).' success</strong>';
+            $featTotal += count($obj->getPassedFeatures());
         }
 
         $strFeatFailed = '' ;
         $sumRes = 'passed' ;
-        if (count($obj->getFailedFeatures()) > 0) {
+        if (null!==$obj->getFailedFeatures() && count($obj->getFailedFeatures()) > 0) {
             $strFeatFailed = ' <strong class="failed">'.count($obj->getFailedFeatures()).' fail</strong>';
             $sumRes = 'failed' ;
+            $featTotal += count($obj->getFailedFeatures());
         }
 
         //--> scenarios results
         $strScePassed = '' ;
-        if (count($obj->getPassedScenarios()) > 0) {
+        if (null!==$obj->getPassedScenarios() && count($obj->getPassedScenarios()) > 0) {
             $strScePassed = ' <strong class="passed">'.count($obj->getPassedScenarios()).' success</strong>';
+            $sceTotal += count($obj->getPassedScenarios());
         }
 
         $strSceFailed = '' ;
-        if (count($obj->getFailedScenarios()) > 0) {
+        if (null!==$obj->getFailedScenarios() && count($obj->getFailedScenarios()) > 0) {
             $strSceFailed = ' <strong class="failed">'.count($obj->getFailedScenarios()).' fail</strong>';
+            $sceTotal += count($obj->getFailedScenarios());
         }
 
         //--> steps results
         $strStepsPassed = '' ;
-        if (count($obj->getPassedSteps()) > 0) {
+        if (null!==$obj->getPassedSteps() && count($obj->getPassedSteps()) > 0) {
             $strStepsPassed = ' <strong class="passed">'.count($obj->getPassedSteps()).' success</strong>';
+            $stepsTotal += count($obj->getPassedSteps());
         }
 
         $strStepsPending = '' ;
-        if (count($obj->getPendingSteps()) > 0) {
+        if (null!==$obj->getPendingSteps() && count($obj->getPendingSteps()) > 0) {
             $strStepsPending = ' <strong class="pending">'.count($obj->getPendingSteps()).' pending</strong>';
+            $stepsTotal += count($obj->getPendingSteps());
         }
 
         $strStepsSkipped = '' ;
-        if (count($obj->getSkippedSteps()) > 0) {
+        if (null!==$obj->getSkippedSteps() && count($obj->getSkippedSteps()) > 0) {
             $strStepsSkipped = ' <strong class="skipped">'.count($obj->getSkippedSteps()).' skipped</strong>';
+            $stepsTotal += count($obj->getSkippedSteps());
         }
 
         $strStepsFailed = '' ;
-        if (count($obj->getFailedSteps()) > 0) {
+        if (null!==$obj->getFailedSteps() && count($obj->getFailedSteps()) > 0) {
             $strStepsFailed = ' <strong class="failed">'.count($obj->getFailedSteps()).' fail</strong>';
+            $stepsTotal += count($obj->getFailedSteps());
         }
 
 
-        //totals
-        $featTotal = (count($obj->getFailedFeatures()) + count($obj->getPassedFeatures()));
-        $sceTotal = (count($obj->getFailedScenarios()) + count($obj->getPassedScenarios())) ;
-        $stepsTotal = (count($obj->getFailedSteps()) + count($obj->getPassedSteps()) + count($obj->getSkippedSteps()) + count($obj->getPendingSteps())) ;
-
         //list of pending steps to display
         $strPendingList = '' ;
-        if (count($obj->getPendingSteps()) > 0) {
+        if (null!==$obj->getPendingSteps() && count($obj->getPendingSteps()) > 0) {
             foreach($obj->getPendingSteps() as $pendingStep) {
                 $strPendingList .= '
                     <li>' . $pendingStep->getKeyword() . ' ' . $pendingStep->getText() . '</li>' ;
@@ -432,36 +439,36 @@ class Behat2Renderer
 
         return "<script type='text/javascript' src='assets/Twig/js/jquery.js'></script>
         <script type='text/javascript'>
-            $(document).ready(function(){
+            $(function() {
                 Array.prototype.diff = function(a) {
                     return this.filter(function(i) {return a.indexOf(i) < 0;});
                 };
 
-                $('#behat .feature h2').click(function(){
+                $('#behat .feature h2').on('click', function(){
                     $(this).parent().toggleClass('jq-toggle-opened');
                 }).parent().addClass('jq-toggle');
 
-                $('#behat .scenario h3').click(function(){
+                $('#behat .scenario h3').on('click', function(){
                     $(this).parent().toggleClass('jq-toggle-opened');
                 }).parent().addClass('jq-toggle');
 
-                $('#behat_show_all').click(function(){
+                $('#behat_show_all').on('click', function(){
                     $('#behat .feature').addClass('jq-toggle-opened');
                     $('#behat .scenario').addClass('jq-toggle-opened');
                 });
 
-                $('#behat_hide_all').click(function(){
+                $('#behat_hide_all').on('click', function(){
                     $('#behat .feature').removeClass('jq-toggle-opened');
                     $('#behat .scenario').removeClass('jq-toggle-opened');
                 });
 
                 $('#behat .summary .counters .scenarios .passed')
                     .addClass('switcher')
-                    .click(function(){
+                    .on('click', function(){
                         var scenario = $('.feature .scenario:not(:has(.failed, .pending))');
                         var feature  = scenario.parent();
 
-                        $('#behat_hide_all').click();
+                        $('#behat_hide_all').trigger('click');
 
                         scenario.addClass('jq-toggle-opened');
                         feature.addClass('jq-toggle-opened');
@@ -470,11 +477,11 @@ class Behat2Renderer
 
                 $('#behat .summary .counters .scenarios .failed')
                     .addClass('switcher')
-                    .click(function(){
+                    .on('click', function(){
                         var scenario = $('.feature .scenario:has(.failed, .pending)');
                         var feature = scenario.parent();
 
-                        $('#behat_hide_all').click();
+                        $('#behat_hide_all').trigger('click');
 
                         scenario.addClass('jq-toggle-opened');
                         feature.addClass('jq-toggle-opened');
@@ -482,11 +489,11 @@ class Behat2Renderer
 
                 $('#behat .summary .counters .steps .passed')
                     .addClass('switcher')
-                    .click(function(){
+                    .on('click', function(){
                         var scenario = $('.feature .scenario:has(.passed)');
                         var feature  = scenario.parent();
 
-                        $('#behat_hide_all').click();
+                        $('#behat_hide_all').trigger('click');
 
                         scenario.addClass('jq-toggle-opened');
                         feature.addClass('jq-toggle-opened');
@@ -494,11 +501,11 @@ class Behat2Renderer
 
                 $('#behat .summary .counters .steps .failed')
                     .addClass('switcher')
-                    .click(function(){
+                    .on('click', function(){
                         var scenario = $('.feature .scenario:has(.failed)');
                         var feature = scenario.parent();
 
-                        $('#behat_hide_all').click();
+                        $('#behat_hide_all').trigger('click');
 
                         scenario.addClass('jq-toggle-opened');
                         feature.addClass('jq-toggle-opened');
@@ -506,11 +513,11 @@ class Behat2Renderer
 
                 $('#behat .summary .counters .steps .skipped')
                     .addClass('switcher')
-                    .click(function(){
+                    .on('click', function(){
                         var scenario = $('.feature .scenario:has(.skipped)');
                         var feature = scenario.parent();
 
-                        $('#behat_hide_all').click();
+                        $('#behat_hide_all').trigger('click');
 
                         scenario.addClass('jq-toggle-opened');
                         feature.addClass('jq-toggle-opened');
@@ -518,11 +525,11 @@ class Behat2Renderer
 
                 $('#behat .summary .counters .steps .pending')
                     .addClass('switcher')
-                    .click(function(){
+                    .on('click', function(){
                         var scenario = $('.feature .scenario:has(.pending)');
                         var feature = scenario.parent();
 
-                        $('#behat_hide_all').click();
+                        $('#behat_hide_all').trigger('click');
 
                         scenario.addClass('jq-toggle-opened');
                         feature.addClass('jq-toggle-opened');

@@ -58,7 +58,8 @@ class Institution {
         'licensedefault' => null,
         'licensemandatory' => 0,
         'dropdownmenu' => 0,
-        'skins' => true
+        'skins' => 1,
+        'tags' => 0
     );
 
     // This institution's config settings
@@ -124,6 +125,7 @@ class Institution {
             // int 1 (i.e. true/false)
             case 'registerallowed':
             case 'skins':
+            case 'tags':
             case 'suspended':
             case 'licensemandatory':
             case 'expirymailsent':
@@ -289,7 +291,7 @@ class Institution {
         $this->verifyReady();
     }
 
-    public function addUserAsMember($user) {
+    public function addUserAsMember($user, $staff=null, $admin=null) {
         global $USER;
         if ($this->isFull()) {
             $this->send_admin_institution_is_full_message();
@@ -311,7 +313,7 @@ class Institution {
             }
         }
 
-        $userinst = new StdClass;
+        $userinst = new stdClass();
         $userinst->institution = $this->name;
         $studentid = get_field('usr_institution_request', 'studentid', 'usr', $user->id,
                                'institution', $this->name);
@@ -324,6 +326,12 @@ class Institution {
         $userinst->usr = $user->id;
         $now = time();
         $userinst->ctime = db_format_timestamp($now);
+        if ($staff) {
+            $userinst->staff = true;
+        }
+        if ($admin) {
+            $userinst->admin = true;
+        }
         $defaultexpiry = $this->defaultmembershipperiod;
         if (!empty($defaultexpiry)) {
             $userinst->expiry = db_format_timestamp($now + $defaultexpiry);
@@ -341,9 +349,9 @@ class Institution {
         insert_record('usr_institution', $userinst);
         delete_records('usr_institution_request', 'usr', $userinst->usr, 'institution', $this->name);
         execute_sql("
-            DELETE FROM {usr_tag}
-            WHERE usr = ? AND tag " . db_ilike() . " 'lastinstitution:%'",
-            array($user->id)
+            DELETE FROM {tag}
+            WHERE resourcetype = ? AND resourceid = ? AND tag " . db_ilike() . " 'lastinstitution:%'",
+            array('usr', $user->id)
         );
         // Copy institution views and collection to the user's portfolio
         $checkviewaccess = empty($user->newuser) && !$USER->get('admin');
@@ -359,8 +367,29 @@ class Institution {
         if ($profileview = $userobj->get_profile_view()) {
             $profileview->add_owner_institution_access(array($this->name));
         }
+        if (is_isolated() && !$admin) {
+            // If isolated institutions are on and this user is not an admin make sure their existing pages
+            // are not shared with people outside their new institution
+            $toremove1 = get_column_sql("SELECT va.id FROM {view} v JOIN {view_access} va ON va.view = v.id WHERE v.owner = ? AND (va.institution IS NOT NULL AND va.institution != ?)", array($user->id, $this->name));
+            $toremove2 = get_column_sql("SELECT va.id FROM {view} v JOIN {view_access} va ON va.view = v.id WHERE v.owner = ? AND (va.usr IS NOT NULL AND va.usr NOT IN (SELECT usr FROM {usr_institution} WHERE institution = ?))", array($user->id, $this->name));
+            $toremove3 = get_column_sql("SELECT va.id FROM {view} v JOIN {view_access} va ON va.view = v.id WHERE v.owner = ? AND (va.group IS NOT NULL AND va.group NOT IN (SELECT g.id FROM {group} g WHERE g.institution = ?))", array($user->id, $this->name));
+            $toremove = array_merge($toremove1, $toremove2, $toremove3);
+            if (!empty($toremove)) {
+                delete_records_sql("DELETE FROM {view_access} WHERE id IN (" . join(',', array_map('db_quote', $toremove)) . ")");
+            }
+        }
 
         db_commit();
+    }
+
+    public function addUserAsStaff($user) {
+        // Only to be used to add a member to an institution and bump ther permissions to staff
+        $this->addUserAsMember($user, true);
+    }
+
+    public function addUserAsAdmin($user) {
+        // Only to be used to add a member to an institution and bump ther permissions to admin
+        $this->addUserAsMember($user, null, true);
     }
 
     public function add_members($userids) {
@@ -620,6 +649,8 @@ class Institution {
     }
 
     public function removeMember($user) {
+        global $USER;
+
         if (is_numeric($user)) {
             $user = get_record('usr', 'id', $user);
         }
@@ -675,23 +706,53 @@ class Institution {
         );
 
         execute_sql("
-            DELETE FROM {usr_tag}
-            WHERE usr = ? AND tag " . db_ilike() . " 'lastinstitution:%'",
-            array($user->id)
+            DELETE FROM {tag}
+            WHERE resourcetype = ? AND resourceid = ? AND tag " . db_ilike() . " 'lastinstitution:%'",
+            array('usr', $user->id)
         );
 
         insert_record(
-            'usr_tag',
+            'tag',
             (object) array(
-                'usr' => $user->id,
+                'resourcetype' => 'usr',
+                'resourceid' => $user->id,
+                'ownertype' => 'institution',
+                'ownerid' => $this->name,
                 'tag' => 'lastinstitution:' . strtolower($this->name),
+                'ctime' => db_format_timestamp(time()),
+                'editedby' => $USER->get('id'),
             )
         );
+
+        // Need to change any user's "institution tag" tags for this institution
+        // into normal user tags
+        $typecast = is_postgres() ? '::varchar' : '';
+        if ($userinstitutiontags = get_records_sql_array("
+            SELECT t.id, t.tag, (SELECT t2.tag FROM {tag} t2 WHERE t2.id" . $typecast . " = SUBSTRING(t.tag, 7)) AS realtag
+            FROM {tag} t
+            WHERE ownertype = ? AND ownerid = ?
+            AND tag LIKE 'tagid_%'", array('user', $user->id))) {
+
+            foreach ($userinstitutiontags as $newtag) {
+                execute_sql("UPDATE {tag} SET tag = ? WHERE id = ?", array($newtag->realtag, $newtag->id));
+            }
+        }
 
         // If the user's license default is set to "institution default", remove the pref
         delete_records('usr_account_preference', 'usr', $user->id, 'field', 'licensedefault', 'value', LICENSE_INSTITUTION_DEFAULT);
 
         delete_records('usr_institution', 'usr', $user->id, 'institution', $this->name);
+        if (is_isolated() && !$user->admin) {
+            // If isolated institutions are on and this user is not an admin make sure their existing pages
+            // are not shared with people outside their new institution
+            $toremove1 = get_column_sql("SELECT va.id FROM {view} v JOIN {view_access} va ON va.view = v.id WHERE v.owner = ? AND (va.institution IS NOT NULL AND va.institution = ?)", array($user->id, $this->name));
+            $toremove2 = get_column_sql("SELECT va.id FROM {view} v JOIN {view_access} va ON va.view = v.id WHERE v.owner = ? AND (va.usr IS NOT NULL AND va.usr IN (SELECT usr FROM {usr_institution} WHERE institution = ?))", array($user->id, $this->name));
+            $toremove3 = get_column_sql("SELECT va.id FROM {view} v JOIN {view_access} va ON va.view = v.id WHERE v.owner = ? AND (va.group IS NOT NULL AND va.group IN (SELECT g.id FROM {group} g WHERE g.institution = ?))", array($user->id, $this->name));
+            $toremove = array_merge($toremove1, $toremove2, $toremove3);
+            if (!empty($toremove)) {
+                delete_records_sql("DELETE FROM {view_access} WHERE id IN (" . join(',', array_map('db_quote', $toremove)) . ")");
+            }
+        }
         handle_event('updateuser', $user->id);
         db_commit();
     }
@@ -706,7 +767,7 @@ class Institution {
             return;
         }
         try {
-            $pwrequest = new StdClass;
+            $pwrequest = new stdClass();
             $pwrequest->usr = $user->id;
             $pwrequest->expiry = db_format_timestamp(time() + 86400);
             $pwrequest->key = get_random_key();
@@ -760,6 +821,9 @@ class Institution {
             WHERE i.institution = ? AND u.deleted = 0 AND i.admin = 1', array($this->name))) {
             return array_map('extract_institution_user_id', $results);
         }
+        if ($this->name == 'mahara') {
+            return $this->institution_and_site_admins();
+        }
         return array();
     }
 
@@ -790,6 +854,12 @@ class Institution {
             SELECT u.id FROM {usr} u INNER JOIN {usr_institution} i ON u.id = i.usr
             WHERE i.institution = ? AND u.deleted = 0 AND i.staff = 1', array($this->name))) {
             return array_map('extract_institution_user_id', $results);
+        }
+        if ($this->name == 'mahara') {
+            // get all the site staff who are not also site admins
+            if ($results = get_records_sql_array("SELECT u.id FROM {usr} u WHERE u.deleted = 0 AND u.staff = 1 AND u.admin = 0")) {
+                return array_map('extract_institution_user_id', $results);
+            }
         }
         return array();
     }
@@ -909,10 +979,12 @@ class Institution {
  * @param bool $includesitestaff         To allow site staff to see dropdown like the site admin would
  * @param bool $includeinstitutionstaff  To allow institution staff to see dropdown like institution admin would
  * @param bool $allselector              To add an 'all' option to the dropdown where it makes sense, eg in institution statistics page
+ * @param bool $withactiveinstitutiontags To only fetch institutions which are configured to define their own tags
  *
  * @return null or array suitable for pieform element
  */
-function get_institution_selector($includedefault = true, $assumesiteadmin=false, $includesitestaff=false, $includeinstitutionstaff=false, $allselector=false) {
+function get_institution_selector($includedefault = true, $assumesiteadmin=false, $includesitestaff=false, $includeinstitutionstaff=false,
+    $allselector=false, $withactiveinstitutiontags=false) {
     global $USER;
 
     if (($assumesiteadmin || $USER->get('admin')) || ($includesitestaff && $USER->get('staff'))) {
@@ -958,8 +1030,17 @@ function get_institution_selector($includedefault = true, $assumesiteadmin=false
     if ($allselector) {
         $options['all'] = get_string('Allinstitutions', 'mahara');
     }
-    foreach ($institutions as $i) {
-        $options[$i->name] = $i->displayname;
+    if ($withactiveinstitutiontags) {
+        foreach ($institutions as $i) {
+            if ($i->tags) {
+                $options[$i->name] = $i->displayname;
+            }
+        }
+    }
+    else {
+        foreach ($institutions as $i) {
+            $options[$i->name] = $i->displayname;
+        }
     }
     $institution = key($options);
     $institutionelement = array(

@@ -2,12 +2,12 @@
 
 <div class="btn-top-right btn-group btn-group-top">
     {if $membership && ($moderator || ($forum->newtopicusers != 'moderators') && $ineditwindow) }
-        <a href="{$WWWROOT}interaction/forum/edittopic.php?forum={$forum->id}" class="btn btn-default newforumtopic">
+        <a href="{$WWWROOT}interaction/forum/edittopic.php?forum={$forum->id}" class="btn btn-secondary newforumtopic">
             <span class="icon icon-plus icon-lg left" role="presentation" aria-hidden="true"></span>
             {str tag="newtopic" section="interaction.forum"}
         </a>
         {if $admin}
-            <a href="{$WWWROOT}interaction/edit.php?id={$forum->id}" class="btn btn-default editforumtitle">
+            <a href="{$WWWROOT}interaction/edit.php?id={$forum->id}" class="btn btn-secondary editforumtitle">
                 <span class="icon icon-cog left" role="presentation" aria-hidden="true"></span>
                 {str tag="edittitle" section="interaction.forum"}
             </a>
@@ -18,8 +18,8 @@
     {/if}
     {if $membership && ($moderator || ($forum->newtopicusers != 'moderators') && $ineditwindow) }
         {if $admin}
-            <a href="{$WWWROOT}interaction/delete.php?id={$forum->id}" class="btn btn-default deleteforum">
-                <span class="icon icon-trash text-danger" role="presentation" aria-hidden="true"></span>
+            <a href="{$WWWROOT}interaction/delete.php?id={$forum->id}" class="btn btn-secondary deleteforum">
+                <span class="icon icon-trash-alt text-danger" role="presentation" aria-hidden="true"></span>
                 {str tag="deleteforum" section="interaction.forum"}
             </a>
         {/if}
@@ -71,7 +71,7 @@
         </table>
 
         {if $regulartopics}
-        <div>
+        <div class="fullwidth forumselectwrap">
             {$pagination|safe}
         </div>
         {/if}
@@ -111,15 +111,15 @@
                 </option>
                 {/if}
 
-            {if $moderator && $otherforums && (count($otherforums) > 0)}
+            {if $moderator && !empty($otherforums) && (count($otherforums) > 0)}
                 <option value="moveto">
                     {str tag="Moveto" section="interaction.forum"}
                 </option>
             {/if}
             </select>
 
-            {if $moderator && $otherforums && (count($otherforums) > 0)}
-            <select name="newforum" id="otherforums" class="hidden form-control select">
+            {if $moderator && !empty($otherforums) && (count($otherforums) > 0)}
+            <select name="newforum" id="otherforums" class="d-none form-control select">
                 {foreach from=$otherforums item=otherforum}
                 <option value="{$otherforum->id}">
                     {$otherforum->title}
@@ -149,8 +149,8 @@
             {str tag="groupadminlist" section="interaction.forum"}
         </p>
         {foreach from=$groupadmins item=groupadmin}
-            <a href="{profile_url($groupadmin)}" class="label label-default">
-                <img src="{profile_icon_url user=$groupadmin maxwidth=20 maxheight=20}" alt="{str tag=profileimagetext arg1=$groupadmin|display_default_name}" class="user-icon-alt">
+            <a href="{profile_url($groupadmin)}" class="badge badge-default">
+                <span class="user-icon user-icon-20 user-icon-inline"><img src="{profile_icon_url user=$groupadmin maxwidth=20 maxheight=20}" alt="{str tag=profileimagetext arg1=$groupadmin|display_default_name}"></span>
                 {$groupadmin|display_name}
             </a>
         {/foreach}
@@ -160,10 +160,9 @@
         <p class="text-small text-inline">
             {str tag="moderatorslist" section="interaction.forum"}
         </p>
-
         {foreach from=$moderators item=mod}
-            <a href="{profile_url($mod)}" class="label label-default">
-                <img src="{profile_icon_url user=$mod maxwidth=20 maxheight=20}" alt="{str tag=profileimagetext arg1=$mod|display_default_name}" class="user-icon-alt">
+            <a href="{profile_url($mod)}" class="badge badge-default">
+                <span class="user-icon user-icon-20 user-icon-inline"><img src="{profile_icon_url user=$mod maxwidth=20 maxheight=20}" alt="{str tag=profileimagetext arg1=$mod|display_default_name}"></span>
                 {$mod|display_name}
             </a>
         {/foreach}

@@ -85,7 +85,7 @@ $contactform = pieform(array(
     'elements'   => $elements,
     'spam' => array(
         'secret'       => get_config('formsecret'),
-        'class' => 'hidden',
+        'class' => 'd-none',
         'mintime'      => 5,
         'hash'         => array('name', 'email', 'subject', 'message', 'userid', 'submit'),
         'reorder'      => array('name', 'email'),
@@ -124,7 +124,7 @@ function contactus_validate(Pieform $form, $values) {
 
 function contactus_submit(Pieform $form, $values) {
     global $SESSION;
-    $data = new StdClass;
+    $data = new stdClass();
     $data->fromname    = $values['name'];
     $data->fromemail   = $values['email'];
     $data->subject     = $values['subject'];

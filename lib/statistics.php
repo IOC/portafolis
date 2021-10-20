@@ -40,7 +40,7 @@ function site_statistics($full=false) {
         }
         $sql = "SELECT SUM($todaysql) AS today, SUM($thisweeksql) AS thisweek, $weekago AS weekago, SUM($eversql) AS ever FROM {usr}";
         $active = get_record_sql($sql);
-        $data['usersloggedin'] = get_string('loggedinsince', 'admin', $active->today, $active->thisweek, format_date(strtotime($active->weekago), 'strftimedateshort'), $active->ever);
+        $data['usersloggedin'] = get_string('loggedinsince', 'admin', $active->today, $active->thisweek, format_date(strtotime($active->weekago), 'strftimedate'), $active->ever);
 
         $memberships = count_records_sql("
             SELECT COUNT(*)
@@ -72,11 +72,28 @@ function site_statistics($full=false) {
     if ($latestversion = get_config('latest_version')) {
         $data['latest_version'] = $latestversion;
         if ($data['release'] == $latestversion) {
-            $data['strlatestversion'] = get_string('uptodate', 'admin');
+            $data['uptodate'] = get_string('uptodate', 'admin');
         }
         else {
             $download_page = 'https://launchpad.net/mahara/+download';
             $data['strlatestversion'] = get_string('latestversionis', 'admin', $download_page, $latestversion);
+        }
+    }
+    if ($branchlatest = get_config('latest_branch_version')) {
+        if ($data['release'] != $branchlatest) {
+            $download_page = 'https://launchpad.net/mahara/+milestone/' . $branchlatest;
+            $data['strlatestbranchversion'] = get_string('latestbranchversionis', 'admin', $download_page, $branchlatest);
+        }
+    }
+    if ($insupport = get_config('supported_versions')) {
+        $insupport = explode(',', $insupport);
+        if (!in_array(get_config('series'), $insupport)) {
+            if (preg_match('/dev$/', $data['release'])) {
+                $data['strnotinsupport'] = get_string('versionnotinsupportdev', 'admin');
+            }
+            else {
+                $data['strnotinsupport'] = get_string('versionnotinsupport', 'admin', get_config('series'));
+            }
         }
     }
 
@@ -85,18 +102,18 @@ function site_statistics($full=false) {
         // Group graph
         $smarty = smarty_core();
         $smarty->assign('grouptypecounts', get_records_sql_array("
-            SELECT grouptype, COUNT(id) AS groups
+            SELECT grouptype, COUNT(id) AS groupcount
             FROM {group}
             WHERE deleted = 0
             GROUP BY grouptype
-            ORDER BY groups DESC", array()
+            ORDER BY groupcount DESC", array()
         ));
         $smarty->assign('jointypecounts', get_records_sql_array("
-            SELECT jointype, COUNT(id) AS groups
+            SELECT jointype, COUNT(id) AS groupcount
             FROM {group}
             WHERE deleted = 0
             GROUP BY jointype
-            ORDER BY groups DESC", array()
+            ORDER BY groupcount DESC", array()
         ));
         $smarty->assign('groupgraph', true);
         $data['groupinfo'] = $smarty->fetch('admin/groupstatssummary.tpl');
@@ -152,18 +169,18 @@ function site_statistics($full=false) {
             $data['strmaxviews'] = get_string('statsnoviews', 'admin');
         }
         $maxgroups = get_records_sql_array("
-            SELECT u.id, u.firstname, u.lastname, u.preferredname, u.urlid, COUNT(m.group) AS groups
+            SELECT u.id, u.firstname, u.lastname, u.preferredname, u.urlid, COUNT(m.group) AS groupcount
             FROM {usr} u JOIN {group_member} m ON u.id = m.member JOIN {group} g ON m.group = g.id
             WHERE g.deleted = 0
             GROUP BY u.id, u.firstname, u.lastname, u.preferredname, u.urlid
-            ORDER BY groups DESC
+            ORDER BY groupcount DESC
             LIMIT 1", array());
         $maxgroups = $maxgroups[0];
         if ($maxgroups) {
             $data['strmaxgroups'] = get_string(
                 'statsmaxgroups1',
                 'admin',
-                $maxgroups->groups,
+                $maxgroups->groupcount,
                 $data['groupmemberaverage'],
                 profile_url($maxgroups),
                 hsc(display_name($maxgroups, null, true))
@@ -195,19 +212,26 @@ function site_statistics($full=false) {
         // Views graph
         $smarty = smarty_core();
         $maxblocktypes = 5;
-        $smarty->assign('blocktypecounts', get_records_sql_array("
+        $blocktypecounts = get_records_sql_array("
             SELECT
                 b.blocktype,
-                CASE WHEN bi.artefactplugin IS NULL THEN b.blocktype
-                    ELSE bi.artefactplugin || '/' || b.blocktype END AS langsection,
                 COUNT(b.id) AS blocks
             FROM {block_instance} b
             JOIN {blocktype_installed} bi ON (b.blocktype = bi.name)
             JOIN {view} v ON (b.view = v.id AND v.type = 'portfolio')
-            GROUP BY b.blocktype, langsection
+            GROUP BY b.blocktype
             ORDER BY blocks DESC",
             array(), 0, $maxblocktypes
-        ));
+        );
+        if (is_array($blocktypecounts)) {
+            foreach ($blocktypecounts as $blocktype) {
+                safe_require('blocktype', $blocktype->blocktype);
+                $classname = generate_class_name('blocktype', $blocktype->blocktype);
+                $blocktype->title = $classname::get_title();
+            }
+        }
+        $smarty->assign('blocktypecounts', $blocktypecounts);
+
         $smarty->assign('viewtypes', true);
         $smarty->assign('viewcount', $data['views']);
         $data['viewsinfo'] = $smarty->fetch('admin/viewstatssummary.tpl');
@@ -276,7 +300,7 @@ function institution_statistics($institution, $full=false) {
                     WHERE id IN (" . $data['memberssql'] . ")";
             $active = get_record_sql($sql, $data['memberssqlparams']);
         }
-        $data['usersloggedin'] = get_string('loggedinsince', 'admin', $active->today, $active->thisweek, format_date(strtotime($active->weekago), 'strftimedateshort'), $active->ever);
+        $data['usersloggedin'] = get_string('loggedinsince', 'admin', $active->today, $active->thisweek, format_date(strtotime($active->weekago), 'strftimedate'), $active->ever);
 
         if (!$data['users']) {
             $data['groupmemberaverage'] = 0;
@@ -394,18 +418,18 @@ function institution_statistics($institution, $full=false) {
                 $data['strmaxviews'] = get_string('statsnoviews', 'admin');
             }
             $maxgroups = get_records_sql_array("
-                SELECT u.id, u.firstname, u.lastname, u.preferredname, u.urlid, COUNT(m.group) AS groups
+                SELECT u.id, u.firstname, u.lastname, u.preferredname, u.urlid, COUNT(m.group) AS groupcount
                 FROM {usr} u JOIN {group_member} m ON u.id = m.member JOIN {group} g ON m.group = g.id
                 WHERE g.deleted = 0 AND u.id IN (" . $data['memberssql'] . ")
                 GROUP BY u.id, u.firstname, u.lastname, u.preferredname, u.urlid
-                ORDER BY groups DESC
+                ORDER BY groupcount DESC
                 LIMIT 1", $data['memberssqlparams']);
             $maxgroups = $maxgroups[0];
             if ($maxgroups) {
                 $data['strmaxgroups'] = get_string(
                     'statsmaxgroups1',
                     'admin',
-                    $maxgroups->groups,
+                    $maxgroups->groupcount,
                     $data['groupmemberaverage'],
                     profile_url($maxgroups),
                     hsc(display_name($maxgroups, null, true))
@@ -541,10 +565,23 @@ function userdetails_statistics_headers($extra, $urllink) {
               'link' => format_goto($urllink . '&sort=remotename', $extra, array('sort'), 'remotename')
         ),
         array(
+              'id' => 'quotapercent',
+              'name' => get_string('quotapercent', 'admin'),
+              'class' => format_class($extra, 'quotapercent'),
+              'link' => format_goto($urllink . '&sort=quotapercent', $extra, array('sort'), 'quotapercent')
+        ),
+        array(
               'id' => 'lastlogin',
               'name' => get_string('lastlogin', 'admin'),
               'class' => format_class($extra, 'lastlogin'),
               'link' => format_goto($urllink . '&sort=lastlogin', $extra, array('sort'), 'lastlogin')
+        ),
+        array(
+              'id' => 'probation',
+              'name' => get_string('probationreportcolumn', 'admin'),
+              'class' => format_class($extra, 'probation'),
+              'link' => format_goto($urllink . '&sort=probation', $extra, array('sort'), 'probation'),
+              'disabled' => empty(get_config('probationenabled'))
         ),
     );
 }
@@ -573,7 +610,7 @@ function userdetails_stats_table($limit, $offset, $extra, $institution, $urllink
     global $USER, $SESSION;
 
     $start = !empty($extra['start']) ? $extra['start'] : null;
-    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('now'));
+    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('+1 day'));
     $users = $SESSION->get('usersforstats');
 
     $fromsql = " FROM {usr} u";
@@ -614,7 +651,7 @@ function userdetails_stats_table($limit, $offset, $extra, $institution, $urllink
 
     $result['settings']['start'] = ($start) ? $start : null;
     $result['settings']['end'] = $end;
-    $result['settings']['users'] = count($users);
+    $result['settings']['users'] = !empty($users) ? count($users) : 0;
 
     if ($count < 1) {
         return $result;
@@ -627,7 +664,9 @@ function userdetails_stats_table($limit, $offset, $extra, $institution, $urllink
         case "username":
         case "email":
         case "remotename":
+        case "quotapercent":
         case "studentid":
+        case "probation":
             $orderby = " " . $sorttype . " " . (!empty($extra['sortdesc']) ? 'DESC' : 'ASC') . ", CONCAT (u.firstname, ' ', u.lastname)";
             break;
         case "lastname":
@@ -640,7 +679,8 @@ function userdetails_stats_table($limit, $offset, $extra, $institution, $urllink
 
     $sql = "SELECT u.id, u.firstname, u.lastname, u.username, u.preferredname AS displayname,
             u.lastlogin, u.email, u.studentid, u.ctime,
-            (SELECT remoteusername FROM {auth_remote_user} aru WHERE aru.localusr = u.id LIMIT 1) AS remotename
+            (SELECT remoteusername FROM {auth_remote_user} aru WHERE aru.localusr = u.id LIMIT 1) AS remotename,
+            ((u.quotaused * 1.0)/ u.quota) AS quotapercent, u.quota, u.quotaused, u.probation
             " . $fromsql . $wheresql . "
             ORDER BY " . $orderby;
     if (empty($extra['csvdownload'])) {
@@ -653,10 +693,16 @@ function userdetails_stats_table($limit, $offset, $extra, $institution, $urllink
     foreach ($data as $item) {
         $item->profileurl = profile_url($item->id);
         $item->lastlogin = $item->lastlogin ? format_date(strtotime($item->lastlogin)) : ' ';
+        $item->quotapercent_format = round($item->quotapercent * 100);
+        $item->quota_format = display_size($item->quota);
+        $item->quotaused_format = !empty($item->quotaused) ? display_size($item->quotaused) : 0;
+        // Map statistics page column headers to CSV column headers to allow for easier user update CSV import
+        $item->preferredname = $item->displayname;
+        $item->remoteuser = $item->remotename;
     }
     if (!empty($extra['csvdownload'])) {
         $csvfields = array('firstname', 'lastname', 'email', 'studentid',
-                           'displayname', 'username', 'remotename', 'lastlogin');
+                           'preferredname', 'username', 'remoteuser', 'quotapercent_format', 'lastlogin', 'probation');
         $USER->set_download_file(generate_csv($data, $csvfields), $institution . 'userdetailsstatistics.csv', 'text/csv');
     }
     $result['csv'] = true;
@@ -789,7 +835,7 @@ function useragreement_stats_table($limit, $offset, $extra, $institution, $urlli
     global $USER, $SESSION;
 
     $start = !empty($extra['start']) ? $extra['start'] : null;
-    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('now'));
+    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('+1 day'));
     $users = $SESSION->get('usersforstats');
 
     $fromsql = "
@@ -866,7 +912,7 @@ function useragreement_stats_table($limit, $offset, $extra, $institution, $urlli
 
     $result['settings']['start'] = ($start) ? $start : null;
     $result['settings']['end'] = $end;
-    $result['settings']['users'] = count($users);
+    $result['settings']['users'] = !empty($users) ? count($users) : 0;
 
     if ($count < 1) {
         return $result;
@@ -1069,7 +1115,7 @@ function useractivity_stats_table($limit, $offset, $extra, $institution, $urllin
     global $USER, $SESSION;
 
     $start = !empty($extra['start']) ? $extra['start'] : null;
-    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('now'));
+    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('+1 day'));
     $users = $SESSION->get('usersforstats');
 
     $fromsql = " FROM {usr} u";
@@ -1124,7 +1170,7 @@ function useractivity_stats_table($limit, $offset, $extra, $institution, $urllin
 
     $result['settings']['start'] = ($start) ? $start : null;
     $result['settings']['end'] = $end;
-    $result['settings']['users'] = count($users);
+    $result['settings']['users'] = !empty($users) ? count($users) : 0;
 
     if ($count < 1) {
         return $result;
@@ -1422,7 +1468,7 @@ function collaboration_stats_table($limit, $offset, $extra, $institution, $urlli
     global $USER;
 
     $start = !empty($extra['start']) ? $extra['start'] : date('Y-m-d', strtotime("-1 months"));
-    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('now'));
+    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('+1 day'));
     $from = strtotime($start);
     $to = strtotime($end);
     $daterange = array();
@@ -1552,7 +1598,7 @@ function collaboration_stats_table($limit, $offset, $extra, $institution, $urlli
 
     foreach ($daterange as $k => $v) {
         list ($year, $week) = explode('_', $k);
-        $obj = new StdClass();
+        $obj = new stdClass();
         $obj->date = get_string('collaborationdate', 'statistics', format_date(strtotime($year . "W" . $week . '1'), 'strfdaymonthyearshort'));
         $obj->yearweek = $k;
         $obj->comments = !empty($aggmap[$k . '|saveartefact|comment']) ? $aggmap[$k . '|saveartefact|comment'] : 0;
@@ -1668,7 +1714,7 @@ function user_stats_table($limit, $offset, $extra) {
     global $USER;
 
     $start = !empty($extra['start']) ? $extra['start'] : date('Y-m-d', strtotime("-1 months"));
-    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('now'));
+    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('+1 day'));
 
     if ($start) {
         $where = "type = ? AND ctime >= DATE(?) AND ctime <= DATE(?)";
@@ -1831,7 +1877,7 @@ function institution_user_stats_table($limit, $offset, &$institutiondata, $extra
     global $USER;
 
     $start = !empty($extra['start']) ? $extra['start'] : null;
-    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('now'));
+    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('+1 day'));
 
     if ($start) {
         $where = "type = ? AND institution = ? AND ctime >= DATE(?) AND ctime <= DATE(?)";
@@ -1979,10 +2025,12 @@ function user_institution_graph($type = null) {
     require_once(get_config('libroot') . 'institution.php');
 
     $institutions = Institution::count_members(false, true);
-    if (count($institutions) > 1) {
+    if (is_array($institutions) && count($institutions) > 1) {
         $dataarray = array();
         foreach ($institutions as &$i) {
-            $dataarray[$i->displayname] = $i->members;
+            if ($i->members) {
+                $dataarray[$i->displayname] = $i->members;
+            }
         }
         arsort($dataarray);
         // Truncate to avoid trying to fit too many results onto graph
@@ -1998,7 +2046,7 @@ function user_institution_graph($type = null) {
         $data['graph'] = ($type) ? $type : 'pie';
         $data['graph_function_name'] = 'user_institution_graph';
         $data['title'] = get_string('institutionmembers','admin');
-        $data['labels'] = array_keys($dataarray);
+        $data['labels'] = array_keys($newdataarray);
         $data['data'] = $newdataarray;
 
         return $data;
@@ -2084,7 +2132,7 @@ function group_stats_table($limit, $offset, $extra) {
     global $USER;
 
     $start = !empty($extra['start']) ? $extra['start'] : date('Y-m-d', strtotime("-1 months"));
-    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('now'));
+    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('+1 day'));
     if ($start) {
         $where = "ctime >= DATE(?) AND ctime <= DATE(?)";
         $count = count_records_select('group', $where . " AND deleted = 0", array($start, $end));
@@ -2367,19 +2415,19 @@ function group_stats_table($limit, $offset, $extra) {
 
 function group_type_graph($type = false) {
     $grouptypes = get_records_sql_array("
-        SELECT grouptype, jointype, COUNT(id) AS groups
+        SELECT grouptype, jointype, COUNT(id) AS groupcount
         FROM {group}
         WHERE deleted = 0
         GROUP BY grouptype, jointype
-        ORDER BY groups DESC", array()
+        ORDER BY groupcount DESC", array()
     );
 
-    if (count($grouptypes) > 1) {
+    if (is_array($grouptypes) && count($grouptypes) > 1) {
         $dataarray = array();
         foreach ($grouptypes as &$t) {
             $strtype = get_string('name', 'grouptype.' . $t->grouptype);
             $strtype .= ' (' . get_string('membershiptype.abbrev.' . $t->jointype, 'group') . ')';
-            $dataarray[$strtype] = $t->groups;
+            $dataarray[$strtype] = $t->groupcount;
         }
         ksort($dataarray);
         arsort($dataarray);
@@ -2401,8 +2449,10 @@ function group_type_graph($type = false) {
 
 function group_type_graph_render($type = null) {
     $data['graph'] = ($type) ? $type : 'pie';
-    $data['jsondata'] = get_field('site_data','value','type','group-type-graph');
-    return $data;
+    if ($jsondata = json_decode(get_field('site_data','value','type','group-type-graph'))) {
+        $data['jsondata'] = json_encode($jsondata[0]);
+        return $data;
+    }
 }
 
 function pageactivity_statistics_headers($extra, $urllink) {
@@ -2482,13 +2532,17 @@ function view_statistics($limit, $offset, $extra) {
 }
 
 function view_stats_table($limit, $offset, $extra) {
-    global $USER;
+    global $USER, $SESSION;
 
     $start = !empty($extra['start']) ? $extra['start'] : null;
-    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('now'));
+    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('+1 day'));
+    $users = $SESSION->get('usersforstats');
     require_once('view.php');
     $where = "(v.owner != 0 OR v.owner IS NULL) AND v.type != ? AND v.template != ?";
     $values = array('dashboard', View::SITE_TEMPLATE);
+    if ($users) {
+      $where .= " AND v.owner IN (" . join(',', array_map('db_quote', array_values((array)$users))) . ")";
+    }
     if (get_config('eventloglevel') == 'all') {
         if ($start) {
             $where .= " AND e.ctime >= DATE(?) AND e.ctime <= DATE(?)
@@ -2530,6 +2584,7 @@ function view_stats_table($limit, $offset, $extra) {
     );
     $result['settings']['start'] = ($start) ? $start : null;
     $result['settings']['end'] = $end;
+    $result['settings']['users'] = !empty($users) ? count($users) : 0;
     if ($count < 1) {
         return $result;
     }
@@ -2647,10 +2702,10 @@ function view_type_graph($type = null) {
         array('dashboard')
     );
 
-    if (count($viewtypes) > 1) {
+    if (is_array($viewtypes) && count($viewtypes) > 1) {
         $dataarray = array();
         foreach ($viewtypes as &$t) {
-            $dataarray[get_string($t->type, 'view')] = $t->views;
+            $dataarray[get_string(ucfirst($t->type), 'view')] = $t->views;
         }
         arsort($dataarray);
 
@@ -2672,8 +2727,10 @@ function view_type_graph($type = null) {
 
 function view_type_graph_render($type = null) {
     $data['graph'] = ($type) ? $type : 'pie';
-    $data['jsondata'] = get_field('site_data','value','type','view-type-graph');
-    return $data;
+    if ($jsondata = json_decode(get_field('site_data','value','type','view-type-graph'))) {
+        $data['jsondata'] = json_encode($jsondata[0]);
+        return $data;
+    }
 }
 
 function institution_view_statistics($limit, $offset, &$institutiondata, $extra) {
@@ -2694,15 +2751,17 @@ function institution_view_statistics($limit, $offset, &$institutiondata, $extra)
 }
 
 function institution_view_stats_table($limit, $offset, &$institutiondata, $extra) {
-    global $USER;
+    global $USER, $SESSION;
 
     $start = !empty($extra['start']) ? $extra['start'] : null;
-    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('now'));
+    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('+1 day'));
+    $users = $SESSION->get('usersforstats');
     if ($institutiondata['views'] != 0) {
-        $start = !empty($extra['start']) ? $extra['start'] : null;
-        $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('now'));
         $where = 'v.id IN (' . $institutiondata['viewssql'] . ') AND v.type != ?';
         $values = array_merge($institutiondata['viewssqlparam'], array('dashboard'));
+        if ($users) {
+            $where .= " AND v.owner IN (" . join(',', array_map('db_quote', array_values((array)$users))) . ")";
+        }
         if (get_config('eventloglevel') == 'all') {
             if ($start) {
                 $where .= " AND e.ctime >= DATE(?) AND e.ctime <= DATE(?)
@@ -2748,6 +2807,7 @@ function institution_view_stats_table($limit, $offset, &$institutiondata, $extra
     );
     $result['settings']['start'] = ($start) ? $start : null;
     $result['settings']['end'] = $end;
+    $result['settings']['users'] = !empty($users) ? count($users) : 0;
     if ($count < 1) {
         return $result;
     }
@@ -2882,7 +2942,7 @@ function institution_view_type_graph($type = null, $institutiondata) {
         ) GROUP BY type', $values
     );
 
-    if (count($viewtypes) > 1) {
+    if (is_array($viewtypes) && count($viewtypes) > 1) {
         $dataarray = array();
         foreach ($viewtypes as &$t) {
             $dataarray[get_string($t->type, 'view')] = $t->views;
@@ -2911,8 +2971,10 @@ function institution_view_type_graph($type = null, $institutiondata) {
 function institution_view_type_graph_render($type = null, $extradata) {
 
     $data['graph'] = ($type) ? $type : 'pie';
-    $data['jsondata'] = get_field('institution_data','value','type','view-type-graph','institution', $extradata->institution);
-    return $data;
+    if ($jsondata = json_decode(get_field('institution_data','value','type','view-type-graph','institution', $extradata->institution))) {
+        $data['jsondata'] = json_encode($jsondata[0]);
+        return $data;
+    }
 }
 
 function institution_user_type_graph($type = null, $institutiondata) {
@@ -3004,7 +3066,7 @@ function content_stats_table($limit, $offset, $extra) {
     global $USER;
 
     $start = !empty($extra['start']) ? $extra['start'] : date('Y-m-d', strtotime("-1 months"));
-    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('now'));
+    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('+1 day'));
     $values = array();
     $fromsql = "FROM {site_registration} sr
                 JOIN {site_registration_data} sd ON sd.registration_id = sr.id";
@@ -3017,14 +3079,15 @@ function content_stats_table($limit, $offset, $extra) {
         $fromsql .= " WHERE sr.id IN (SELECT id FROM {site_registration} ORDER BY time DESC LIMIT 2)";
     }
     $fromsql .= " AND sd.value " . (is_postgres() ? '~ E' : 'REGEXP ') . "'^[0-9]+$'
-                  AND sd.field NOT LIKE '%version'";
+                  AND sd.field NOT LIKE '%version'
+                  AND sd.field NOT IN ('allowpublicviews', 'allowpublicprofiles', 'newstats')";
     $regdata = get_records_sql_array("SELECT DISTINCT sr.id, sr.time " . $fromsql . " ORDER BY sr.time DESC", $values);
 
-    $count = count_records_sql("SELECT COUNT(*) " . $fromsql . " AND sr.id = " . $regdata[0]->id, $values);
+    $count = ($regdata) ? count_records_sql("SELECT COUNT(*) " . $fromsql . " AND sr.id = " . $regdata[0]->id, $values) : 0;
 
     $pagination = build_pagination(array(
         'id' => 'stats_pagination',
-        'url' => get_config('wwwroot') . 'admin/users/statistics.php?type=content',
+        'url' => get_config('wwwroot') . 'admin/users/statistics.php?type=content&subtype=content',
         'jsonscript' => 'admin/users/statistics.json.php',
         'datatable' => 'statistics_table',
         'count' => $count,
@@ -3073,7 +3136,7 @@ function content_stats_table($limit, $offset, $extra) {
     $daterange = array_map(function ($obj) { return $obj->time; }, $regdata);
     $result['settings']['start'] = ($start) ? $start : min($daterange);
 
-    if (count($regdata) > 1) {
+    if (is_array($regdata) && count($regdata) > 1) {
         $firstweeks = get_records_sql_assoc(
             "SELECT sd.field, sd.value " . $fromsql . "
             AND sr.id = " . end($regdata)->id . "
@@ -3109,6 +3172,168 @@ function content_stats_table($limit, $offset, $extra) {
     return $result;
 }
 
+function objectionable_statistics_headers($extra, $urllink) {
+    return array(
+        array('id' => 'rownum', 'name' => '#'),
+        array('id' => 'viewname', 'required' => true,
+              'name' => get_string('view'),
+              'class' => format_class($extra, 'viewname'),
+        ),
+        array('id' => 'artefactname', 'required' => true,
+              'name' => get_string('Artefact'),
+              'class' => format_class($extra, 'artefactname'),
+        ),
+        array('id' => 'reporter', 'required' => true,
+              'name' => get_string('reporter', 'statistics'),
+              'class' => format_class($extra, 'reporter'),
+        ),
+        array('id' => 'report', 'required' => true,
+              'name' => get_string('report', 'group'),
+              'class' => format_class($extra, 'report'),
+        ),
+        array('id' => 'date', 'required' => true,
+              'name' => get_string('date'),
+              'class' => format_class($extra, 'date'),
+        ),
+        array('id' => 'reviewer', 'required' => false,
+              'name' => get_string('reviewer', 'statistics'),
+              'class' => format_class($extra, 'reviewer'),
+        ),
+        array('id' => 'review', 'required' => false,
+              'name' => get_string('review', 'statistics'),
+              'class' => format_class($extra, 'review'),
+        ),
+        array('id' => 'reviewdate', 'required' => false,
+              'name' => get_string('date'),
+              'class' => format_class($extra, 'reviewdate'),
+        ),
+        array('id' => 'status', 'required' => true,
+              'name' => get_string('status'),
+              'class' => format_class($extra, 'status'),
+        ),
+    );
+}
+
+function objectionable_statistics($limit, $offset, $extra, $institution = null) {
+    userhasaccess($institution, 'objectionable');
+    $data = array();
+    $urllink = get_config('wwwroot') . 'admin/users/statistics.php?type=content&subtype=objectionable';
+    if ($institution) {
+        $urllink .= '&institution=' . $institution;
+    }
+    $data['tableheadings'] = objectionable_statistics_headers($extra, $urllink);
+
+    $activeheadings = get_active_columns($data, $extra);
+    $extra['columns'] = array_keys($activeheadings);
+
+    $data['table'] = objectionable_stats_table($limit, $offset, $extra, $institution, $urllink);
+    $data['table']['activeheadings'] = $activeheadings;
+
+    $data['summary'] = $data['table']['count'] == 0 ? get_string('nostats', 'admin') : null;
+
+    return $data;
+}
+
+function objectionable_stats_table($limit, $offset, $extra, $institution, $urllink) {
+    global $USER, $SESSION;
+
+    $start = !empty($extra['start']) ? $extra['start'] : date('Y-m-d', strtotime("-1 months"));
+    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('+1 day'));
+    $users = $SESSION->get('usersforstats');
+
+    $fromsql = " FROM (SELECT objectid AS viewid, report, NULL AS artefactid, reportedby, reportedtime, reviewedby, review, reviewedtime, resolvedtime, status
+                       FROM {objectionable}
+                       WHERE objecttype = 'view'
+                       UNION
+                       SELECT va.view AS viewid, o.report, o.objectid AS artefactid, reportedby, reportedtime, reviewedby, review, reviewedtime, resolvedtime, status
+                       FROM {objectionable} o
+                       JOIN {view_artefact} va ON va.artefact = o.objectid
+                       WHERE o.objecttype = 'artefact'
+                      ) AS obj
+                 JOIN {view} v ON v.id = obj.viewid
+                 JOIN {usr} u ON u.id = v.owner";
+    $wheresql = " WHERE obj.resolvedtime IS NULL";
+    $where = array();
+    if ($institution) {
+        if ($institution == 'mahara') {
+            $wheresql .= " AND u.id NOT IN (SELECT usr FROM {usr_institution})";
+        }
+        else {
+            $fromsql .= " JOIN {usr_institution} ui ON (ui.usr = u.id AND ui.institution = ?)";
+            $where = array($institution);
+        }
+    }
+    if ($users) {
+        $wheresql .= " AND u.id IN (" . join(',', array_map('db_quote', array_values((array)$users))) . ")";
+    }
+    if ($start) {
+        $wheresql .= " AND obj.reportedtime >= DATE(?) AND obj.reportedtime <= DATE(?)";
+        $where[] = $start;
+        $where[] = $end;
+    }
+
+    $count = count_records_sql("SELECT COUNT(*) " . $fromsql . $wheresql, $where);
+
+    $pagination = build_pagination(array(
+        'id' => 'stats_pagination',
+        'url' => $urllink,
+        'jsonscript' => 'admin/users/statistics.json.php',
+        'datatable' => 'statistics_table',
+        'count' => $count,
+        'limit' => $limit,
+        'offset' => $offset,
+        'extradata' => $extra,
+        'setlimit' => true,
+    ));
+
+    $result = array(
+        'count'         => $count,
+        'tablerows'     => '',
+        'pagination'    => $pagination['html'],
+        'pagination_js' => $pagination['javascript'],
+    );
+    $result['settings']['start'] = ($start) ? $start : null;
+    $result['settings']['end'] = $end;
+    if ($count < 1) {
+        return $result;
+    }
+
+    $sql = "SELECT viewid, report, artefactid, reportedby, reportedtime, reviewedby, review, reviewedtime, resolvedtime, status,
+                v.title, u.id AS ownerid " . $fromsql . $wheresql . " ORDER BY v.title, reportedtime";
+    if (empty($extra['csvdownload'])) {
+        $sql .= " LIMIT $limit OFFSET $offset";
+    }
+
+    $data = get_records_sql_array($sql, $where);
+
+    if ($data) {
+        foreach ($data as &$item) {
+            $item->artefactname = ($item->artefactid) ? get_field('artefact', 'title', 'id', $item->artefactid) : null;
+            $item->viewname = $item->title;
+            $item->reporter = display_name($item->reportedby);
+            $item->reviewer = display_name($item->reviewedby);
+        }
+    }
+
+    if (!empty($extra['csvdownload'])) {
+        $csvfields = array('objectname', 'reporter', 'reportedtime', 'report', 'status');
+        $USER->set_download_file(generate_csv($data, $csvfields), $institution . 'objectionablestatistics.csv', 'text/csv');
+    }
+    $result['csv'] = true;
+    $columnkeys = array();
+    foreach ($extra['columns'] as $column) {
+        $columnkeys[$column] = 1;
+    }
+
+    $smarty = smarty_core();
+    $smarty->assign('data', $data);
+    $smarty->assign('columns', $columnkeys);
+    $smarty->assign('offset', $offset);
+    $result['tablerows'] = $smarty->fetch('admin/objectionablestats.tpl');
+
+    return $result;
+}
+
 function institution_content_statistics($limit, $offset, &$institutiondata, $extra) {
     userhasaccess($institutiondata['name'], 'pageactivity');
     $data = array();
@@ -3131,7 +3356,7 @@ function institution_content_stats_table($limit, $offset, &$institutiondata, $ex
     global $USER;
 
     $start = !empty($extra['start']) ? $extra['start'] : null;
-    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('now'));
+    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('+1 day'));
     $values = array();
     $fromsql = "FROM {institution_registration} sr
                 JOIN {institution_registration_data} sd ON sd.registration_id = sr.id";
@@ -3156,7 +3381,7 @@ function institution_content_stats_table($limit, $offset, &$institutiondata, $ex
 
     $pagination = build_pagination(array(
         'id' => 'stats_pagination',
-        'url' => get_config('wwwroot') . 'admin/users/statistics.php?institution=' . $institutiondata['name'] . '&type=content',
+        'url' => get_config('wwwroot') . 'admin/users/statistics.php?institution=' . $institutiondata['name'] . '&type=content&subtype=content',
         'jsonscript' => 'admin/users/statistics.json.php',
         'datatable' => 'statistics_table',
         'count' => $count,
@@ -3207,7 +3432,7 @@ function institution_content_stats_table($limit, $offset, &$institutiondata, $ex
     $daterange = array_map(function ($obj) { return $obj->time; }, $regdata);
     $result['settings']['start'] = ($start) ? $start : min($daterange);
 
-    if (count($regdata) > 1) {
+    if (is_array($regdata) && count($regdata) > 1) {
         $firstweeks = get_records_sql_assoc(
             "SELECT sd.field, sd.value " . $fromsql . "
             AND sr.id = " . end($regdata)->id . "
@@ -3306,7 +3531,7 @@ function masquerading_stats_table($limit, $offset, $extra, $institution, $urllin
     global $USER, $SESSION;
 
     $start = !empty($extra['start']) ? $extra['start'] : null;
-    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('now'));
+    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('+1 day'));
     $users = $SESSION->get('usersforstats');
 
     $fromsql = " FROM {usr} u JOIN {event_log} e ON e.usr = u.id ";
@@ -3347,7 +3572,7 @@ function masquerading_stats_table($limit, $offset, $extra, $institution, $urllin
     );
     $result['settings']['start'] = ($start) ? $start : null;
     $result['settings']['end'] = $end;
-    $result['settings']['users'] = count($users);
+    $result['settings']['users'] = !empty($users) ? count($users) : 0;
     if ($count < 1) {
         return $result;
     }
@@ -3407,7 +3632,7 @@ function accesslist_statistics_headers($extra, $urllink) {
         array('id' => 'rownum', 'name' => '#'),
         array(
               'id' => 'owner', 'required' => true,
-              'name' => get_string('owner', 'view'),
+              'name' => get_string('Owner', 'view'),
               'class' => format_class($extra, 'owner'),
               'link' => format_goto($urllink . '&sort=owner', $extra, array('sort'), 'owner'),
               'helplink' => get_help_icon('core', 'reports', 'accesslist', 'owner')
@@ -3459,7 +3684,7 @@ function accesslist_stats_table($limit, $offset, $extra, $institution, $urllink)
     global $USER, $SESSION;
 
     $start = !empty($extra['start']) ? $extra['start'] : null;
-    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('now'));
+    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('+1 day'));
     $users = $SESSION->get('usersforstats');
 
     $fromsql = " FROM (
@@ -3517,7 +3742,7 @@ function accesslist_stats_table($limit, $offset, $extra, $institution, $urllink)
     );
     $result['settings']['start'] = ($start) ? $start : null;
     $result['settings']['end'] = $end;
-    $result['settings']['users'] = count($users);
+    $result['settings']['users'] = !empty($users) ? count($users) : 0;
     if ($count < 1) {
         return $result;
     }
@@ -3557,6 +3782,7 @@ function accesslist_stats_table($limit, $offset, $extra, $institution, $urllink)
             FROM {view_access} va WHERE va.view = ? AND va.token IS NOT NULL LIMIT 1)",
             array($item->viewid, $item->viewid));
         $item->hasaccessrules = !empty($item->access);
+        $item->pending = is_view_suspended($item->viewid);
     }
 
     if (!empty($extra['csvdownload'])) {
@@ -3668,7 +3894,7 @@ function institution_comparison_stats_table($limit, $offset, $extra, $urllink) {
         'pagination_js' => $pagination['javascript'],
     );
     $result['settings']['start'] = get_field_sql("SELECT MIN(ctime) FROM {usr}");
-    $result['settings']['end'] = date('Y-m-d', strtotime('now'));
+    $result['settings']['end'] = date('Y-m-d', strtotime('+1 day'));
     if ($count < 1) {
         return $result;
     }
@@ -3726,7 +3952,7 @@ function institution_comparison_stats_table($limit, $offset, $extra, $urllink) {
 
     $registrationdata = array();
     foreach ($institutions as $i) {
-        $d = new StdClass;
+        $d = new stdClass();
         $d->name = $i->name;
         $d->displayname = $i->displayname;
         $current = get_records_select_array('institution_registration_data',
@@ -3911,7 +4137,7 @@ function institution_logins_stats_table($limit, $offset, $extra) {
     global $USER;
 
     $start = !empty($extra['start']) ? $extra['start'] : null;
-    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('now'));
+    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('+1 day'));
 
     $rawdata = users_active_data($limit, $offset, $extra);
     $count = ($rawdata) ? count($rawdata) : 0;
@@ -4049,10 +4275,20 @@ function display_statistics($institution, $type, $extra = null) {
             }
             break;
          case 'content':
-            $data = content_statistics($extra->limit, $extra->offset, $extra->extra);
+            if ($subtype == 'content') {
+                $data = content_statistics($extra->limit, $extra->offset, $extra->extra);
+            }
+            else if ($subtype == 'objectionable') {
+                $data = objectionable_statistics($extra->limit, $extra->offset, $extra->extra);
+            }
             break;
          case 'groups':
-            $data = group_statistics($extra->limit, $extra->offset, $extra->extra);
+            if ($subtype == 'assessments') {
+                $data = assessment_statistics($extra->limit, $extra->offset, $extra->extra);
+            }
+            else {
+                $data = group_statistics($extra->limit, $extra->offset, $extra->extra);
+            }
             break;
          case 'users':
          default:
@@ -4099,10 +4335,20 @@ function display_statistics($institution, $type, $extra = null) {
             }
             break;
          case 'content':
-            $data = institution_content_statistics($extra->limit, $extra->offset, $institutiondata, $extra->extra);
+            if ($subtype == 'content') {
+                $data = institution_content_statistics($extra->limit, $extra->offset, $institutiondata, $extra->extra);
+            }
+            else if ($subtype == 'objectionable') {
+                $data = objectionable_statistics($extra->limit, $extra->offset, $extra->extra, $institution);
+            }
             break;
          case 'groups':
+            if ($subtype == 'assessments') {
+                $data = assessment_statistics($extra->limit, $extra->offset, $extra->extra, $institution);
+            }
+            else {
                 $data = array('notvalid_errorstring' => get_string('nogroupdataperinstitution', 'statistics'));
+            }
             break;
          case 'users':
          default:
@@ -4172,7 +4418,7 @@ function report_config_form($extra, $institutionelement) {
         'plugintype'      => 'core',
         'pluginname'      => 'admin',
         'renderer'        => 'div',
-        'class'           => 'form-as-button pull-left',
+        'class'           => 'form-as-button float-left',
         'elements'   => array(
             'type' => array(
                 'type' => 'hidden',
@@ -4219,7 +4465,7 @@ function report_config_form($extra, $institutionelement) {
         'type' => 'calendar',
         'title' => get_string('To') . ':',
         'class' => 'form-inline in-modal',
-        'defaultvalue' => !empty($extra->extra) && isset($extra->extra['end']) ? strtotime($extra->extra['end']) : strtotime('now'),
+        'defaultvalue' => !empty($extra->extra) && isset($extra->extra['end']) ? strtotime($extra->extra['end']) : strtotime('+1 day'),
         'caloptions' => array(
             'showsTime' => false,
         ),
@@ -4232,10 +4478,12 @@ function report_config_form($extra, $institutionelement) {
         $activeheadings = get_active_columns($data, $extra->extra);
         $headerelements = array();
         foreach ($data['tableheadings'] as $heading) {
+            $disabled = isset($heading['disabled']) && !empty($heading['disabled']) ? true : false;
+            $disabled = $disabled ? true : (!empty($heading['required']) ? true : false);
             $headerelements['report_column_' . $heading['id']] = array(
                 'type' => 'checkbox',
                 'title' => $heading['name'],
-                'readonly' => (!empty($heading['required']) ? true : false),
+                'readonly' => $disabled,
                 'defaultvalue' => (!empty($heading['required']) || !empty($heading['selected']) ? $heading['id'] : null),
             );
         }
@@ -4338,17 +4586,17 @@ function format_class($extra, $column, $class = 'search-results-sort-column') {
 }
 
 function reportconfigform_cancel_submit(Pieform $form) {
-    $submitelement = $form->get_element('submit');
-    redirect($submitelement['goto']);
+    $goto = $form->get_element_option('submit', 'goto');
+    redirect($goto);
 }
 
 function reportconfigform_submit(Pieform $form, $values) {
     global $SESSION;
 
-    $submitelement = $form->get_element('submit');
+    $goto = $form->get_element_option('submit', 'goto');
     // Get the type/subtype values from select field
     list($type, $subtype) = explode('_', $values['typesubtype']);
-    $submitelement['goto'] .= '&type=' . $type . '&subtype=' . $subtype;
+    $goto .= '&type=' . $type . '&subtype=' . $subtype;
 
     $SESSION->set('columnsforstats', null);
     $extra = array();
@@ -4368,7 +4616,7 @@ function reportconfigform_submit(Pieform $form, $values) {
 
     $form->reply(PIEFORM_OK, array(
         'message' => get_string('applyingfilters', 'statistics'),
-        'goto' => $submitelement['goto'],
+        'goto' => $goto,
         )
     );
 }
@@ -4382,14 +4630,17 @@ function reportconfigform_submit(Pieform $form, $values) {
 function get_report_types($institution = null) {
     global $USER;
 
-    // Get correct subtypes for 'information' type
+    // Get correct subtypes for 'information' type.
     if (!empty($institution) && $institution != 'all') {
-        $infooptions = array('information_information' => get_string('Overview', 'statistics'));
+        $infooptions = array(
+            'information_information' => get_string('Overview', 'statistics')
+        );
     }
     else {
         $infooptions = array('information_information' => get_string('Overview', 'statistics'),
                              'information_comparisons' => get_string('reportinstitutioncomparison', 'statistics'),
-                             'information_logins' => get_string('logins', 'statistics'));
+                             'information_logins' => get_string('logins', 'statistics'),
+        );
     }
     asort($infooptions);
 
@@ -4414,7 +4665,10 @@ function get_report_types($institution = null) {
     $optgroups = array(
         'content' => array(
             'label' => get_string('Content', 'admin'),
-            'options' => array('content_content' => get_string('Content', 'admin')),
+            'options' => array(
+                'content_content' => get_string('Content', 'admin'),
+                'content_objectionable' => get_string('objectionable', 'admin')
+            ),
         ),
         'information' => array(
             'label' => get_string('Institution', 'admin'),
@@ -4429,8 +4683,23 @@ function get_report_types($institution = null) {
     if (empty($institution) || $institution == 'all') {
         $optgroups['groups'] = array(
             'label' => get_string('Groups', 'admin'),
-            'options' => array('groups_groups' => get_string('Groups', 'admin')),
+            'options' => array(
+                'groups_groups' => get_string('Groups', 'admin'),
+            ),
         );
+        if (is_plugin_active('assessmentreport', 'module')) {
+            $optgroups['groups']['options']['groups_assessments'] = get_string('submissions', 'statistics');
+        }
+    }
+    else {
+        if (is_plugin_active('assessmentreport', 'module')) {
+            $optgroups['groups'] = array(
+                'label' => get_string('Groups', 'admin'),
+                'options' => array(
+                    'groups_assessments' => get_string('submissions', 'statistics')
+                ),
+            );
+        }
     }
 
     // But ignore $optgroups above if $USER is only institution staff and only allowed to see old user related reports
@@ -4474,7 +4743,7 @@ function get_report_settings($settings) {
     if (!empty($settings['users'])) {
         $str .= "<div>";
         $str .= get_string('selectednusers', 'admin', $settings['users']);
-        $str .= ' <button class="btn btn-default filter" id="removeuserfilter" title="' . get_string('removefilter', 'statistics') . '">
+        $str .= ' <button class="btn btn-secondary filter" id="removeuserfilter" title="' . get_string('removefilter', 'statistics') . '">
                      <span class="times">×</span>
                      <span class="sr-only">' . get_string('removefilter', 'statistics') . '</span>
                  </button>';
@@ -4517,6 +4786,9 @@ function report_earliest_date($subtype, $institution = 'mahara') {
     switch ($subtype) {
         case "content":
             $date = get_field_sql("SELECT MIN(i.time) FROM {institution_registration} i WHERE i.institution = ?", array($institution));
+            break;
+        case "objectionable":
+            $date = get_field_sql("SELECT MIN(o.reportedtime) FROM {objectionable} o WHERE o.resolvedtime IS NULL");
             break;
         case "groups":
             $date = get_field_sql("SELECT MIN(ctime) FROM {group}");
@@ -4586,6 +4858,9 @@ function report_earliest_date($subtype, $institution = 'mahara') {
             $date = get_field_sql("SELECT MIN(ctime) FROM {institution_data}
                                    WHERE institution = ?", array($institution));
             break;
+        case "assessments":
+            $date = get_field_sql("SELECT MIN(datesubmitted) ctime FROM {module_assessmentreport_history}");
+            break;
         case "userdetails":
         case "useragreement":
         case "comparisons":
@@ -4602,4 +4877,221 @@ function report_earliest_date($subtype, $institution = 'mahara') {
         return false;
     }
     return format_date(strtotime($date), 'strftimedate');
+}
+
+/**
+ * @param $limit
+ * @param $offset
+ * @param $extra
+ * @param null $institution
+ * @return array
+ * @throws ParameterException
+ * @throws SQLException
+ */
+function assessment_statistics($limit, $offset, $extra, $institution = null) {
+    $data = array();
+    $urllink = get_config('wwwroot') . 'admin/users/statistics.php?type=groups&subtype=assessments';
+    if ($institution) {
+        $urllink .= '&institution=' . $institution;
+    }
+    $data['tableheadings'] = assessments_statistics_headers($extra, $urllink);
+
+    $activeheadings = get_active_columns($data, $extra);
+    $extra['columns'] = array_keys($activeheadings);
+
+    $data['table'] = assessment_statistics_table($limit, $offset, $extra, $institution, $urllink);
+    $data['table']['activeheadings'] = $activeheadings;
+
+    $data['summary'] = $data['table']['count'] == 0 ? get_string('nostats', 'admin') : null;
+
+    return $data;
+}
+
+/**
+ * @param $extra
+ * @param $urllink
+ * @return array
+ */
+function assessments_statistics_headers($extra, $urllink) {
+    return array(
+        array('id' => 'rownum', 'name' => '#'),
+        array('id' => 'type',
+            'required' => true,
+            'name' => get_string('assessmenttype', 'statistics'),
+            'class' => format_class($extra, 'type'),
+            'link' => format_goto($urllink . '&sort=type', $extra, array('sort'), 'type')
+        ),
+        array('id' => 'viewname',
+            'required' => true,
+            'name' => get_string('Portfolio', 'view'),
+            'class' => format_class($extra, 'viewname'),
+            'link' => format_goto($urllink . '&sort=viewname', $extra, array('sort'), 'viewname'),
+        ),
+        array('id' => 'owner',
+            'required' => true,
+            'name' => get_string('Owner', 'view'),
+            'link' => format_goto($urllink . '&sort=owner', $extra, array('sort'), 'owner'),
+        ),
+        array('id' => 'group',
+            'required' => true,
+            'name' => get_string('Group', 'group'),
+            'link' => format_goto($urllink . '&sort=group', $extra, array('sort'), 'group'),
+            ),
+        array('id' => 'submitted',
+            'required' => true,
+            'name' => get_string('assessmensubmitted', 'statistics'),
+            'class' => format_class($extra, 'assessmensubmitted'),
+            'link' => format_goto($urllink . '&sort=submitted', $extra, array('sort'), 'submitted'),
+        ),
+        array('id' => 'released',
+            'required' => true,
+            'name' => get_string('assessmentreleaseddate', 'statistics'),
+            'class' => format_class($extra, 'assessmentreleaseddate'),
+            'link' => format_goto($urllink . '&sort=released', $extra, array('sort'), 'released'),
+        ),
+        array('id' => 'marker',
+            'required' => true,
+            'name' => get_string('assessmentmarker', 'statistics'),
+            'class' => format_class($extra, 'assessmentmarker'),
+            'link' => format_goto($urllink . '&sort=marker', $extra, array('sort'), 'marker'),
+        ),
+    );
+}
+
+/**
+ * @param $limit
+ * @param $offset
+ * @param $extra
+ * @param $institution
+ * @param $urllink
+ * @return array
+ * @throws ParameterException
+ * @throws SQLException
+ */
+function assessment_statistics_table($limit, $offset, $extra, $institution, $urllink) {
+    global $USER, $SESSION;
+
+    $start = !empty($extra['start']) ? $extra['start'] : date('Y-m-d', strtotime("-1 months"));
+    $end = !empty($extra['end']) ? $extra['end'] : date('Y-m-d', strtotime('+1 day'));
+    $users = $SESSION->get('usersforstats');
+
+    $fromsql = " FROM {module_assessmentreport_history} ah
+                    JOIN {usr} u ON ah.userid = u.id
+                    LEFT JOIN {usr} m ON ah.markerid = m.id
+                    LEFT JOIN {view} v ON v.id = ah.itemid AND ah.event = 'view'
+                    LEFT JOIN {group} g ON g.id = ah.groupid
+                    LEFT JOIN {collection} c ON c.id = ah.itemid AND ah.event = 'collection'";
+
+    $wheresql = " WHERE u.id !=0";
+    $where = array();
+    if ($institution) {
+        if ($institution == 'mahara') {
+            $wheresql .= " AND u.id NOT IN (SELECT usr FROM {usr_institution})";
+        }
+        else {
+            $fromsql .= " JOIN {usr_institution} ui ON (ui.usr = u.id AND ui.institution = ?)";
+            $where = array($institution);
+        }
+    }
+    if ($users) {
+        $wheresql .= " AND u.id IN (" . join(',', array_map('db_quote', array_values((array)$users))) . ")";
+    }
+    if ($start) {
+        $wheresql .= " AND ah.datesubmitted >= DATE(?) AND ah.datesubmitted <= DATE(?)";
+        $where[] = $start;
+        $where[] = $end;
+    }
+
+    $count = count_records_sql("SELECT COUNT(*) " . $fromsql . $wheresql, $where);
+
+    $pagination = build_pagination(array(
+        'id' => 'stats_pagination',
+        'url' => $urllink,
+        'jsonscript' => 'admin/users/statistics.json.php',
+        'datatable' => 'statistics_table',
+        'count' => $count,
+        'limit' => $limit,
+        'offset' => $offset,
+        'extradata' => $extra,
+        'setlimit' => true,
+    ));
+
+    $result = array(
+        'count'         => $count,
+        'tablerows'     => '',
+        'pagination'    => $pagination['html'],
+        'pagination_js' => $pagination['javascript'],
+    );
+    $result['settings']['start'] = ($start) ? $start : null;
+    $result['settings']['end'] = $end;
+    if ($count < 1) {
+        return $result;
+    }
+
+    $sorttype = !empty($extra['sort']) ? $extra['sort'] : '';
+    switch ($sorttype) {
+        case "type":
+            $orderby = " ah.event " . (!empty($extra['sortdesc']) ? 'DESC' : 'ASC');
+            break;
+        case "viewname":
+            $orderby = " viewname " . (!empty($extra['sortdesc']) ? 'DESC' : 'ASC');
+            break;
+        case "owner":
+            $orderby = " u.username " . (!empty($extra['sortdesc']) ? 'DESC' : 'ASC');
+            break;
+        case "group":
+            $orderby = " g.name " . (!empty($extra['sortdesc']) ? 'DESC' : 'ASC');
+            break;
+        case "released":
+            $orderby = " ah.datereleased " . (!empty($extra['sortdesc']) ? 'DESC' : 'ASC');
+            break;
+        case "marker":
+            $orderby = " m.username " . (!empty($extra['sortdesc']) ? 'DESC' : 'ASC');
+            break;
+        case "submitted":
+        default:
+            $orderby = " ah.datesubmitted " . (!empty($extra['sortdesc']) ? 'DESC' : 'ASC');
+    }
+
+    $sql = "SELECT ah.id, ah.itemid, ah.userid, ah.markerid, g.name AS groupname,
+            CASE WHEN c.id IS NULL THEN v.title ELSE c.name END AS viewname,
+            ah.event, ah.datesubmitted AS submitted, ah.datereleased AS released
+           " . $fromsql . $wheresql . " ORDER BY " . $orderby;
+
+    if (empty($extra['csvdownload'])) {
+        $sql .= " LIMIT $limit OFFSET $offset";
+    }
+
+    $data = get_records_sql_array($sql, $where);
+
+    if ($data) {
+        foreach ($data as &$item) {
+            $item->owner = display_name($item->userid);
+            if ($item->markerid > 0) {
+                $item->marker = display_name($item->markerid);
+            }
+            else {
+                $item->marker = 0;
+            }
+            $item->type = get_string(ucfirst($item->event), $item->event);
+        }
+    }
+
+    if (!empty($extra['csvdownload'])) {
+        $csvfields = array('type', 'viewname', 'owner', 'groupname',  'submitted', 'released', 'marker');
+        $USER->set_download_file(generate_csv($data, $csvfields), $institution . 'assessmentstatistics.csv', 'text/csv');
+    }
+    $result['csv'] = true;
+    $columnkeys = array();
+    foreach ($extra['columns'] as $column) {
+        $columnkeys[$column] = 1;
+    }
+
+    $smarty = smarty_core();
+    $smarty->assign('data', $data);
+    $smarty->assign('columns', $columnkeys);
+    $smarty->assign('offset', $offset);
+    $result['tablerows'] = $smarty->fetch('admin/assessmentstats.tpl');
+
+    return $result;
 }

@@ -195,7 +195,8 @@ class BehatForms extends BehatBase {
         $selectortype = "css_element";
         switch ($label) {
             case "Search for...":
-              $id = substr($value, 0, -1);
+              //format string - ids are user/group, not Users/Groups
+              $id = strtolower(substr($value, 0, -1));
               $locator = "#$id";
               break;
             case "General":
@@ -217,6 +218,28 @@ class BehatForms extends BehatBase {
         $locator = (empty($locator) ? "$id>option[value='$value']" : $locator);
         $this->i_click_on_element($locator, $selectortype);
     }
+
+    /**
+    *
+    * Step to select from a previously hidden search box
+    * needs to be called after calling with share_with_select2's "Search for..." option
+    *
+    * @When I select :user from select2 search box in row number :row_num
+    * @param string $user
+    * @param int $row_num
+    */
+
+    public function select_from_search_box($user, $row_num) {
+        $row_num = $row_num -1;
+        //create xpath for correct search box
+        $search_xpath = "//*[@id=\"select2-hidden-user-search-$row_num-container\"]";
+        $this->i_click_on_element($search_xpath, 'xpath_element');
+        //create xpath for the user being searched for
+        $user_xpath = "//*[@id[starts-with(., 'select2-hidden-user-search')]]/li/span[contains(text(),  \"$user\")]";
+        $this->i_click_on_element($user_xpath, 'xpath_element');
+    }
+
+
 
     /**
      * Select value in choice list
@@ -640,7 +663,7 @@ class BehatForms extends BehatBase {
      * @Given /^(?:|I )fill in "(?P<text>[^"]*)" in first editor$/
      */
     public function iFillInFirstWYSIWYGEditor($text) {
-        $iframe = $this->find('css', '.mce-edit-area > iframe')->getAttribute('id');
+        $iframe = $this->find('css', '.tox-edit-area > iframe')->getAttribute('id');
         $id = substr($iframe, 0, -4); // remove '_ifr'
         // Use javascript to update the tinyMCE editor
         if ($this->find('xpath', "//iframe[@id='" . $iframe . "']")) {
@@ -658,8 +681,7 @@ class BehatForms extends BehatBase {
      */
     public function i_click_button_editor_toolbar($action) {
         $exception = new ElementNotFoundException($this->getSession(), 'button', null, 'the action button "' . $action . '" in the editor toolbar');
-
-        $actionbutton = $this->find('css', "div.wysiwyg div[aria-label='" . $action . "'] > button", $exception);
+        $actionbutton = $this->find('css', "div.wysiwyg button[aria-label='" . $action . "']", $exception);
         $this->ensure_node_is_visible($actionbutton);
         $actionbutton->click();
     }

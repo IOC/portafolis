@@ -37,6 +37,7 @@ define('TITLE', get_string('institutionviewscollections', 'view'));
 
 if ($institution === false) {
     $smarty = smarty();
+    setpageicon($smarty, 'icon-regular icon-file-alt');
     $smarty->display('admin/users/noinstitutions.tpl');
     exit;
 }
@@ -46,11 +47,12 @@ list($searchform, $data, $pagination) = View::views_by_owner(null, $institution)
 $js = <<< EOF
 jQuery(function () {
     {$pagination['javascript']}
+    showmatchall();
 EOF;
 if ($offset > 0) {
     $js .= <<< EOF
     if ($('#myviews').length) {
-        $('#myviews a').focus();
+        $('#myviews a').trigger("focus");
     }
 EOF;
 }
@@ -59,7 +61,7 @@ else {
     if ($('#searchresultsheading').length) {
         $('#searchresultsheading').addClass('hidefocus')
             .prop('tabIndex', -1)
-            .focus();
+            .trigger("focus");
     }
 EOF;
 }
@@ -76,7 +78,7 @@ if (!empty($institution)) {
 }
 
 $smarty = smarty(array('paginator'));
-setpageicon($smarty, 'icon-university');
+setpageicon($smarty, 'icon-file-alt');
 
 $smarty->assign('institutionselector', $s['institutionselector']);
 $smarty->assign('INLINEJAVASCRIPT', $js);

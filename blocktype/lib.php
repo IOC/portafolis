@@ -49,7 +49,7 @@ interface IPluginBlocktype {
      */
     public static function get_categories();
 
-    public static function render_instance(BlockInstance $instance, $editing=false);
+    public static function render_instance(BlockInstance $instance, $editing=false, $versioning=false);
 }
 
 /**
@@ -86,6 +86,127 @@ abstract class PluginBlocktype extends Plugin implements IPluginBlocktype {
         return false;
     }
 
+    /**
+     * To define a pluginwide configuration
+     */
+    public static function has_base_config() {
+        return true;
+    }
+
+    /**
+     * To define a pluginwide configuration
+     */
+    public static function get_base_config_options() {
+        $type = array();
+        $blocks = get_records_sql_array("SELECT b.name, b.artefactplugin, bc.sortorder,
+                                   (SELECT COUNT(*) FROM {block_instance} bi WHERE bi.blocktype = b.name) AS blockcount
+                                  FROM {blocktype_installed} b
+                                  JOIN {blocktype_installed_category} bc ON bc.blocktype = b.name
+                                  WHERE b.active = 1
+                                  AND b.name != ?
+                                  ORDER BY bc.sortorder", array('placeholder'));
+        foreach ($blocks as $block) {
+            $namespaced = blocktype_single_to_namespaced($block->name, $block->artefactplugin);
+            safe_require('blocktype', $namespaced);
+            $classname = generate_class_name('blocktype', $namespaced);
+            $types[] = array('name' => $block->name,
+                             'title' => call_static_method($classname, 'get_title'),
+                             'cssicon' => call_static_method($classname, 'get_css_icon', $block->name),
+                             'cssicontype' => call_static_method($classname, 'get_css_icon_type', $block->name),
+                             'count' => $block->blockcount,
+                             );
+        }
+        $form = array(
+            'elements' => array(
+                'types' => array(
+                    'type' => 'fieldset',
+                    'legend' => get_string('contenttypes', 'blocktype.placeholder'),
+                    'elements' => array(
+                        'contenttypes' => array(
+                            'type' => 'html',
+                            'value' => '',
+                        ),
+                    ),
+                ),
+            )
+        );
+        $smarty = smarty_core();
+        $smarty->assign('types', $types);
+        $typeslist = $smarty->fetch('blocktype:placeholder:contenttypeslist.tpl');
+        $smarty->assign('typeslist', $typeslist);
+        $typeshtml = $smarty->fetch('blocktype:placeholder:contenttypes.tpl');
+        $form['elements']['types']['elements']['contenttypes']['value'] = $typeshtml;
+        return $form;
+    }
+
+    /**
+     * To define a pluginwide configuration
+     */
+    public static function get_base_config_options_js() {
+        global $USER;
+
+        $sesskey = $USER->get('sesskey');
+        $js = <<<EOF
+$(function() {
+    $('#placeholderlist button').each(function() {
+        $(this).off('click');
+        $(this).on('click', function(ev) {
+            ev.stopPropagation();
+            ev.preventDefault();
+        });
+    });
+
+    var updaterows = function(option) {
+        var sortorder = $('#placeholderlist').sortable('serialize');
+        $.post(config['wwwroot'] + "blocktype/config.json.php", { sesskey: '$sesskey', id: option, direction: sortorder })
+        .done(function(data) {
+            // update the page with the new list
+            if (data.returnCode == '0') {
+                $('#placeholderlist').replaceWith(data.message.html);
+                if (data.message.message) {
+                    var okmessage = $('<div id="changestatusline" class="alert alert-dismissible alert-success" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="' + get_string('Close') + '"><span aria-hidden="true">&times;</span></button><p>' + data.message.message + '</p></div>');
+                    $('#messages').empty().append(okmessage);
+                }
+                wiresortables();
+            }
+        });
+    };
+
+    var wiresortables = function() {
+        $('#placeholderlist > div').each(function() {
+            $(this).prepend('<div class="handle">&nbsp;</div>');
+            $('.handle').css('position', 'absolute');
+            $('.handle').css('z-index', '3');
+            $('.handle').css('width', $(this).find('button').css('width'));
+            $('.handle').css('height', $(this).find('button').css('height'));
+        });
+        $('#placeholderlist').sortable({
+            items: '> div',
+            appendTo: '#placeholderlist',
+            cursor: 'move',
+            opacity: 0.8,
+            helper: 'clone',
+            handle: '.handle',
+            stop: function(e, ui) {
+                var id = $(ui.item).find('button').data('option');
+                updaterows(id);
+            },
+        })
+        .disableSelection()
+        .on("mouseenter mouseleave", function() {
+            $(this).css('cursor', 'move');
+        });
+        // hide the 'save' button as this form works with drag / drop saving
+        $('#pluginconfig_save_container').hide();
+    };
+
+    // init
+    wiresortables();
+});
+EOF;
+        return $js;
+    }
+
     public static function get_theme_path($pluginname) {
         if (($artefactname = blocktype_artefactplugin($pluginname))) {
             // Path for block plugins that sit under an artefact
@@ -94,6 +215,20 @@ abstract class PluginBlocktype extends Plugin implements IPluginBlocktype {
         else {
             return parent::get_theme_path($pluginname);
         }
+    }
+
+
+    /**
+     * This function returns an array of menu items
+     * to be displayed in the top right navigation menu
+     *
+     * See the function find_menu_children() in lib/web.php
+     * for a description of the expected array structure.
+     *
+     * @return array
+     */
+    public static function right_nav_menu_items() {
+        return array();
     }
 
     /**
@@ -120,6 +255,10 @@ abstract class PluginBlocktype extends Plugin implements IPluginBlocktype {
         return false;
     }
 
+    public static function get_css_icon_type($blocktypename) {
+        return '';
+    }
+
     public static function extra_xmldb_substitution($xml) {
         return str_replace(
         '<!-- PLUGINTYPE_INSTALLED_EXTRAFIELDS -->',
@@ -137,6 +276,16 @@ abstract class PluginBlocktype extends Plugin implements IPluginBlocktype {
      * can only reasonably be placed once in a view
     */
     public static function single_only() {
+        return false;
+    }
+
+    /**
+     * override this to return true if the blocktype
+     * can only contain one artefact per block.
+     * example: Journal block can have multiple artefact so return false.
+     * example: Image block has one image per block so return true.
+    */
+    public static function single_artefact_per_block() {
         return false;
     }
 
@@ -185,6 +334,24 @@ abstract class PluginBlocktype extends Plugin implements IPluginBlocktype {
     * or remote.
     */
     public static function get_instance_javascript(BlockInstance $instance) {
+        return array();
+    }
+
+   /**
+    * This function must be implemented in the subclass if it requires
+    * toolbar options for the view. It returns an array of button <a> tags and/or
+    * html to display in the toobar area.
+    */
+    public static function get_instance_toolbars(BlockInstance $instance) {
+        return array();
+    }
+
+    /**
+    * This function must be implemented in the subclass if it requires
+    * css file outside of sass compiled css. It returns an array of css files, either local
+    * or remote.
+    */
+    public static function get_instance_css(BlockInstance $instance) {
         return array();
     }
 
@@ -246,6 +413,17 @@ abstract class PluginBlocktype extends Plugin implements IPluginBlocktype {
         }
         return false;
     }
+    /**
+    * Some blocktype plugins will have related artefacts based on artefactid.
+    * They should implement this function to keep a list of which ones. The
+    * result of this method is used to work out what artefacts where present at
+    * the time of the version creation to save in view_versioning.
+    *
+    * Note that it should just handle child level artefacts.
+    */
+    public static function get_current_artefacts(BlockInstance $instance) {
+        return array();
+    }
 
     /**
      * If this blocktype contains artefacts, and uses the artefactchooser
@@ -290,14 +468,19 @@ abstract class PluginBlocktype extends Plugin implements IPluginBlocktype {
         return $description;
     }
 
-    public static function get_blocktypes_for_category($category, View $view) {
-        $sql = 'SELECT bti.name, bti.artefactplugin
+    public static function get_blocktypes_for_category($category, View $view, $blocktype = null) {
+        $sql = 'SELECT bti.name, bti.artefactplugin, btic.sortorder
             FROM {blocktype_installed} bti
             JOIN {blocktype_installed_category} btic ON btic.blocktype = bti.name
             JOIN {blocktype_installed_viewtype} btiv ON btiv.blocktype = bti.name
-            WHERE btic.category = ? AND bti.active = 1 AND btiv.viewtype = ?
-            ORDER BY btic.sortorder, bti.name';
-        if (!$bts = get_records_sql_array($sql, array($category, $view->get('type')))) {
+            WHERE btic.category = ? AND bti.active = 1 AND btiv.viewtype = ?';
+        $where = array($category, $view->get('type'));
+        if ($blocktype) {
+            $sql .= ' AND bti.name = ?';
+            $where[] = $blocktype;
+        }
+        $sql .= ' ORDER BY btic.sortorder, bti.name';
+        if (!$bts = get_records_sql_array($sql, $where)) {
             return false;
         }
 
@@ -333,9 +516,12 @@ abstract class PluginBlocktype extends Plugin implements IPluginBlocktype {
                     'title'          => call_static_method($classname, 'get_title'),
                     'description'    => call_static_method($classname, 'get_description'),
                     'singleonly'     => call_static_method($classname, 'single_only'),
+                    'single_artefact_per_block' => call_static_method($classname, 'single_artefact_per_block'),
                     'artefactplugin' => $bt->artefactplugin,
                     'thumbnail_path' => get_config('wwwroot') . 'thumb.php?type=blocktype&bt=' . $bt->name . ((!empty($bt->artefactplugin)) ? '&ap=' . $bt->artefactplugin : ''),
                     'cssicon'        => call_static_method($classname, 'get_css_icon', $bt->name),
+                    'cssicontype'    => call_static_method($classname, 'get_css_icon_type', $bt->name),
+                    'sortorder'      => $bt->sortorder,
                 );
             }
         }
@@ -579,6 +765,30 @@ abstract class PluginBlocktype extends Plugin implements IPluginBlocktype {
         return true;
     }
 
+    /**
+     * Defines if the block is viewable by the logged in user
+     *
+     * This method should be overridden in the child class, if peer role
+     * should be able to see the block
+     *
+     * @param array user access role for the view
+     * @return boolean whether display the block content for the roles
+     */
+    public static function display_for_roles($roles) {
+        return !(count($roles) == 1 && $roles[0] == 'peer');
+    }
+
+    /**
+     * Defines if the block has to always be resized on load
+     *
+     * This method should be overridden in the child class, if the block
+     * content is different when viewing than when editing
+     *
+     * @return boolean whether the height set on the DB should be ignored
+     */
+    public static function set_block_height_on_load() {
+        return false;
+    }
 }
 
 
@@ -640,13 +850,15 @@ class BlockInstance {
     private $row;
     private $column;
     private $order;
-    private $canmoveleft;
-    private $canmoveright;
-    private $canmoveup;
-    private $canmovedown;
     private $maxorderincolumn;
     private $artefacts = array();
     private $temp = array();
+    private $tags = array();
+    private $inedit = false;
+    private $positionx;
+    private $positiony;
+    private $width;
+    private $height;
 
     public function __construct($id=0, $data=null) {
          if (!empty($id)) {
@@ -672,6 +884,30 @@ class BlockInstance {
                 $this->{$field} = $value;
             }
         }
+
+        $dimensiontable_exists = true;
+        if (defined('INSTALLER')) {
+           // Check to see if the table exists yet
+           require_once('ddl.php');
+           $dimensiontable_exists = table_exists(new XMLDBTable('block_instance_dimension'));
+        }
+
+        if ($dimensiontable_exists) {
+           $dimension = get_records_array('block_instance_dimension', 'block', $id);
+
+           if (is_array($dimension) && isset($dimension[0])) {
+               $this->positionx = $dimension[0]->positionx;
+               $this->positiony = $dimension[0]->positiony;
+               $this->width     = $dimension[0]->width;
+               $this->height    = $dimension[0]->height;
+           }
+        }
+        else {
+           $this->positionx = 0;
+           $this->positiony = 0;
+           $this->width     = 4;
+           $this->height    = 3;
+        }
         $this->artefactplugin = blocktype_artefactplugin($this->blocktype);
     }
 
@@ -684,6 +920,20 @@ class BlockInstance {
             if (!is_array($this->configdata)) {
                 $this->configdata = unserialize($this->configdata);
             }
+        }
+        if ($field == 'tags') {
+            $typecast = is_postgres() ? '::varchar' : '';
+            $this->tags = get_column_sql("
+            SELECT
+                (CASE
+                    WHEN t.tag LIKE 'tagid_%' THEN CONCAT(i.displayname, ': ', t2.tag)
+                    ELSE t.tag
+                END) AS tag, t.resourceid
+            FROM {tag} t
+            LEFT JOIN {tag} t2 ON t2.id" . $typecast . " = SUBSTRING(t.tag, 7)
+            LEFT JOIN {institution} i ON i.name = t2.ownerid
+            WHERE t.resourcetype = ? AND t.resourceid = ?
+            ORDER BY tag", array('blocktype', $this->get('id')));
         }
         if (strpos($field, 'canmove') === 0) {
             return $this->can_move(substr($field, strlen('canmove'))); // needs to be calculated.
@@ -702,6 +952,9 @@ class BlockInstance {
 
     public function set($field, $value) {
         if (property_exists($this, $field)) {
+            if ($field == 'tags') {
+                $this->set_tags($value);
+            }
             if ($field == 'configdata') {
                 $value = serialize($value);
             }
@@ -713,6 +966,45 @@ class BlockInstance {
             return true;
         }
         throw new ParamOutOfRangeException("Field $field wasn't found in class " . get_class($this));
+    }
+
+    private function set_tags($tags) {
+        global $USER;
+
+        if (empty($this->view_obj)) {
+            $this->get_view();
+        }
+
+        if ($this->view_obj->get('group')) {
+            $ownertype = 'group';
+            $ownerid = $this->view_obj->get('group');
+        }
+        else if ($this->view_obj->get('institution')) {
+            $ownertype = 'institution';
+            $ownerid = $this->view_obj->get('institution');
+        }
+        else {
+            $ownertype = 'user';
+            $ownerid = $this->view_obj->get('owner');
+        }
+        $this->tags = check_case_sensitive($tags, 'tag');
+        delete_records('tag', 'resourcetype', 'blocktype', 'resourceid', $this->get('id'));
+        foreach (array_unique($this->tags) as $tag) {
+            // truncate the tag before insert it into the database
+            $tag = substr($tag, 0, 128);
+            $tag = check_if_institution_tag($tag);
+            insert_record('tag',
+                (object)array(
+                    'resourcetype' => 'blocktype',
+                    'resourceid' => $this->get('id'),
+                    'ownertype' => $ownertype,
+                    'ownerid' => $ownerid,
+                    'tag' => $tag,
+                    'ctime' => db_format_timestamp(time()),
+                    'editedby' => $USER->get('id'),
+                )
+            );
+        }
     }
 
     // returns false if it finds a bad attachment
@@ -770,12 +1062,18 @@ class BlockInstance {
         // make sure that user is allowed to publish artefact. This is to stop
         // hacking of form value to attach other users private data.
         $badattachment = false;
-        if (!empty($values['artefactid'])) {
-            $badattachment = !$this->verify_attachment_permissions($values['artefactid']);
+        if (isset($values['blocktemplate']) && !empty($values['blocktemplate'])) {
+            // Ignore check on artefactids as they are not relating to actual artefacts
         }
-        if (!empty($values['artefactids'])) {
-            $badattachment = !$this->verify_attachment_permissions($values['artefactids']);
+        else {
+            if (!empty($values['artefactid'])) {
+                $badattachment = !$this->verify_attachment_permissions($values['artefactid']);
+            }
+            if (!empty($values['artefactids'])) {
+                $badattachment = !$this->verify_attachment_permissions($values['artefactids']);
+            }
         }
+
         if ($badattachment) {
             $result['message'] = get_string('unrecoverableerror', 'error');
             $form->set_error(null, $result['message']);
@@ -808,6 +1106,11 @@ class BlockInstance {
 
         $title = (isset($values['title'])) ? $values['title'] : '';
         unset($values['title']);
+
+        if (isset($values['tags'])) {
+            $this->set('tags', $values['tags']);
+            unset($values['tags']);
+        }
 
         // A block may return a list of other blocks that need to be
         // redrawn after configuration of this block.
@@ -879,9 +1182,10 @@ class BlockInstance {
      *               javascript to run
      */
     public function render_editing($configure=false, $new=false, $jsreply=false) {
-        safe_require('blocktype', $this->get('blocktype'));
-        $movecontrols = array();
+        global $USER;
 
+        safe_require('blocktype', $this->get('blocktype'));
+        $this->inedit = true;
         $blocktypeclass = generate_class_name('blocktype', $this->get('blocktype'));
         try {
             $title = $this->get_title();
@@ -896,11 +1200,19 @@ class BlockInstance {
         }
         else {
             try {
+              $user_roles = get_column('view_access', 'role', 'usr', $USER->get('id'), 'view', $this->view);
+              if (!call_static_method($blocktypeclass, 'display_for_roles', $user_roles)) {
+                  $content = '';
+                  $css = '';
+                  $js = '';
+              }
+              else   {
                 $content = call_static_method(generate_class_name('blocktype', $this->get('blocktype')), 'render_instance', $this, true);
                 $jsfiles = call_static_method($blocktypeclass, 'get_instance_javascript', $this);
                 $inlinejs = call_static_method($blocktypeclass, 'get_instance_inline_javascript', $this);
                 $js = $this->get_get_javascript_javascript($jsfiles) . $inlinejs;
                 $css = '';
+              }
             }
             catch (NotFoundException $e) {
                 // Whoops - where did the image go? There is possibly a bug
@@ -915,45 +1227,6 @@ class BlockInstance {
                 $js = '';
                 $css = '';
             }
-
-            if (!defined('JSON') && !$jsreply) {
-                if ($this->get('canmoveleft')) {
-                    $movecontrols[] = array(
-                        'column' => $this->get('column') - 1,
-                        'order'  => $this->get('order'),
-                        'title'  => $title == '' ? get_string('movethisblockleft', 'view') : get_string('moveblockleft', 'view', "'$title'"),
-                        'arrow'  => "icon icon-long-arrow-left",
-                        'dir'    => 'left',
-                    );
-                }
-                if ($this->get('canmovedown')) {
-                    $movecontrols[] = array(
-                        'column' => $this->get('column'),
-                        'order'  => $this->get('order') + 1,
-                        'title'  => $title == '' ? get_string('movethisblockdown', 'view') : get_string('moveblockdown', 'view', "'$title'"),
-                        'arrow'  => 'icon icon-long-arrow-down',
-                        'dir'    => 'down',
-                    );
-                }
-                if ($this->get('canmoveup')) {
-                    $movecontrols[] = array(
-                        'column' => $this->get('column'),
-                        'order'  => $this->get('order') - 1,
-                        'title'  => $title == '' ? get_string('movethisblockup', 'view') : get_string('moveblockup', 'view', "'$title'"),
-                        'arrow'  => 'icon icon-long-arrow-up',
-                        'dir'    => 'up',
-                    );
-                }
-                if ($this->get('canmoveright')) {
-                    $movecontrols[] = array(
-                        'column' => $this->get('column') + 1,
-                        'order'  => $this->get('order'),
-                        'title'  => $title == '' ? get_string('movethisblockright', 'view') : get_string('moveblockright', 'view', "'$title'"),
-                        'arrow'  => 'icon icon-long-arrow-right',
-                        'dir'    => 'right',
-                    );
-                }
-            }
         }
 
         $configtitle = $title == '' ? call_static_method($blocktypeclass, 'get_title') : $title;
@@ -967,7 +1240,12 @@ class BlockInstance {
         $smarty->assign('column', $this->get('column'));
         $smarty->assign('order',  $this->get('order'));
 
-        $smarty->assign('movecontrols', $movecontrols);
+        $smarty->assign('positionx', $this->get('positionx'));
+        $smarty->assign('positiony', $this->get('positiony'));
+        $smarty->assign('width', $this->get('width'));
+        $smarty->assign('height', $this->get('height'));
+
+        $smarty->assign('blocktype', $this->get('blocktype'));
         $smarty->assign('configurable', call_static_method($blocktypeclass, 'has_instance_config'));
         $smarty->assign('configure', $configure); // Used by the javascript to rewrite the block, wider.
         $smarty->assign('configtitle',  $configtitle);
@@ -975,17 +1253,19 @@ class BlockInstance {
         $smarty->assign('javascript', defined('JSON'));
         $smarty->assign('strnotitle', get_string('notitle', 'view'));
         $smarty->assign('strmovetitletext', $title == '' ? get_string('movethisblock', 'view') : get_string('moveblock', 'view', "'$title'"));
+        $smarty->assign('strmovetitletexttooltip', get_string('moveblock2', 'view'));
         $smarty->assign('strconfigtitletext', $title == '' ? get_string('configurethisblock1', 'view', $id) : get_string('configureblock1', 'view', "'$title'", $id));
+        $smarty->assign('strconfigtitletexttooltip', get_string('configureblock2', 'view'));
         $smarty->assign('strremovetitletext', $title == '' ? get_string('removethisblock1', 'view', $id) : get_string('removeblock1', 'view', "'$title'", $id));
+        $smarty->assign('strremovetitletexttooltip', get_string('removeblock2', 'view'));
+        $smarty->assign('lockblocks', ($this->get_view()->get('lockblocks') && $this->get_view()->get('owner'))); // Only lock blocks for user's portfolio pages
 
-        if (!$configure && $title) {
+        if ( $title) {
             $configdata = $this->get('configdata');
             if (isset($configdata['retractable']) && $configdata['retractable']) {
                 $smarty->assign('retractable', true);
-                if (defined('JSON') || $jsreply) {
-                    $jssmarty = smarty_core();
-                    $jssmarty->assign('id', $this->get('id'));
-                    $js .= $jssmarty->fetch('view/retractablejs.tpl');
+                if (isset($configdata['retractedonload']) && $configdata['retractedonload']) {
+                    $smarty->assign('retractedonload', true);
                 }
             }
         }
@@ -1003,9 +1283,11 @@ class BlockInstance {
           $artefacts =  get_records_sql_array(
               'SELECT a.id, a.title FROM {artefact} a WHERE a.id in ( '. join(',', array_fill(0, count($ids), '?')) . ')', $ids
           );
-          uasort($artefacts, array("BlockInstance", "my_files_cmp"));
-          foreach ($artefacts as $artefact) {
-            $result[] = $artefact->id;
+          if ($artefacts) {
+              uasort($artefacts, array("BlockInstance", "my_files_cmp"));
+              foreach ($artefacts as $artefact) {
+                  $result[] = $artefact->id;
+              }
           }
       }
       return $result;
@@ -1020,9 +1302,12 @@ class BlockInstance {
      *
      * @param boolean $exporting  Indicate the rendering is for an export
      *                            If we are doing an export we can't render the block to be loaded via ajax
+     * @param boolean $versioning Indicate the rendering is for an older view version
+     *
      * @return the rendered block
      */
-    public function render_viewing($exporting=false) {
+    public function render_viewing($exporting=false, $versioning=false) {
+        global $USER;
 
         if (!safe_require_plugin('blocktype', $this->get('blocktype'))) {
             return;
@@ -1030,25 +1315,40 @@ class BlockInstance {
 
         $smarty = smarty_core();
 
+        $user_roles = get_column('view_access', 'role', 'usr', $USER->get('id'), 'view', $this->view);
+
         $classname = generate_class_name('blocktype', $this->get('blocktype'));
-        if (get_config('ajaxifyblocks') && call_static_method($classname, 'should_ajaxify') && $exporting === false) {
+        $displayforrole = call_static_method($classname, 'display_for_roles', $user_roles);
+        $checkview = $this->get_view();
+        if ($checkview->get('owner') == NULL ||
+            ($USER->is_admin_for_user($checkview->get('owner')) && $checkview->is_objectionable())) {
+            $displayforrole = true;
+        }
+        if (!$displayforrole) {
+            $content = '';
+            $smarty->assign('loadbyajax', false);
+        }
+        else if (get_config('ajaxifyblocks') && call_static_method($classname, 'should_ajaxify') && $exporting === false && $versioning === false) {
             $content = '';
             $smarty->assign('loadbyajax', true);
         }
         else {
             $smarty->assign('loadbyajax', false);
             try {
-                $content = call_static_method($classname, 'render_instance', $this);
+                $content = call_static_method($classname, 'render_instance', $this, false, $versioning);
             }
             catch (NotFoundException $e) {
-                // Whoops - where did the image go? There is possibly a bug
-                // somewhere else that meant that this blockinstance wasn't
-                // told that the image was previously deleted. But the block
-                // instance is not allowed to treat this as a failure
-                log_debug('Artefact not found when rendering a block instance. '
-                    . 'There might be a bug with deleting artefacts of this type? '
-                    . 'Original error follows:');
-                log_debug($e->getMessage());
+                //Ignore not found error when fetching old verions of view
+                if (!$versioning) {
+                    // Whoops - where did the image go? There is possibly a bug
+                    // somewhere else that meant that this blockinstance wasn't
+                    // told that the image was previously deleted. But the block
+                    // instance is not allowed to treat this as a failure
+                    log_debug('Artefact not found when rendering a block instance. '
+                        . 'There might be a bug with deleting artefacts of this type? '
+                        . 'Original error follows:');
+                    log_debug($e->getMessage());
+                }
                 $content = '';
             }
         }
@@ -1072,28 +1372,69 @@ class BlockInstance {
         // If this block is for just one artefact, we set the title of the
         // block to be a link to view more information about that artefact
         $configdata = $this->get('configdata');
-        if (!empty($configdata['artefactid'])) {
+        if (!empty($configdata['artefactid']) && $displayforrole) {
             if (call_static_method($classname, 'has_title_link')) {
-                $smarty->assign('viewartefacturl', get_config('wwwroot') . 'artefact/artefact.php?artefact='
-                    . $configdata['artefactid'] . '&view=' . $this->get('view') . '&block=' . $this->get('id'));
+                $smarty->assign('blockid', $this->get('id'));
+                $smarty->assign('artefactid', $configdata['artefactid']);
             }
         }
 
-        if (method_exists($classname, 'feed_url')) {
-            $smarty->assign('feedlink', call_static_method($classname, 'feed_url', $this));
+        if ($displayforrole) {
+            if (method_exists($classname, 'feed_url')) {
+                $smarty->assign('feedlink', call_static_method($classname, 'feed_url', $this));
+            }
         }
 
-
-        $smarty->assign('link', call_static_method($classname, 'get_link', $this));
-
-
         $smarty->assign('content', $content);
-        if (isset($configdata['retractable']) && $title) {
+        if (isset($configdata['retractable']) && $title && !$exporting) {
             $smarty->assign('retractable', $configdata['retractable']);
             if (isset($configdata['retractedonload'])) {
                 $smarty->assign('retractedonload', $configdata['retractedonload']);
             }
         }
+        $cssicontype = call_static_method($classname, 'get_css_icon_type', $this->blocktype);
+        $cardicontype = !empty($cssicontype) ? preg_replace('/^icon-/', 'card-', $cssicontype) : '';
+        $smarty->assign('cardicontype', $cardicontype);
+        $smarty->assign('versioning', $versioning);
+
+        // Apply comments and details block header to blocks with have one artefact per block
+        // Blocks with more than one artefact per block get their header via individual templates
+        $blockheader = call_static_method($classname, 'single_artefact_per_block', $this->blocktype);
+        // Set up template for the blocks that have the comments and details header
+        // Check also that an artefact has been attached to ensure empty blocks don't get empty modals
+        if ($blockheader && !empty($configdata['artefactid'])) {
+            $smarty->assign('blockheader', $blockheader);
+            if (!empty($configdata['artefactid'])) {
+                $smarty->assign('artefactid', $configdata['artefactid']);
+                $artefact = $this->get_artefact_instance($configdata['artefactid']);
+                $smarty->assign('allowcomments', $artefact->get('allowcomments'));
+                if (!$artefact->get('allowcomments')) {
+                    if ($this->get('blocktype') == 'textbox') {
+                        $smarty->assign('justdetails', (int)get_config('licensemetadata'));
+                    }
+                    else {
+                        $smarty->assign('justdetails', true);
+                    }
+                }
+                else {
+                    $commentoptions = ArtefactTypeComment::get_comment_options();
+                    $commentoptions->limit = 0;
+                    $commentoptions->view = new View($this->get('view'));
+                    $commentoptions->artefact = $artefact;
+                    $commentoptions->onview = true;
+                    $commentoptions->blockid = $this->get('id');
+                    $comments = ArtefactTypeComment::get_comments($commentoptions);
+                    $commentcount = isset($comments->count) ? $comments->count : 0;
+                    $smarty->assign('commentcount', $commentcount);
+                }
+            }
+        }
+        // Image gallery's from folders should always have details
+        if ($blockheader && $this->get('blocktype') == 'gallery') {
+            $smarty->assign('justdetails', true);
+        }
+
+        $smarty->assign('peerroleonly', $USER->has_peer_role_only($this->get_view()));
 
         return $smarty->fetch('view/blocktypecontainerviewing.tpl');
     }
@@ -1110,6 +1451,8 @@ class BlockInstance {
         if (!empty($renderedform)) {
             return $renderedform;
         }
+
+        $notretractable = get_config_plugin('blocktype', $this->get('blocktype'), 'notretractable');
 
         safe_require('blocktype', $this->get('blocktype'));
         $blocktypeclass = generate_class_name('blocktype', $this->get('blocktype'));
@@ -1160,21 +1503,27 @@ class BlockInstance {
                     'value' => $new,
                 ),
             ),
-            $elements,
-            array (
-                'retractable' => array(
-                    'type'         => 'select',
-                    'title'        => get_string('retractable', 'view'),
-                    'description'  => get_string('retractabledescription', 'view'),
-                    'options' => array(
-                            BlockInstance::RETRACTABLE_NO => get_string('no'),
-                            BlockInstance::RETRACTABLE_YES => get_string('yes'),
-                            BlockInstance::RETRACTABLE_RETRACTED => get_string('retractedonload', 'view')
-                    ),
-                    'defaultvalue' => $retractable + $retractedonload,
-                ),
-            )
+            $elements
         );
+
+        if (!$notretractable) {
+            $elements = array_merge(
+                $elements,
+                array (
+                    'retractable' => array(
+                        'type'         => 'select',
+                        'title'        => get_string('retractable', 'view'),
+                        'description'  => get_string('retractabledescription', 'view'),
+                        'options' => array(
+                                BlockInstance::RETRACTABLE_NO => get_string('no'),
+                                BlockInstance::RETRACTABLE_YES => get_string('yes'),
+                                BlockInstance::RETRACTABLE_RETRACTED => get_string('retractedonload', 'view')
+                        ),
+                        'defaultvalue' => $retractable + $retractedonload,
+                    ),
+                )
+            );
+        }
 
         if ($new) {
             $cancel = get_string('remove');
@@ -1188,7 +1537,7 @@ class BlockInstance {
         // Add submit/cancel buttons
         $elements['action_configureblockinstance_id_' . $this->get('id')] = array(
             'type' => 'submitcancel',
-            'class' => 'btn-default',
+            'class' => 'btn-secondary',
             'value' => array(get_string('save'), $cancel),
             'goto' => View::make_base_url(),
         );
@@ -1233,6 +1582,9 @@ class BlockInstance {
         if (preg_match('/<script type="(text|application)\/javascript">(new Pieform\(.*\);)<\/script>/', $html, $matches)) {
             $js = "var pf_{$form['name']} = " . $matches[2] . "pf_{$form['name']}.init();";
         }
+        else if (preg_match('/<script>(new Pieform\(.*\);)<\/script>/', $html, $matches)) {
+            $js = "var pf_{$form['name']} = " . $matches[1] . "pf_{$form['name']}.init();";
+        }
         else {
             $js = '';
         }
@@ -1259,7 +1611,7 @@ class BlockInstance {
 
         $js .= "
             jQuery(function ($) {
-                $('#instconf_title').change(function() {
+                $('#instconf_title').on('change', function() {
                     $('#instconf_retractable').prop('disabled', ($('#instconf_title').prop('value') == ''));
                 });
             });";
@@ -1285,7 +1637,7 @@ class BlockInstance {
         if (empty($this->dirty)) {
             return;
         }
-        $fordb = new StdClass;
+        $fordb = new stdClass();
         foreach (get_object_vars($this) as $k => $v) {
             // The configdata is initially fetched from the database in string
             // form. Calls to get() will convert it to an array on the fly. We
@@ -1305,6 +1657,11 @@ class BlockInstance {
         }
 
         $this->rebuild_artefact_list();
+
+        // check the table exists in case we need to update a block in the upgrade before the creation of the table
+        if (db_table_exists('block_instance_dimension') && isset($this->positionx)) {
+            $this->set_block_dimensions($this->positionx, $this->positiony, $this->width, $this->height);
+        }
 
         // Tell stuff about this
         handle_event('blockinstancecommit', $this);
@@ -1354,7 +1711,7 @@ class BlockInstance {
             true
         );
 
-        $va = new StdClass;
+        $va = new stdClass();
         $va->view = $this->get('view');
         $va->block = $this->id;
 
@@ -1397,7 +1754,7 @@ class BlockInstance {
     }
 
     public function delete() {
-        if (empty($this->id)) {
+        if (empty($this->id) || ($this->get_view()->get('lockblocks') && $this->get_view()->get('owner'))) {
             $this->dirty = false;
             return;
         }
@@ -1418,7 +1775,9 @@ class BlockInstance {
             call_static_method($classname, 'delete_instance', $this);
         }
         delete_records('view_artefact', 'block', $this->id);
+        delete_records('block_instance_dimension', 'block', $this->id);
         delete_records('block_instance', 'id', $this->id);
+        delete_records('tag', 'resourcetype', 'blocktype', 'resourceid', $this->id);
         db_commit();
 
         $this->dirty = false;
@@ -1599,11 +1958,21 @@ class BlockInstance {
             'row'        => $this->get('row'),
             'column'     => $this->get('column'),
             'order'      => $this->get('order'),
+            'positionx'  => $this->get('positionx'),
+            'positiony'  => $this->get('positiony'),
+            'width'      => $this->get('width'),
+            'height'     => $this->get('height'),
         ));
 
         if (($sameowner && $copytype != 'fullinclself') || $copytype == 'reference') {
             $newblock->set('configdata', $configdata);
             $newblock->commit();
+            // Copy any tagged block tags - we need to commit before here so the block instance has an ID value
+            if ($tags = $this->get('tags')) {
+                $newblock->set('tags', $tags);
+                $newblock->commit();
+            }
+
             if ($this->get('blocktype') == 'taggedposts' && $copytype == 'tagsonly') {
                 $this->copy_tags($newblock->get('id'));
             }
@@ -1686,6 +2055,11 @@ class BlockInstance {
 
         $newblock->set('configdata', $configdata);
         $newblock->commit();
+        // Copy any tagged block tags - we need to commit before here so the block instance has an ID value
+        if ($tags = $this->get('tags')) {
+            $newblock->set('tags', $tags);
+            $newblock->commit();
+        }
         if ($this->get('blocktype') == 'taggedposts' && $copytype == 'tagsonly') {
             $this->copy_tags($newblock->get('id'));
         }
@@ -1721,9 +2095,9 @@ class BlockInstance {
      * Returns javascript to grab & eval javascript from files on the web
      *
      * @param array $jsfiles Each element of $jsfiles is either a url, a local filename,
-     *                       or an array of the form
+     *                       or an array in the form of
      *                       array(
-     *                           'file'   => string   // url or local js filename
+     *                           'file'   => string   // url or local js filename (or empty if initjs only is required)
      *                           'initjs' => string   // js to be executed once the file's
      *                                                // contents have been loaded
      *                       )
@@ -1733,24 +2107,102 @@ class BlockInstance {
     public function get_get_javascript_javascript($jsfiles) {
         $js = '';
         foreach ($jsfiles as $jsfile) {
+            if (is_array($jsfile) && empty($jsfile['file']) && !empty($jsfile['initjs'])) {
+                // Just dealing with initjs option only so do this on page load
+                $js .= "jQuery(function() {\n" . $jsfile['initjs'] . "\n})";
+            }
+            else {
+                $file = (is_array($jsfile) && !empty($jsfile['file'])) ? $jsfile['file'] : $jsfile;
 
-            $file = (is_array($jsfile) && isset($jsfile['file'])) ? $jsfile['file'] : $jsfile;
-
-            if (stripos($file, 'http://') === false && stripos($file, 'https://') === false) {
-                $file = 'blocktype/' . $this->blocktype . '/' . $file;
-                if ($this->artefactplugin) {
-                    $file = 'artefact/' . $this->artefactplugin . '/' . $file;
+                if (stripos($file, 'http://') === false && stripos($file, 'https://') === false) {
+                    $file = 'blocktype/' . $this->blocktype . '/' . $file;
+                    if ($this->artefactplugin) {
+                        $file = 'artefact/' . $this->artefactplugin . '/' . $file;
+                    }
+                    $file = get_config('wwwroot') . $file;
                 }
-                $file = get_config('wwwroot') . $file;
-            }
 
-            $js .= "jQuery.ajax({url: '{$file}', dataType: 'script', cache:true";
-            if (is_array($jsfile) && !empty($jsfile['initjs'])) {
-                // Pass success callback to getScript
-                $js .= ", success: function(data){\n" . $jsfile['initjs'] . "\n}";
+                $js .= "jQuery.ajax({url: '{$file}', dataType: 'script', cache:true";
+                if (is_array($jsfile) && !empty($jsfile['initjs'])) {
+                    // Pass success callback to getScript
+                    $js .= ", success: function(data){\n" . $jsfile['initjs'] . "\n}";
+                }
+                $js .= "});\n";
             }
-            $js .= "});\n";
         }
         return $js;
     }
+
+    /**
+     * This function returns an array of menu items to be displayed
+     * on a group page when viewed by group members.
+     * Each item should be a stdClass() object containing -
+     * - title language pack key
+     * - url relative to wwwroot
+     * @return array
+     */
+    public static function group_tabs($groupid, $role) {
+        return array();
+    }
+
+    public function set_block_dimensions($positionx, $positiony, $width, $height) {
+        $obj = new StdClass();
+        $obj->block = $this->id;
+        $obj->positionx = $positionx;
+        $obj->positiony = $positiony;
+        $obj->height = $height;
+        $obj->width = $width;
+
+        if (isset($obj->positionx) && isset($obj->positiony) && isset($obj->height) && isset($obj->width)) {
+            //TODO: move this inside of the commit
+            ensure_record_exists('block_instance_dimension', (object) array('block' => $this->id), $obj);
+            $this->set('positionx',  $positionx);
+            $this->set('positiony', $positiony);
+            $this->set('height', $height);
+            $this->set('width',  $width);
+        }
+        else {
+           throw new \Exception(get_string('dimensionsnotset', 'view'));
+        }
+
+    }
+}
+
+function require_blocktype_plugins() {
+    static $plugins = null;
+    if (is_null($plugins)) {
+        $plugins = plugins_installed('blocktype');
+        foreach ($plugins as $plugin) {
+            safe_require('blocktype', $plugin->name);
+        }
+    }
+    return $plugins;
+}
+
+function blocktype_get_types_from_filter($filter) {
+    static $contenttype_blocktype = null;
+
+    if (is_null($contenttype_blocktype)) {
+        $contenttype_blocktype = array();
+        foreach (require_blocktype_plugins() as $plugin) {
+            $classname = generate_class_name('blocktype', $plugin->name);
+            if (!is_callable($classname . '::get_blocktype_type_content_types')) {
+                continue;
+            }
+            $blocktypetypes = call_static_method($classname, 'get_blocktype_type_content_types');
+            foreach ($blocktypetypes as $blocktype => $contenttypes) {
+                if (!empty($contenttypes)) {
+                    foreach ($contenttypes as $ct) {
+                        $contenttype_blocktype[$ct][] = $blocktype;
+                    }
+                }
+            }
+        }
+    }
+
+    if (empty($contenttype_blocktype[$filter])) {
+        return null;
+    }
+
+    return $contenttype_blocktype[$filter];
 }

@@ -11,7 +11,8 @@
 
 define('PUBLIC', 1);
 define('INTERNAL', 1);
-define('MENUITEM', 'groups/members');
+define('MENUITEM', 'engage/index');
+define('MENUITEM_SUBPAGE', 'members');
 require(dirname(dirname(__FILE__)) . '/init.php');
 require_once('group.php');
 require_once('searchlib.php');
@@ -145,7 +146,7 @@ $searchform = pieform(array(
                 'submit' => array(
                     'type' => 'button',
                     'usebuttontag' => true,
-                    'class' => 'btn-primary no-label input-group-btn',
+                    'class' => 'btn-primary no-label input-group-append',
                     'value' => get_string('search')
                 )
             )

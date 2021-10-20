@@ -28,6 +28,10 @@ class PluginBlocktypeGroupMembers extends MaharaCoreBlocktype {
         return true;
     }
 
+    public static function single_artefact_per_block() {
+        return false;
+    }
+
     public static function get_categories () {
         return array('general' => 17000);
     }
@@ -40,7 +44,7 @@ class PluginBlocktypeGroupMembers extends MaharaCoreBlocktype {
         return true;
     }
 
-    public static function render_instance (BlockInstance $instance, $editing = false) {
+    public static function render_instance (BlockInstance $instance, $editing = false, $versioning=false) {
         global $USER;
 
         // Not render if the block is in a template

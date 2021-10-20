@@ -1,12 +1,5 @@
 {include file="header.tpl"}
 
-<div class="btn-group btn-group-top only-button">
-    <a class="btn btn-default btn-group-item pull-left" href="{$wwwroot}module/framework/frameworks.php?upload=1">
-        <span class="icon icon-plus icon-lg left" role="presentation" aria-hidden="true"></span>
-        <span class="btn-title">{str tag="addframework" section="module.framework"}</span>
-    </a>
-</div>
-
 <h4>{str tag="frameworks" section="module.framework"}</h4>
 <p class="lead">{str tag="frameworksdesc" section="module.framework"}</p>
 
@@ -30,7 +23,7 @@
             <span title="{$item->active.title}" class="{$item->active.classes}"></span>
         </td>
         <td class="buttonscell framework">
-            <script type="application/javascript">
+            <script>
                 jQuery('#framework{$item->id}_enabled').on('change', function() {
                     // save switch
                     jQuery.post(config.wwwroot + 'module/framework/frameworks.json.php', jQuery('#framework{$item->id}').serialize())
@@ -39,7 +32,7 @@
                     });
                 });
             </script>
-            <div class="pull-right btn-group form-as-button">
+            <div class="float-right btn-group form-as-button">
             {$item->config|safe}
             {if $item->delete}
                 {$item->delete|safe}

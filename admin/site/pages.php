@@ -59,7 +59,7 @@ $form = pieform(array(
             'title'       => get_string('pagetext', 'admin'),
             'defaultvalue' => $pagecontents[DEFAULTPAGE],
             'rules'       => array(
-                'maxlength' => 65536,
+                'maxlength' => 1000000,
                 'required' => true
             )
         ),
@@ -79,7 +79,7 @@ function editsitepage_submit(Pieform $form, $values) {
     $pagetext = EmbeddedImage::prepare_embedded_images($values['pagetext'], 'staticpages', $id);
 
     global $USER;
-    $data = new StdClass;
+    $data = new stdClass();
     $data->name    = $values['pagename'];
     $data->content = $pagetext;
     $data->mtime   = db_format_timestamp(time());
@@ -95,7 +95,7 @@ function editsitepage_submit(Pieform $form, $values) {
 }
 
 $smarty = smarty(array('adminsitepages'), array(), array('admin' => array('discardpageedits')));
-setpageicon($smarty, 'icon-pencil');
+setpageicon($smarty, 'icon-pencil-alt');
 
 $smarty->assign('pageeditform', $form);
 $smarty->display('admin/site/pages.tpl');

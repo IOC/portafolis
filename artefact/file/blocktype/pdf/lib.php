@@ -17,6 +17,10 @@ class PluginBlocktypePdf extends MaharaCoreBlocktype {
         return false;
     }
 
+    public static function single_artefact_per_block() {
+        return true;
+    }
+
     public static function get_title() {
         return get_string('title', 'blocktype.file/pdf');
     }
@@ -29,7 +33,7 @@ class PluginBlocktypePdf extends MaharaCoreBlocktype {
         return array('fileimagevideo' => 8000);
     }
 
-    public static function render_instance(BlockInstance $instance, $editing=false) {
+    public static function render_instance(BlockInstance $instance, $editing=false, $versioning=false) {
         global $USER;
         require_once(get_config('docroot') . 'lib/view.php');
         $configdata = $instance->get('configdata'); // this will make sure to unserialize it for us
@@ -73,20 +77,28 @@ class PluginBlocktypePdf extends MaharaCoreBlocktype {
             else if ($language == 'en') {
                 $language = 'en-GB';
             }
-            $result = '<iframe src="' . $urlbase . 'artefact/file/blocktype/pdf/viewer.php?editing=' . $editing . '&ingroup=' . !empty($group) . '&file=' . $artefactid . '&lang=' . $language . '&view=' . $instance->get('view')
-                 . '" width="100%" height="500" frameborder="0"></iframe>';
+            $result = '<iframe allowfullscreen src="' . $urlbase . 'artefact/file/blocktype/pdf/viewer.php?editing=' . $editing . '&ingroup=' . !empty($group) . '&file=' . $artefactid . '&lang=' . $language . '&view=' . $instance->get('view')
+                 . ($versioning ? '&versioning=true' : '')
+                 . '" class="pdfiframe"></iframe>';
 
             require_once(get_config('docroot') . 'artefact/comment/lib.php');
             require_once(get_config('docroot') . 'lib/view.php');
             $view = new View($configdata['viewid']);
-            list($commentcount, $comments) = ArtefactTypeComment::get_artefact_comments_for_view($artefact, $view, $instance->get('id'), true, $editing);
+            list($commentcount, $comments) = ArtefactTypeComment::get_artefact_comments_for_view($artefact, $view, $instance->get('id'), true, $editing, $versioning);
+
         }
         $smarty = smarty_core();
         if ($artefactid) {
-            $smarty->assign('commentcount', $commentcount);
-            $smarty->assign('comments', $comments);
+            $smarty->assign('artefactid', $artefactid);
+            $artefact = $instance->get_artefact_instance($configdata['artefactid']);
+            $smarty->assign('allowcomments', $artefact->get('allowcomments'));
+            if ($commentcount) {
+                $smarty->assign('commentcount', $commentcount);
+            }
         }
         $smarty->assign('html', $result);
+        $smarty->assign('editing', $editing);
+        $smarty->assign('blockid', $instance->get('id'));
         return $smarty->fetch('blocktype:pdf:pdfrender.tpl');
     }
 

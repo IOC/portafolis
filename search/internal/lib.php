@@ -126,19 +126,76 @@ class PluginSearchInternal extends PluginSearch {
             WHERE
                 u.id != 0 AND u.active = 1 AND u.deleted = 0';
 
-        if (!empty($data['friends'])) {
+        if (!empty($data['friends']) && !get_config('friendsnotallowed')) {
             // Only include friends in search
             $where .= ' AND u.id IN (
                 SELECT usr1 FROM {usr_friend} f1 WHERE f1.usr2 = ' . $USER->get('id')
                 . ' UNION SELECT usr2 FROM {usr_friend} f2 WHERE f2.usr1 = ' . $USER->get('id') . ')';
         }
 
-        if (isset($data['institutions']) && !empty($data['institutions'])) {
+        if ((!empty($data['myinstitutions']) && !empty($data['institutions'])) || (is_isolated() && !empty($data['institutions']))) {
             $where .= '
-                AND u.id IN (
+                AND (u.id IN (
                     SELECT usr FROM {usr_institution} WHERE institution IN ('
                 . join(',', array_map('db_quote', $data['institutions'])) . ')
                 )';
+
+            if (isset($data['showadmins']) && !empty($data['showadmins'])) {
+                $where .= ' OR u.admin = 1';
+            }
+
+            $where .= ')';
+        }
+
+        // For regular members of 'No Institution', if 'isolatedinstitutions' feature is set
+        $is_admin = $USER->get('admin');
+        if (is_isolated() && !$USER->get('institutions') && !$is_admin) {
+            $where .= '
+                AND (u.id NOT IN (
+                    SELECT usr FROM {usr_institution}
+                )';
+
+                if (isset($data['showadmins']) && !empty($data['showadmins'])) {
+                    $where .= ' OR u.admin = 1';
+                }
+
+                $where .= ')';
+        }
+
+        $is_any_admin = $USER->get('admin') || $USER->is_institutional_admin() || $USER->get('staff') || $USER->is_institutional_staff();
+        if (get_config('owngroupsonly') && !$is_any_admin) {
+            // In search results only include users that are members of the same groups.
+            // This does not count for site admins/staff and institutional admins/staff.
+            $groupids = array_keys($USER->get('grouproles'));
+            // If there are no groups then create an array with id=0, because:
+            // (a) no group will have id=0 and
+            // (b) the IN part of below SQL statement will return error if it
+            // will not contain at least one number
+            if (empty($groupids)) {
+                $groupids = array('0');
+            }
+            $where .= '
+                AND (u.id IN (
+                    SELECT member FROM {group_member} WHERE "group" IN ('
+                . join(',', array_map('db_quote', array_map('intval', $groupids))) . ')
+                )';
+
+                if (isset($data['showadmins']) && !empty($data['showadmins'])) {
+                    $where .= ' OR u.admin = 1';
+                }
+
+                $where .= ')';
+        }
+        if (is_isolated() && !get_config('owngroupsonly')) {
+            // Regular institution users should always see institutional admins/staff
+            if (!empty($data['institutions'])) {
+                $where .= '
+                    OR (u.id IN (
+                        SELECT usr FROM {usr_institution} WHERE institution IN ('
+                    . join(',', array_map('db_quote', $data['institutions'])) . ')
+                        AND (staff = 1 OR admin = 1))
+                    )';
+            }
         }
 
         $sql .= "
@@ -211,7 +268,7 @@ class PluginSearchInternal extends PluginSearch {
         $required[] = 'username'; // Not a profile field, but used in the search query.
 
         // Get a list of match expressions to use in the WHERE clause
-        $matches = new StdClass;
+        $matches = new stdClass();
         $valuecount = 0;
         foreach (array_merge($required, $optional) as $f) {
             list ($matchsql, $matchcount) = self::match_user_field_expression($f, $usralias);
@@ -347,6 +404,9 @@ class PluginSearchInternal extends PluginSearch {
             if ($institutions = array_keys($USER->get('institutions'))) {
                 $options['institutions'] = $institutions;
             }
+        }
+        if (isset($options['showadmins'])) {
+            $options['showadmins'] = (bool)($options['showadmins']);
         }
         return $options;
     }
@@ -505,6 +565,16 @@ class PluginSearchInternal extends PluginSearch {
                             $where .= ' AND FALSE';
                         }
                         break;
+                    case 'objectionable':
+                        if (!empty($f['string'])) {
+                            $where .= '
+                                AND u.id IN (' . join(',', array_map('db_quote', $f['string'])) . ')';
+                        }
+                        else {
+                            // No users with objectionable content found, return empty list
+                            $where .= ' AND FALSE';
+                        }
+                        break;
                     case 'exportqueue':
                         $firstcols = 'e.id AS eid,
                           (SELECT case WHEN e.starttime IS NOT NULL THEN ' . db_format_tsfield('e.starttime', false) . ' ELSE ' . db_format_tsfield('e.ctime', false) . ' END) AS status,
@@ -580,8 +650,31 @@ class PluginSearchInternal extends PluginSearch {
 
 
     public static function group_search_user($group, $query_string, $constraints, $offset, $limit, $membershiptype, $order, $friendof, $orderbyoptionidx=null, $nontutor=false) {
+        global $USER;
 
         list($searchsql, $values) = self::name_search_sql($query_string);
+
+        $is_admin = $USER->get('admin') || $USER->get('staff');
+        if (is_isolated() && !$is_admin) {
+            // in search results only include users that are members of the same institution
+            // site admin and site staff users are excluded
+            $userinst = get_field('usr_institution', 'institution', 'usr', $USER->get('id'));
+            $searchsql .= '
+                AND u.id IN (
+                    SELECT usr FROM {usr_institution} WHERE institution = \'' . $userinst . '\'
+                )';
+        }
+        if (get_config('owngroupsonly') && !$is_admin) {
+            // in search results only include users that are members of the same groups
+            // site admin and site staff users are excluded
+            $usergroups = get_column('group_member', 'group', 'member', $USER->get('id'));
+            $membergroups = get_column_sql('SELECT member FROM {group_member} WHERE "group" IN (' . implode(',', $usergroups) . ') AND member != ?', array($USER->get('id')));
+            if ($membergroups) {
+                $membergroups = array_unique($membergroups);
+                $searchsql .= '
+                    AND u.id IN (' . implode(',', $membergroups) . ')';
+            }
+        }
 
         $orderbyoptions = array(
             'adminfirst' => 'gm.role = \'admin\' DESC, gm.role = \'tutor\' DESC,
@@ -713,8 +806,9 @@ class PluginSearchInternal extends PluginSearch {
 
 
     public static function institutional_admin_search_user($query, $institution, $limit) {
+        $typecast = is_postgres() ? '::varchar' : '';
         $sql = '
-            FROM {usr} u LEFT OUTER JOIN {usr_tag} t ON (t.usr = u.id) ';
+            FROM {usr} u LEFT OUTER JOIN {tag} t ON (t.resourcetype = \'usr\' AND t.resourceid = u.id' . $typecast . ') ';
 
         $where = '
             WHERE u.id <> 0 AND u.deleted = 0 ';
@@ -839,15 +933,16 @@ class PluginSearchInternal extends PluginSearch {
     public static function search_group($query_string, $limit, $offset=0, $type='member', $category='', $institution='all') {
         global $USER;
         $data = array();
-
+        $ltijoin = is_plugin_active('lti', 'module') ? ' LEFT JOIN {lti_assessment} a ON g.id = a.group ' : '';
+        $ltiwhere = is_plugin_active('lti', 'module') ? ' AND a.id IS NULL ' : '';
         $sql = "
             FROM
-                {group}
+                {group} g " . $ltijoin . "
             WHERE (
                 name " . db_ilike() . " '%' || ? || '%'
                 OR description " . db_ilike() . " '%' || ? || '%'
                 OR shortname " . db_ilike() . " '%' || ? || '%'
-            ) AND deleted = 0 ";
+            ) AND deleted = 0 " . $ltiwhere;
         $values = array($query_string, $query_string, $query_string);
 
         if (!$grouproles = join(',', array_keys($USER->get('grouproles')))) {
@@ -857,18 +952,21 @@ class PluginSearchInternal extends PluginSearch {
         $canseehidden = $USER->get('admin') || $USER->get('staff');
 
         if ($type == 'member') {
-            $sql .=  'AND id IN (' . $grouproles . ')';
+            $sql .=  'AND g.id IN (' . $grouproles . ')';
         }
         else if ($type == 'notmember') {
-            $sql .= 'AND id NOT IN (' . $grouproles . ')';
+            $sql .= 'AND g.id NOT IN (' . $grouproles . ')';
         }
         else if ($type == 'canjoin') {
-            $sql .= 'AND (jointype != ? AND NOT (jointype = ? AND request = 0)) AND id NOT IN (' . $grouproles . ')';
-            $values = array_merge($values, array('controlled', 'approve'));
+            $sql .= '
+              AND (NOT (jointype = ? AND request = 0 AND g.id NOT IN (SELECT "group" FROM {group_member_invite} WHERE member = ?))
+                   AND NOT (jointype = ? AND request = 0)
+              ) AND g.id NOT IN (' . $grouproles . ')';
+            $values = array_merge($values, array('controlled', $USER->get('id'), 'approve'));
         }
 
         if (!$canseehidden) {
-            $sql .= ' AND (hidden = 0 OR id IN (' . $grouproles . '))';
+            $sql .= ' AND (hidden = 0 OR g.id IN (' . $grouproles . '))';
         }
 
         if (!empty($category)) {
@@ -879,15 +977,22 @@ class PluginSearchInternal extends PluginSearch {
                 $values[] = $category;
             }
         }
-        if ($institution != 'all') {
-            $sql .= ' AND institution = ?';
-            $values[] = $institution;
+        if ($type != 'admin') {
+            if (is_array($institution) && !empty($institution)) {
+                $sql .= ' AND institution IN (?)';
+                $institution = join(',', array_keys($institution));
+                $values[] = $institution;
+            }
+            else if (!is_array($institution) && $institution != 'all') {
+                $sql .= ' AND institution = ?';
+                $values[] = $institution;
+            }
         }
 
         $count = get_field_sql('SELECT COUNT(*) '.$sql, $values);
 
         if ($count > 0) {
-            $sql = 'SELECT * ' . $sql . ' ORDER BY name';
+            $sql = 'SELECT g.* ' . $sql . ' ORDER BY name';
             $data = get_records_sql_array($sql, $values, $offset, $limit);
         }
 
@@ -926,13 +1031,13 @@ class PluginSearchInternal extends PluginSearch {
 
         // Tokenise the search
         $querydata = self::search_parse_query($querystring);
-
+        $typecast = is_postgres() ? '::varchar' : '';
         $sql = "
             SELECT
                 a.id, a.artefacttype, a.title, a.description
             FROM
                 {artefact} a
-            LEFT JOIN {artefact_tag} at ON (at.artefact = a.id)
+            LEFT JOIN {tag} at ON (at.resourcetype = 'artefact' AND at.resourceid = a.id" . $typecast . ")
             WHERE
                 a.owner = ?
             AND (
@@ -945,7 +1050,7 @@ class PluginSearchInternal extends PluginSearch {
                 COUNT(*)
             FROM
                 {artefact} a
-            LEFT JOIN {artefact_tag} at ON (at.artefact = a.id)
+            LEFT JOIN {tag} at ON (at.resourcetype = 'artefact' AND at.resourceid = a.id" . $typecast . ")
             WHERE
                 a.owner = ?
             AND (
@@ -1006,47 +1111,103 @@ class PluginSearchInternal extends PluginSearch {
      * @param string   $sort
      * @param array    $types view/artefacttype filters
      * @param boolean  $returntags Return all the tags that have been attached to each result
+     * @param array    $viewids Only return specified views / artefacts in specified views - combined with $tag
      */
-    public static function portfolio_search_by_tag($tag, $owner, $limit, $offset, $sort, $types, $returntags) {
+    public static function portfolio_search_by_tag($tag, $owner, $limit, $offset, $sort, $types, $returntags, $viewids = array()) {
         $viewfilter = is_null($types) || $types['view'] == true ? 'AND TRUE' : 'AND FALSE';
         $collectionfilter = is_null($types) || $types['collection'] == true ? 'AND TRUE' : 'AND FALSE';
 
         if (is_null($types)) {
             $artefacttypefilter = '';
-        }
-        else if (!empty($types['artefact'])) {
-            $artefacttypefilter = ' AND a.artefacttype IN (' . join(',', array_map('db_quote', $types['artefact'])) . ')';
+            $blocktypefilter = '';
         }
         else {
-            $artefacttypefilter = ' AND FALSE';
+            if (!empty($types['artefact'])) {
+                $artefacttypefilter = ' AND a.artefacttype IN (' . join(',', array_map('db_quote', $types['artefact'])) . ')';
+            }
+            else {
+                $artefacttypefilter = ' AND FALSE';
+            }
+            if (!empty($types['blocktype'])) {
+                $blocktypefilter = ' AND b.blocktype IN (' . join(',', array_map('db_quote', $types['blocktype'])) . ')';
+            }
+            else {
+                $blocktypefilter = ' AND FALSE';
+            }
         }
 
         if (!is_null($tag)) {
             $artefacttypefilter .= ' AND at.tag = ?';
-            $viewfilter .= ' AND vt.tag = ?';
-            $collectionfilter .= ' AND ct.tag = ?';
-            $values = array($owner->id, $tag, $owner->id, $tag, $owner->id, $tag);
+            $viewfilter         .= ' AND vt.tag = ?';
+            $collectionfilter   .= ' AND (ct.tag = ? OR vt.tag = ?)';
+            $blocktypefilter   .= ' AND bt.tag = ?';
+
+            // Test if this is an institutionally defined
+            // tag and strip the displayname prefix out.
+            // $tagid = null;
+            $split = explode(':', $tag);
+            if (count($split) == 2) {
+                $prefix = trim($split[0]);
+                $itag    = trim($split[1]);
+                if ($checktag = get_field_sql("SELECT CONCAT('tagid_', t.id)
+                        FROM {tag} t
+                        JOIN {institution} i ON i.name = t.ownerid
+                        WHERE i.displayname = ? AND t.tag = ?", array($prefix, $itag))) {
+                    $tag = $checktag;
+                }
+            }
+            $values = array($owner->id, $tag, $owner->id, $tag, $owner->id, $tag, $tag, $owner->id, $tag);
         }
         else {
-            $values = array($owner->id, $owner->id, $owner->id);
+            $values = array($owner->id, $owner->id, $owner->id, $owner->id);
         }
-
+        if (!empty($viewids) && is_array($viewids)) {
+            $viewidstr = implode(',', $viewids);
+            $artefactjoin = ' JOIN {view_artefact} va ON (va.artefact = a.parent OR va.artefact = a.id)
+                              LEFT JOIN {artefact_blog_blogpost} abb ON abb.blogpost = a.id ';
+            $artefactwhere = ' AND va.view IN (' . $viewidstr . ') AND (abb.published IS NULL OR abb.published = 1) ';
+            $blocktypejoin = ' JOIN {view} v ON v.id = b.view ';
+            $blocktypewhere = ' AND v.id IN (' . $viewidstr . ') ';
+            $viewwhere = ' AND v.id IN (' . $viewidstr . ') ';
+            $collectionwhere = ' AND cv.view IN (' . $viewidstr . ') ';
+        }
+        else {
+            $artefactjoin = '';
+            $artefactwhere = '';
+            $blocktypejoin = '';
+            $blocktypewhere = '';
+            $viewwhere = '';
+            $collectionwhere = '';
+        }
+        $typecast = is_postgres() ? '::varchar' : '';
         $from = "
         FROM (
            (SELECT a.id, a.title, a.description, 'artefact' AS type, a.artefacttype, " . db_format_tsfield('a.ctime', 'ctime') . ",
                 a.owner, a.group, a.institution, NULL AS urlid
-            FROM {artefact} a JOIN {artefact_tag} at ON (a.id = at.artefact)
-            WHERE a.owner = ?" . $artefacttypefilter . ")
+            FROM {artefact} a
+            JOIN {tag} at ON (at.resourcetype = 'artefact' AND at.resourceid = a.id" . $typecast . ") " . $artefactjoin . "
+            WHERE a.owner = ?" . $artefactwhere . $artefacttypefilter . ")
            UNION
            (SELECT v.id, v.title, v.description, 'view' AS type, NULL AS artefacttype, " . db_format_tsfield('v.ctime', 'ctime') . ",
                 v.owner, v.group, v.institution, v.urlid
-            FROM {view} v JOIN {view_tag} vt ON (v.id = vt.view)
-            WHERE v.owner = ? " . $viewfilter . ")
+            FROM {view} v
+            JOIN {tag} vt ON (vt.resourcetype = 'view' AND vt.resourceid = v.id" . $typecast . ")
+            LEFT JOIN {collection_view} cv ON cv.view = v.id
+            WHERE v.owner = ? AND cv.view IS NULL " . $viewwhere . $viewfilter . ")
            UNION
            (SELECT c.id, c.name, c.description, 'collection' AS type, NULL AS artefacttype, " . db_format_tsfield('c.ctime', 'ctime') . ",
                 c.owner, c.group, c.institution, NULL AS urlid
-            FROM {collection} c JOIN {collection_tag} ct ON (c.id = ct.collection)
-            WHERE c.owner = ? " . $collectionfilter . ")
+            FROM {collection} c
+            JOIN {collection_view} cv ON cv.collection = c.id
+            LEFT JOIN {tag} ct ON (ct.resourcetype = 'collection' AND ct.resourceid = c.id" . $typecast . ")
+            LEFT JOIN {tag} vt ON (vt.resourcetype = 'view' AND vt.resourceid = cv.view" . $typecast . ")
+            WHERE c.owner = ? " . $collectionwhere . $collectionfilter . ")
+           UNION
+           (SELECT b.id, b.title, NULL AS description, 'blocktype' AS type, b.blocktype, NULL AS ctime,
+                NULL AS owner, NULL AS \"group\", NULL AS institution, NULL AS urlid
+            FROM {block_instance} b
+            JOIN {tag} bt ON (bt.resourcetype = 'blocktype' AND bt.resourceid = b.id" . $typecast . ") " . $blocktypejoin . "
+            WHERE bt.ownertype = 'user' AND bt.ownerid = ?" . $blocktypewhere . $blocktypefilter . ")
         ) p";
 
         $result = (object) array(
@@ -1064,28 +1225,210 @@ class PluginSearchInternal extends PluginSearch {
             $sort = $sort == 'date' ? 'ctime DESC' : 'title ASC';
             if ($data = get_records_sql_assoc("SELECT type || ':' || id AS tid, p.* " . $from . ' ORDER BY ' . $sort, $values, $offset, $limit)) {
                 if ($returntags) {
-                    $ids = array('view' => array(), 'collection' => array(), 'artefact' => array());
+                    $ids = array('view' => array(), 'collection' => array(), 'artefact' => array(), 'blocktype' => array());
                     foreach ($data as &$d) {
                         $ids[$d->type][$d->id] = 1;
+                        if ($d->type == 'artefact') {
+                            // VIEWS get all the views the artefact is included into.
+                            // artefact parents are folder, blog, plan, cpd
+                            $sql = 'SELECT COALESCE(v.id, vp.id) AS id, COALESCE(v.title, vp.title) AS title
+                                    FROM {artefact} a
+                                    LEFT OUTER JOIN {view_artefact} va ON va.artefact = a.id
+                                    LEFT OUTER JOIN {view} v ON v.id = va.view
+                                    LEFT OUTER JOIN {artefact} parent ON parent.id = a.parent
+                                    LEFT OUTER JOIN {view_artefact} vap ON (vap.artefact = parent.id and parent.artefacttype in (\'plan\', \'folder\'))
+                                    LEFT OUTER JOIN {view} vp ON vp.id = vap.view
+                                    WHERE a.id = ?';
+                            if (!empty($viewids)) {
+                               $sql .= ' AND (va.view IN (' . $viewidstr . ')
+                                         OR vap.view IN (' . $viewidstr . '))';
+                            }
+                            $views = get_records_sql_array($sql, array($d->id));
+                            if ($views) {
+                                $record_views = array ();
+                                foreach ( $views as $view ) {
+                                    if (isset ( $view->id )) {
+                                        $record_views[$view->id] = $view->title;
+                                        $d->viewid = $view->id; // just needs to be any valid view
+                                    }
+                                }
+                                $d->views = $record_views;
+                            }
+                            // Check if the file is a pdf
+                            if ($d->artefacttype == 'file') {
+                                if (get_field_sql("SELECT artefact
+                                                   FROM {artefact_file_files}
+                                                   WHERE artefact = ?
+                                                   AND filetype IN (
+                                                       SELECT mimetype FROM {artefact_file_mime_types}
+                                                       WHERE description = ?)", array($d->id, 'pdf'))) {
+                                    $d->specialtype = 'pdf';
+                                }
+                            }
+                        }
+                        else if ($d->type == 'collection') {
+                            $c = new Collection($d->id);
+                            $views = $c->get('views');
+                            if ($views) {
+                                // Get first view of collection
+                                $d->viewid = $views['views'][0]->view;
+                                $record_views = array ();
+                                foreach ($views['views'] as $view) {
+                                    if (isset($view->view)) {
+                                        $record_views[$view->view] = $view->title;
+                                    }
+                                }
+                                $d->views = $record_views;
+                            }
+                        }
+                        else if ($d->type == 'blocktype') {
+                            // Get the view the blocktype is included into.
+                            $sql = 'SELECT v.id, v.title
+                                    FROM {block_instance} b
+                                    JOIN {view} v ON v.id = b.view
+                                    WHERE b.id = ?';
+                            if (!empty($viewids)) {
+                               $sql .= ' AND (b.view IN (' . $viewidstr . '))';
+                            }
+                            $views = get_records_sql_array($sql, array($d->id));
+                            if ($views) {
+                                $record_views = array ();
+                                foreach ( $views as $view ) {
+                                    if (isset ( $view->id )) {
+                                        $record_views[$view->id] = $view->title;
+                                        $d->viewid = $view->id; // just needs to be any valid view
+                                    }
+                                }
+                                $d->views = $record_views;
+                            }
+                        }
+                        else {
+                            $d->viewid = $d->id;
+                        }
                     }
+                    // Add tags array for each item
                     if (!empty($ids['view'])) {
-                        if ($viewtags = get_records_select_array('view_tag', 'view IN (' . join(',', array_keys($ids['view'])) . ')')) {
+                        $viewtags = get_records_sql_array("
+                            SELECT
+                                (CASE
+                                    WHEN t.tag LIKE 'tagid_%' THEN CONCAT(i.displayname, ': ', t2.tag)
+                                    ELSE t.tag
+                                END) AS tag, t.resourceid
+                            FROM {tag} t
+                            LEFT JOIN {tag} t2 ON t2.id" . $typecast . " = SUBSTRING(t.tag, 7)
+                            LEFT JOIN {institution} i ON i.name = t2.ownerid
+                            WHERE t.resourcetype = 'view' AND t.resourceid IN ('" . join("','", array_keys($ids['view'])) . "')");
+                        if ($viewtags) {
                             foreach ($viewtags as &$vt) {
-                                $data['view:' . $vt->view]->tags[] = $vt->tag;
+                                $data['view:' . $vt->resourceid]->tags[] = $vt->tag;
                             }
                         }
                     }
                     if (!empty($ids['collection'])) {
-                        if ($collectiontags = get_records_select_array('collection_tag', 'collection IN (' . join(',', array_keys($ids['collection'])) . ')')) {
+                        $collectiontags = get_records_sql_array("
+                            SELECT
+                                (CASE
+                                    WHEN t.tag LIKE 'tagid_%' THEN CONCAT(i.displayname, ': ', t2.tag)
+                                    ELSE t.tag
+                                END) AS tag, t.resourceid
+                            FROM {tag} t
+                            LEFT JOIN {tag} t2 ON t2.id" . $typecast . " = SUBSTRING(t.tag, 7)
+                            LEFT JOIN {institution} i ON i.name = t2.ownerid
+                            WHERE t.resourcetype = 'collection' AND t.resourceid IN ('" . join("','", array_keys($ids['collection'])) . "')");
+                        if ($collectiontags) {
                             foreach ($collectiontags as &$ct) {
-                                $data['collection:' . $ct->collection]->tags[] = $ct->tag;
+                                $data['collection:' . $ct->resourceid]->tags[] = $ct->tag;
+                            }
+                        }
+                        if ($collectionviewtags = get_records_sql_array("
+                                SELECT c.id, cv.view,
+                                    (CASE
+                                        WHEN vt.tag LIKE 'tagid_%' THEN CONCAT(i.displayname, ': ', t2.tag)
+                                        ELSE vt.tag
+                                    END) AS tag
+                                FROM {collection} c
+                                JOIN {collection_view} cv ON cv.collection = c.id
+                                LEFT JOIN {tag} vt ON (vt.resourcetype = 'view' AND vt.resourceid = cv.view" . $typecast . ")
+                                LEFT JOIN {tag} t2 ON t2.id" . $typecast . " = SUBSTRING(vt.tag, 7)
+                                LEFT JOIN {institution} i ON i.name = t2.ownerid
+                                WHERE c.id IN (" . join(',', array_keys($ids['collection'])) . ")
+                                AND vt.tag IS NOT NULL")) {
+                            foreach ($collectionviewtags as &$cvt) {
+                                if (!isset($data['collection:' . $cvt->id]->viewtags) || !in_array($cvt->tag, $data['collection:' . $cvt->id]->viewtags)) {
+                                    $data['collection:' . $cvt->id]->viewtags[] = array('view' => $cvt->view, 'tag' => $cvt->tag);
+                                }
                             }
                         }
                     }
                     if (!empty($ids['artefact'])) {
-                        if ($artefacttags = get_records_select_array('artefact_tag', 'artefact IN (' . join(',', array_keys($ids['artefact'])) . ')', NULL, 'tag')) {
+                        $artefacttags = get_records_sql_array("
+                            SELECT
+                                (CASE
+                                    WHEN t.tag LIKE 'tagid_%' THEN CONCAT(i.displayname, ': ', t2.tag)
+                                    ELSE t.tag
+                                END) AS tag, t.resourceid
+                            FROM {tag} t
+                            LEFT JOIN {tag} t2 ON t2.id" . $typecast . " = SUBSTRING(t.tag, 7)
+                            LEFT JOIN {institution} i ON i.name = t2.ownerid
+                            WHERE t.resourcetype = 'artefact' AND t.resourceid IN ('" . join("','", array_keys($ids['artefact'])) . "')");
+                        if ($artefacttags) {
                             foreach ($artefacttags as &$at) {
-                                $data['artefact:' . $at->artefact]->tags[] = $at->tag;
+                                $data['artefact:' . $at->resourceid]->tags[] = $at->tag;
+                            }
+                        }
+                        if (!empty($viewids) && $artefactviewtags = get_records_sql_array("
+                                SELECT a.id, va.view,
+                                    (CASE
+                                        WHEN vt.tag LIKE 'tagid_%' THEN CONCAT(i.displayname, ': ', t2.tag)
+                                        ELSE vt.tag
+                                    END) AS tag
+                                FROM {artefact} a
+                                JOIN {view_artefact} va ON va.artefact = a.id
+                                LEFT JOIN {tag} vt ON (vt.resourcetype = 'view' AND vt.resourceid = va.view" . $typecast . ")
+                                LEFT JOIN {tag} t2 ON t2.id" . $typecast . " = SUBSTRING(vt.tag, 7)
+                                LEFT JOIN {institution} i ON i.name = t2.ownerid
+                                WHERE a.id IN ('" . join("','", array_keys($ids['artefact'])) . "')
+                                AND va.view IN ('" . join("','", $viewids) . "')")) {
+                            foreach ($artefactviewtags as &$avt) {
+                                if (!isset($data['artefact:' . $avt->id]->viewtags) || !in_array($avt->tag, $data['artefact:' . $avt->id]->viewtags)) {
+                                    $data['artefact:' . $avt->id]->viewtags[] = array('view' => $avt->view, 'tag' => $avt->tag);
+                                }
+                            }
+                        }
+                    }
+                    if (!empty($ids['blocktype'])) {
+                        $blocktypetags = get_records_sql_array("
+                            SELECT
+                                (CASE
+                                    WHEN t.tag LIKE 'tagid_%' THEN CONCAT(i.displayname, ': ', t2.tag)
+                                    ELSE t.tag
+                                END) AS tag, t.resourceid
+                            FROM {tag} t
+                            LEFT JOIN {tag} t2 ON t2.id" . $typecast . " = SUBSTRING(t.tag, 7)
+                            LEFT JOIN {institution} i ON i.name = t2.ownerid
+                            WHERE t.resourcetype = 'blocktype' AND t.resourceid IN ('" . join("','", array_keys($ids['blocktype'])) . "')");
+                        if ($blocktypetags) {
+                            foreach ($blocktypetags as &$bt) {
+                                $data['blocktype:' . $bt->resourceid]->tags[] = $bt->tag;
+                            }
+                        }
+                        if (!empty($viewids) && $blocktypeviewtags = get_records_sql_array("
+                                SELECT b.id, va.view,
+                                    (CASE
+                                        WHEN vt.tag LIKE 'tagid_%' THEN CONCAT(i.displayname, ': ', t2.tag)
+                                        ELSE vt.tag
+                                    END) AS tag
+                                FROM {block_instance} b
+                                JOIN {view_artefact} va ON va.block = b.id
+                                LEFT JOIN {tag} vt ON (vt.resourcetype = 'view' AND vt.resourceid = va.view" . $typecast . ")
+                                LEFT JOIN {tag} t2 ON t2.id" . $typecast . " = SUBSTRING(vt.tag, 7)
+                                LEFT JOIN {institution} i ON i.name = t2.ownerid
+                                WHERE b.id IN ('" . join("','", array_keys($ids['blocktype'])) . "')
+                                AND va.view IN ('" . join("','", $viewids) . "')")) {
+                            foreach ($blocktypeviewtags as &$bvt) {
+                                if (!isset($data['blocktype:' . $bvt->id]->viewtags) || !in_array($bvt->tag, $data['blocktype:' . $bvt->id]->viewtags)) {
+                                    $data['blocktype:' . $bvt->id]->viewtags[] = array('view' => $bvt->view, 'tag' => $bvt->tag);
+                                }
                             }
                         }
                     }
@@ -1093,6 +1436,7 @@ class PluginSearchInternal extends PluginSearch {
                 $result->data = $data;
             }
         }
+
         return $result;
     }
 

@@ -213,9 +213,9 @@ function set_report_styling() {
     $report_js = $report_root . "/assets/Twig/js";
     $font_awesome_dir = get_mahararoot_dir() . "/htdocs/theme/raw/fonts/font-awesome";
     $font_files = array_values(array_diff(scandir($font_awesome_dir), array('.', '..')));
-    $font_awesome_css = get_mahararoot_dir() . "/htdocs/theme/raw/style/lib/font-awesome/font-awesome.css";
+    $font_awesome_css = get_mahararoot_dir() . "/htdocs/theme/raw/style/lib/font-awesome/fontawesome.css";
     $jquery_js = get_mahararoot_dir() . "/htdocs/js/jquery/jquery.js";
-    $bootstrap_js = get_mahararoot_dir() . "/htdocs/lib/bootstrap/assets/javascripts/bootstrap.js";
+    $bootstrap_js = get_mahararoot_dir() . "/htdocs/lib/bootstrap/assets/javascripts/bootstrap.min.js";
 
     if (file_exists($report_root . '/composer.json')) {
         echo "Adding styling for html report...\n";
@@ -230,10 +230,10 @@ function set_report_styling() {
         foreach ($font_files as $file) {
           copy($font_awesome_dir . "/$file" , $report_css . "/font-awesome/$file");
         }
-        copy($font_awesome_css , $report_css . "/font-awesome/font-awesome.css");
+        copy($font_awesome_css , $report_css . "/font-awesome/fontawesome.css");
 
         // JavaScript
         copy($jquery_js, $report_js . "/jquery.js");
-        copy($bootstrap_js, $report_js . "/bootstrap.js");
+        copy($bootstrap_js, $report_js . "/bootstrap.min.js");
     }
 }

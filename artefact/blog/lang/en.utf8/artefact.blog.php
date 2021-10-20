@@ -18,7 +18,9 @@ $string['Blogs'] = 'Journals';
 $string['blog'] = 'journal';
 $string['blogs'] = 'journals';
 $string['siteblogs'] = 'Site journals';
+$string['siteblogsdesc'] = 'Create and administer site journals';
 $string['institutionblogs'] = 'Institution journals';
+$string['institutionblogsdesc'] = 'Create and administer institution journals';
 $string['groupblogs'] = 'Group journals';
 $string['addblog'] = 'Create journal';
 $string['addpost'] = 'New entry';
@@ -99,7 +101,9 @@ $string['postbodydesc'] = ' ';
 $string['postedon'] = 'Posted on';
 $string['updatedon'] = 'Last updated';
 $string['postedbyon'] = 'Posted by %s on %s';
+$string['postedby'] = 'Posted by';
 $string['posttitle'] = 'Title';
+$string['createdin'] = 'Created in';
 $string['posts'] = 'entries';
 $string['nposts'] = array(
     '1 entry',
@@ -159,7 +163,8 @@ $string['postscopiedfromview'] = 'Entries copied from %s';
 
 $string['youhavenoblogs'] = 'You have no journals.';
 $string['youhavenoblogsaddone'] = 'You have no journals. <a href="%s">Add one</a>.';
-$string['youhavenogroupblogs1'] = 'There are no journals in this group. <a href="%s">Add one</a>.';
+$string['youhavenogroupblogs'] = 'There are no journals in this group.';
+$string['youhavenogroupblogsaddone'] = 'There are no journals in this group. <a href="%s">Add one</a>.';
 $string['youhavenoinstitutionblogs1'] = 'There are no journals in this institution. <a href="%s">Add one</a>.';
 $string['youhavenositeblogs1'] = 'There are no site journals. <a href="%s">Add one</a>.';
 $string['youhavenblog'] = array(

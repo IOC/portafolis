@@ -1,4 +1,4 @@
-<script type="application/javascript">
+<script>
     var {{$name}}_d;
 
     var {{$name}}_searchparams;
@@ -41,7 +41,7 @@
 
                 jQuery('#{{$name}}_potential').empty().append(results);
                 if (typeof params.query != 'undefined') {
-                    jQuery('#{{$name}}_potential')[0].focus();
+                    jQuery( jQuery('#{{$name}}_potential')[0]).trigger('focus');
                 }
 
                 if(users.count > users.limit) {
@@ -65,14 +65,14 @@
 
         {{$name}}_searchfunc({});
 
-        $('#{{$name}}_search').keypress(function(k) {
+        $('#{{$name}}_search').on('keypress', function(k) {
             if (k.keyCode == 13) {
                 {{$name}}_searchfunc({'query': $('#{{$name}}_search').val()});
                 k.preventDefault();
             }
         });
 
-        $('#{{$name}}_search_btn').click(function(e) {
+        $('#{{$name}}_search_btn').on("click", function(e) {
             {{$name}}_searchfunc({'query': $('#{{$name}}_search').val()});
             e.preventDefault();
         });
@@ -123,7 +123,7 @@
             formchangemanager.setFormState(form, FORM_CHANGED);
         }
 
-        to.focus();
+        to.trigger('focus');
     };
 
     jQuery(function ($) {
@@ -137,7 +137,7 @@
             <label for="{{$name}}_search" class="plain sr-only">{{str tag='filter'}}</label>
             <div class="input-group">
                 <input id="{{$name}}_search" type="text" class="text form-control">
-                <span class="input-group-btn">
+                <span class="input-group-append">
                     <button id="{{$name}}_search_btn" type="button" class="btn btn-primary">
                     {{str tag='search'}}
                     </button>
@@ -153,11 +153,11 @@
         <td class="lrbuttons form-group last select-col pt0">
             <div class="btn-group btn-group-vertical">
                 <button type="button" name="rightarrow" onClick="{{$name}}_moveopts('potential','members')" class="rightarrow btn btn-primary btn-lg">
-                    <span class="icon icon-long-arrow-right" role="presentation" aria-hidden="true"></span>
+                    <span class="icon icon-long-arrow-alt-right" role="presentation" aria-hidden="true"></span>
                     <span class="sr-only">{{$rightarrowlabel}}</span>
                 </button>
                 <button type="button" name="leftarrow" onClick="{{$name}}_moveopts('members','potential')" class="leftarrow btn btn-primary btn-lg">
-                     <span class="icon icon-long-arrow-left" role="presentation" aria-hidden="true"></span>
+                     <span class="icon icon-long-arrow-alt-left" role="presentation" aria-hidden="true"></span>
                      <span class="sr-only">{{$leftarrowlabel}}</span>
                 </button>
             </div>

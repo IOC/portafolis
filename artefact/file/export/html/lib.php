@@ -81,8 +81,8 @@ class HtmlExportFile extends HtmlExportArtefactPlugin {
 
     public function get_summary() {
         $smarty = $this->exporter->get_smarty();
-        $smarty->assign('filecount', count(array_filter($this->artefactdata, create_function('$a', 'return $a->get("artefacttype") != "folder";'))));
-        $smarty->assign('foldercount', count(array_filter($this->artefactdata, create_function('$a', 'return $a->get("artefacttype") == "folder";'))));
+        $smarty->assign('filecount', count(array_filter($this->artefactdata, function($a) { return $a->get("artefacttype") != "folder"; })));
+        $smarty->assign('foldercount', count(array_filter($this->artefactdata, function($a) { return $a->get("artefacttype") == "folder"; })));
         $smarty->assign('spaceused', $this->exporter->get('user')->get('quotaused'));
 
         return array(
@@ -201,13 +201,13 @@ class HtmlExportFile extends HtmlExportArtefactPlugin {
      */
     private function prepare_artefacts_for_smarty($parent, $folders) {
         $data = array();
-        $equality = ($folders) ? '==' : '!=';
-        $parent = (is_null($parent)) ? 'null': intval($parent);
-        $artefacts = array_filter($this->artefactdata, create_function('$a',
-            'return $a->get("parent") == ' . $parent
-            . ' && $a->get("artefacttype") ' . $equality . ' "folder"'
-            . ' && $a->get("owner") == ' . $this->owner . ';'
-        ));
+        $parent = (is_null($parent)) ? null : intval($parent);
+        $this_owner = $this->owner;
+        $artefacts = array_filter($this->artefactdata, function($a)  use ($parent, $folders, $this_owner) {
+            if (($folders && $a->get("parent") == $parent && $a->get("artefacttype") == "folder" && $a->get("owner") == $this_owner) ||
+                (!$folders && $a->get("parent") == $parent && $a->get("artefacttype") != "folder" && $a->get("owner") == $this_owner)) { return true; };
+        });
+
         foreach ($artefacts as $artefact) {
             $size = '';
             if ($artefact->get('artefacttype') != 'folder') {

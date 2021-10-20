@@ -202,6 +202,7 @@ $string['activeusers'] = "Active users";
 $string['logins'] = "Logins";
 
 $string['reports'] = 'Reports';
+$string['reportsdesc'] = 'View statistics about the site and learning analytics data about users';
 $string['reportsfor'] = 'Reports for %s';
 $string['reporttype'] = 'Report type';
 $string['reportconfig'] = 'Report configuration';
@@ -226,15 +227,16 @@ $string['reportdescusers'] = '<ul>
 
 $string['reportuserdetails'] = 'User details';
 $string['reportdescuserdetails'] = '<ul>
-<li>Username</li>
-<li>Email address</li>
 <li>First name</li>
 <li>Last name</li>
+<li>Email address</li>
 <li>ID number</li>
 <li>Display name</li>
+<li>Username</li>
 <li>Remote username</li>
+<li>Quota used</li>
 <li>Last login</li>
-<li>Number of probation points</li>
+<li>Number of probation points (if enabled)</li>
 </ul><p>People whose user accounts were created during the selected time period are displayed.</p>';
 
 $string['reportuseractivity'] = 'User activity';
@@ -355,12 +357,29 @@ $string['reportdescgroups'] = '<ul>
 
 // Content reports
 $string['reportdesccontent'] = '<ul>
-<li>Title</li>
-<li>Number of modifications</li>
-<li>Total</li>
-<li>Number of unique users who made the modifications</li>
-<li>Number of unique users over the total</li>
+<li>Name</li>
+<li>Total modified during time period</li>
+<li>Total existing at end of time period</li>
 </ul>';
+$string['reportdescobjectionable'] = "<ul>
+<li>Page title</li>
+<li>Artefact title</li>
+<li>Objectionable content reporter</li>
+<li>Reporter's name</li>
+<li>Report description</li>
+<li>Report date</li>
+<li>Reviewer's name</li>
+<li>Review description</li>
+<li>Review date</li>
+<li>Report status</li>
+</ul>";
+$string['reporter'] = 'Reporter';
+$string['review'] = 'Review';
+$string['reviewer'] = 'Reviewer';
+$string['contentobjectionablereports'] = 'Objectionable content';
+$string['status.0'] = '';
+$string['status.1'] = 'Administrator needs to review';
+$string['status.2'] = 'User needs to make changes';
 
 // Institution reports
 $string['informationreports'] = 'Information overview';
@@ -412,6 +431,7 @@ $string['contentreports'] = 'Content overview';
 $string['peoplereports'] = 'People overview';
 $string['informationloginsreports'] = 'Logins';
 $string['informationcomparisonsreports'] = 'Institution comparison';
+$string['groupsassessmentsreports'] = 'Submissions';
 
 $string['applyingfilters'] = 'Applying filters';
 $string['nogroupdataperinstitution'] = 'Group reports can only be generated for the entire site. Please select "All institutions" from the institution selector if you have permission to view sitewide reports.';
@@ -447,3 +467,17 @@ $string['usersbyinstitution'] = 'Users by institution';
 $string['groupsbytype'] = 'Groups by type';
 $string['earliestdate'] = 'Data for this report is only available from %s onwards.';
 $string['noearliestdate'] = 'There is no data recorded for this report.';
+$string['submissions'] = 'Submissions';
+$string['reportdescassessments'] = '<ul>
+<li>Submission type</li>
+<li>Portfolio title</li>
+<li>Portfolio owner</li>
+<li>Group submitted to</li>
+<li>Submission date</li>
+<li>Release date</li>
+<li>Released by</li>
+</ul>';
+$string['assessmenttype'] = 'Submission type';
+$string['assessmensubmitted'] = 'Submission date';
+$string['assessmentmarker'] = 'Released by';
+$string['assessmentreleaseddate'] = 'Release date';

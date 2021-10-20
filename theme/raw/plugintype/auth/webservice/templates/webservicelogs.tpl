@@ -1,10 +1,10 @@
 {include file="header.tpl"}
 
-<div id="logsearchformcontainer" class="panel panel-default panel-body">
+<div id="logsearchformcontainer" class="card card-body">
 {$form|safe}
 </div>
-<div id="results" class="section panel panel-default">
-    <h2 class="panel-heading" id="resultsheading">{str tag="Results"}</h2>
+<div id="results" class="section card">
+    <h2 class="card-header" id="resultsheading">{str tag="Results"}</h2>
     {if $results}
     <div class="table-responsive">
     <table id="searchresults" class="table table-striped fullwidth listing">
@@ -34,22 +34,22 @@
     </table>
     {$pagination|safe}
     {if $pagination_js}
-        <script type="application/javascript">
+        <script>
         {$pagination_js|safe}
         </script>
     {/if}
     </div>
     {else}
-        <div class="panel-body">
+        <div class="card-body">
             <p class="no-results">{str tag="noresultsfound"}</p>
         </div>
     {/if}
 </div>
 
-<script type="application/javascript">
+<script>
 // to clear any offset when submitting form again
 jQuery(function() {
-    jQuery('#logsearchform').submit(function(e) {
+    jQuery('#logsearchform').on('submit', function(e) {
         jQuery('.currentoffset').attr('value', 0);
     });
 });

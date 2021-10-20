@@ -11,7 +11,7 @@
  */
 
 define('INTERNAL', 1);
-define('MENUITEM', 'myportfolio/skins');
+define('MENUITEM', 'create/skins');
 define('SECTION_PLUGINTYPE', 'core');
 define('SECTION_PLUGINNAME', 'skin');
 define('SECTION_PAGE', 'index');
@@ -56,7 +56,7 @@ $form = pieform(array(
                 'submit' => array(
                     'type' => 'button',
                     'usebuttontag' => true,
-                    'class' => 'btn-primary input-group-btn',
+                    'class' => 'btn-primary input-group-append',
                     'value' => '<span class="icon icon-filter left" role="presentation" aria-hidden="true"></span>' . get_string('filter'),
                 ),
             ),
@@ -74,6 +74,7 @@ $pagination = build_pagination(array(
 ));
 
 $smarty = smarty();
+setpageicon($smarty, 'icon-paint-brush');
 $smarty->assign('skins', $data->data);
 $smarty->assign('user', $USER->get('id'));
 $smarty->assign('form', $form);

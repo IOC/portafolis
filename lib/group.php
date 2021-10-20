@@ -12,6 +12,7 @@
 defined('INTERNAL') || die();
 
 // Constants for the different group roles
+define ('GROUP_ROLES_NONE', 0);
 define('GROUP_ROLES_ALL', 1);
 define('GROUP_ROLES_NONMEMBER', 2);
 define('GROUP_ROLES_ADMIN', 3);
@@ -120,6 +121,18 @@ function group_change_role($groupid, $userid, $role) {
     }
 
     set_field('group_member', 'role', $role, 'group', $groupid, 'member', $userid);
+
+    $data = new stdClass();
+    $data->user = $userid;
+    $data->group = $groupid;
+    $data->role = $role;
+    handle_event('userchangegrouprole', array(
+        'id' => $groupid,
+        'eventfor' => 'group',
+        'parentid' => $userid,
+        'parenttype' => 'user',
+        'rules' => $data)
+    );
 }
 
 /**
@@ -183,14 +196,19 @@ function group_role_can_edit_views($group, $role) {
  * the window.
  * @param object $group the group to check
  * @param bool $admin_always whether the admin should be OK regardless of time
+ * @param bool $tutor_always whether the tutor should be OK regardless of time
  */
-function group_within_edit_window($group, $admin_always=true) {
+function group_within_edit_window($group, $admin_always=true, $tutor_always=true) {
     if (is_numeric($group)) {
         $group = get_group_by_id($group, true);
     }
 
     if ($admin_always && group_user_access($group->id) == 'admin') {
-      return true;
+        return true;
+    }
+
+    if ($tutor_always && group_user_access($group->id) == 'tutor') {
+        return true;
     }
 
     $start = !empty($group->editwindowstart) ? strtotime($group->editwindowstart) : null;
@@ -399,6 +417,7 @@ function group_create($data) {
 
     // Need to make sure group has at least one member
     if (empty($data['members'])) {
+        global $USER;
         $data['members'] = array($USER->get('id') => 'admin');
     }
 
@@ -432,7 +451,7 @@ function group_create($data) {
             'description'    => isset($data['description']) ? $data['description'] : null,
             'urlid'          => isset($data['urlid']) ? $data['urlid'] : null,
             'grouptype'      => $data['grouptype'],
-            'category'       => isset($data['category']) ? intval($data['category']) : null,
+            'category'       => isset($data['category']) && !empty($data['category']) ? intval($data['category']) : null,
             'jointype'       => $jointype,
             'ctime'          => $data['ctime'],
             'mtime'          => $data['ctime'],
@@ -454,7 +473,7 @@ function group_create($data) {
             'editwindowstart' => $data['editwindowstart'],
             'editwindowend'  => $data['editwindowend'],
             'sendnow'        => isset($data['sendnow']) ? $data['sendnow'] : null,
-            'viewnotify'     => isset($data['viewnotify']) ? $data['viewnotify'] : null,
+            'viewnotify'     => !empty($data['viewnotify']) ? $data['viewnotify'] : null,
             'feedbacknotify' => isset($data['feedbacknotify']) ? $data['feedbacknotify'] : null,
         ),
         'id',
@@ -599,7 +618,7 @@ function group_update($new, $create=false) {
         $new->allowarchives = 0;
     }
 
-    $update_blog_access = ($new->editroles != $old->editroles);
+    $update_artefact_access = ($new->editroles != $old->editroles);
 
     foreach (array('id', 'grouptype', 'public', 'request', 'submittableto', 'allowarchives', 'editroles',
         'hidden', 'hidemembers', 'hidemembersfrommembers', 'groupparticipationreports') as $f) {
@@ -707,7 +726,7 @@ function group_update($new, $create=false) {
     if ($old->grouptype != $new->grouptype) {
         if ($new->grouptype == 'course') {
             if ($ids = get_records_select_array('artefact',
-                      '"group" = ' . $new->id . ' AND artefacttype IN (\'blog\', \'blogpost\')',
+                      '"group" = ' . $new->id . ' AND artefacttype IN (\'blog\', \'blogpost\', \'plan\', \'task\')',
                       null, '', 'id')) {
                 $access = ($old->editroles == 'all' || $old->editroles == 'notmember');
                 db_begin();
@@ -729,7 +748,7 @@ function group_update($new, $create=false) {
                       AND  artefact IN (
                           SELECT a.id FROM {artefact} a
                           WHERE a.group = ?
-                          AND a.artefacttype IN (\'blog\', \'blogpost\')
+                          AND a.artefacttype IN (\'blog\', \'blogpost\', \'plan\', \'task\')
                       )';
             execute_sql($query, array($new->id));
         }
@@ -773,8 +792,10 @@ function group_update($new, $create=false) {
         }
     }
 
-    // When the create/edit permissions change, update permissions on journal and posts
-    if ($update_blog_access) {
+    // When the create/edit permissions change, update permissions on:
+    // - journals and posts
+    // - plans and tasks
+    if ($update_artefact_access) {
         $edit_access = array();
         if ($old->editroles == 'all') {
             $edit_access['member'] = 0;
@@ -796,7 +817,7 @@ function group_update($new, $create=false) {
                       AND artefact IN (
                           SELECT a.id FROM {artefact} a
                           WHERE a.group = ?
-                          AND a.artefacttype IN (\'blog\', \'blogpost\')
+                          AND a.artefacttype IN (\'blog\', \'blogpost\', \'plan\', \'task\')
                       )';
             execute_sql($query, array($value, $value, $new->id));
         }
@@ -928,6 +949,14 @@ function group_delete($groupid, $shortname=null, $institution=null, $notifymembe
         $forum->delete();
     }
 
+    // Delete lti submissions to the group if they exist
+    if (is_plugin_active('lti', 'module')) {
+        foreach (get_column('lti_assessment', 'id', 'group', $group->id) as $assessmentid) {
+            delete_records('lti_assessment_submission', 'ltiassessment', $assessmentid);
+        }
+        delete_records('lti_assessment', 'group', $group->id);
+    }
+
     if ($notifymembers) {
         require_once('activity.php');
         activity_occurred('groupmessage', array(
@@ -987,7 +1016,7 @@ function group_add_user($groupid, $userid, $role=null, $method='internal') {
     $groupid = group_param_groupid($groupid);
     $userid  = group_param_userid($userid);
 
-    $gm = new StdClass;
+    $gm = new stdClass();
     $gm->member = $userid;
     $gm->group = $groupid;
     $gm->ctime =  db_format_timestamp(time());
@@ -1075,7 +1104,7 @@ function group_remove_user($groupid, $userid=null, $force=false) {
     if (!$force && !group_user_can_leave($groupid, $userid)) {
         throw new AccessDeniedException(get_string('usercantleavegroup', 'group'));
     }
-    $data = new StdClass;
+    $data = new stdClass();
     $data->user = $userid;
     $data->group = $groupid;
     $data->role = get_field('group_member', 'role', 'group', $groupid, 'member', $userid);
@@ -1221,7 +1250,7 @@ function group_update_members($groupid, $members, $lines_done = 0, $num_lines = 
 function group_invite_user($group, $userid, $userfrom, $role='member', $delay=null) {
     $user = optional_userobj($userid);
 
-    $data = new StdClass;
+    $data = new stdClass();
     $data->group = $group->id;
     $data->member= $user->id;
     $data->ctime = db_format_timestamp(time());
@@ -1244,7 +1273,7 @@ function group_invite_user($group, $userid, $userfrom, $role='member', $delay=nu
 /**
  * Form for users to join a given group
  */
-function group_get_join_form($name, $groupid, $returnto='view') {
+function group_get_join_form($name, $groupid) {
     return pieform(array(
         'name' => $name,
         'successcallback' => 'joingroup_submit',
@@ -1257,7 +1286,7 @@ function group_get_join_form($name, $groupid, $returnto='view') {
                     'join' => array(
                         'type' => 'button',
                         'usebuttontag' => true,
-                        'class' => 'btn-default',
+                        'class' => 'btn-secondary',
                         'value' => '<span class="icon icon-lg icon-plus left" role="presentation" aria-hidden="true"></span> ' . get_string('joingroup', 'group')
                     )
                 )
@@ -1266,11 +1295,7 @@ function group_get_join_form($name, $groupid, $returnto='view') {
                 'type' => 'hidden',
                 'value' => $groupid,
                 'sesskey' => true,
-            ),
-            'returnto' => array(
-                'type' => 'hidden',
-                'value' => $returnto
-            ),
+            )
         )
     ));
 }
@@ -1278,7 +1303,7 @@ function group_get_join_form($name, $groupid, $returnto='view') {
 /**
  * Form for accepting/declining a group invite
  */
-function group_get_accept_form($name, $groupid, $returnto) {
+function group_get_accept_form($name, $groupid) {
     return pieform(array(
        'name'     => $name,
        'renderer' => 'div',
@@ -1291,13 +1316,13 @@ function group_get_accept_form($name, $groupid, $returnto) {
                     'accept' => array(
                         'type'  => 'button',
                         'usebuttontag' => true,
-                        'class' => 'btn-default form-as-button pull-left',
+                        'class' => 'btn-secondary form-as-button float-left',
                         'value' => '<span class="icon icon-lg icon-check text-success left" role="presentation" aria-hidden="true"></span> ' . get_string('acceptinvitegroup', 'group')
                     ),
                     'decline' => array(
                         'type'  => 'button',
                         'usebuttontag' => true,
-                        'class' => 'btn-default form-as-button pull-left',
+                        'class' => 'btn-secondary form-as-button float-left',
                         'value' => '<span class="icon icon-lg icon-ban text-danger left" role="presentation" aria-hidden="true"></span> ' . get_string('declineinvitegroup', 'group')
                     )
                 ),
@@ -1305,10 +1330,6 @@ function group_get_accept_form($name, $groupid, $returnto) {
             'group' => array(
                 'type' => 'hidden',
                 'value' => $groupid
-            ),
-            'returnto' => array(
-                'type' => 'hidden',
-                'value' => $returnto
             )
         )
     ));
@@ -1322,7 +1343,7 @@ function group_get_adduser_form($userid, $groupid) {
         'name'                => 'adduser' . $userid,
         'successcallback'     => 'group_adduser_submit',
         'renderer'            => 'div',
-        'class'               => 'form-as-button pull-left',
+        'class'               => 'form-as-button float-left',
         'elements'            => array(
             'group' => array(
                 'type'    => 'hidden',
@@ -1339,7 +1360,7 @@ function group_get_adduser_form($userid, $groupid) {
             'submit' => array(
                 'type'  => 'button',
                 'usebuttontag' => true,
-                'class' => 'btn-default',
+                'class' => 'btn-secondary',
                 'value' => '<span class="icon icon-lg icon-check left text-success" role="presentation" aria-hidden="true"></span> ' .get_string('add'),
             ),
         ),
@@ -1355,7 +1376,7 @@ function group_get_removeuser_form($userid, $groupid) {
         'validatecallback'    => 'group_removeuser_validate',
         'successcallback'     => 'group_removeuser_submit',
         'renderer'            => 'div',
-        'class'               => 'pull-left',
+        'class'               => 'float-left',
         'elements'            => array(
             'group' => array(
                 'type'    => 'hidden',
@@ -1372,7 +1393,7 @@ function group_get_removeuser_form($userid, $groupid) {
             'submit' => array(
                 'type'  => 'button',
                 'usebuttontag' => true,
-                'class' => 'btn-default',
+                'class' => 'btn-secondary',
                 'value' => '<span class="icon icon-times icon-lg text-danger left" role="presentation" aria-hidden="true"></span>' . get_string('removefromgroup', 'group'),
             ),
         ),
@@ -1387,7 +1408,7 @@ function group_get_denyuser_form($userid, $groupid) {
         'name'                => 'denyuser' . $userid,
         'successcallback'     => 'group_denyuser_submit',
         'renderer'            => 'div',
-        'class'               => 'form-as-button pull-left',
+        'class'               => 'form-as-button float-left',
         'elements'            => array(
             'group' => array(
                 'type'    => 'hidden',
@@ -1404,7 +1425,7 @@ function group_get_denyuser_form($userid, $groupid) {
             'submit' => array(
                 'type'  => 'button',
                 'usebuttontag' => true,
-                'class' => 'btn-default',
+                'class' => 'btn-secondary',
                 'value' => '<span class="icon icon-ban icon-lg text-danger left" role="presentation" aria-hidden="true"></span>' . get_string('declinerequest', 'group'),
             ),
         ),
@@ -1417,13 +1438,7 @@ function joingroup_submit(Pieform $form, $values) {
     global $SESSION, $USER;
     group_add_user($values['group'], $USER->get('id'));
     $SESSION->add_ok_msg(get_string('joinedgroup', 'group'));
-    if (substr($values['returnto'], 0, 1) == '/') {
-        $next = $values['returnto'];
-    }
-    else {
-        $next = group_homepage_url(get_group_by_id($values['group'], true));
-    }
-    redirect($next);
+    redirect(group_homepage_url(get_group_by_id($values['group'], true)));
 }
 
 function group_invite_submit(Pieform $form, $values) {
@@ -1434,17 +1449,11 @@ function group_invite_submit(Pieform $form, $values) {
         if (isset($values['accept'])) {
             group_add_user($values['group'], $USER->get('id'), $inviterecord->role);
             $SESSION->add_ok_msg(get_string('groupinviteaccepted', 'group'));
-            if (substr($values['returnto'], 0, 1) == '/') {
-                $next = $values['returnto'];
-            }
-            else {
-                $next = group_homepage_url(get_group_by_id($values['group'], true));
-            }
-            redirect($next);
+            redirect( group_homepage_url(get_group_by_id($values['group'], true)));
         }
         else {
             $SESSION->add_ok_msg(get_string('groupinvitedeclined', 'group'));
-            redirect($values['returnto'] == 'find' ? '/group/find.php' : '/group/mygroups.php');
+            redirect('/group/index.php');
         }
     }
 }
@@ -1503,13 +1512,29 @@ function group_removeuser_submit(Pieform $form, $values) {
 
 /**
  * Form for submitting views to a group
+ *
+ * @param int $groupid
+ * @return string|void
+ * @throws SQLException
  */
 function group_view_submission_form($groupid) {
     global $USER;
 
-    list($collections, $views) = View::get_views_and_collections($USER->get('id'));
+    list($collections, $views, $grouptaskoutcomecollections, $grouptaskoutcomeviews) = View::get_views_and_collections_considering_plantasks($USER->get('id'), $groupid);
 
     $viewoptions = $collectionoptions = array();
+
+    foreach ($grouptaskoutcomecollections as $gtoc) {
+        if (empty($gtoc['submittedgroup']) && empty($gtoc['submittedhost'])) {
+            $grouptaskoutcomeoptions['c:' . $gtoc['id']] = $gtoc['name'];
+        }
+    }
+
+    foreach ($grouptaskoutcomeviews as $gtov) {
+        if ($gtov['type'] != 'profile' && empty($gtov['submittedgroup']) && empty($gtov['submittedhost'])) {
+            $grouptaskoutcomeoptions['v:' . $gtov['id']] = $gtov['name'];
+        }
+    }
 
     foreach ($collections as $c) {
         if (empty($c['submittedgroup']) && empty($c['submittedhost'])) {
@@ -1525,25 +1550,28 @@ function group_view_submission_form($groupid) {
 
     $options = $optgroups = null;
 
-    if (!empty($collectionoptions) && !empty($viewoptions)) {
-        $optgroups = array(
-            'collections' => array(
-                'label'   => get_string('Collections', 'collection'),
-                'options' => $collectionoptions,
-            ),
-            'views'       => array(
-                'label'   => get_string('Views', 'view'),
-                'options' => $viewoptions,
-            ),
-        );
+    if (!empty($grouptaskoutcomeoptions)) {
+        $optgroups['grouptasks'] = [
+            'label' => get_string('Grouptasks', 'artefact.plans'),
+            'options' => $grouptaskoutcomeoptions,
+        ];
     }
-    else if (!empty($collectionoptions)) {
-        $options = $collectionoptions;
+
+    if (!empty($collectionoptions)) {
+        $optgroups['collections'] = [
+            'label'   => get_string('Collections', 'collection'),
+            'options' => $collectionoptions,
+        ];
     }
-    else if (!empty($viewoptions)) {
-        $options = $viewoptions;
+
+    if (!empty($viewoptions)) {
+        $optgroups['views'] = [
+            'label' => get_string('Views', 'view'),
+            'options' => $viewoptions,
+        ];
     }
-    else {
+
+    if (empty($optgroups)) {
         return;
     }
 
@@ -1570,7 +1598,7 @@ function group_view_submission_form($groupid) {
                     'submit' => array(
                         'type' => 'button',
                         'usebuttontag' => true,
-                        'class' => 'btn-primary input-group-btn ',
+                        'class' => 'btn-primary input-group-append ',
                         'value' => get_string('submit')
                     ),
                 ),
@@ -1679,19 +1707,18 @@ function group_get_admins($groupids) {
 }
 
 /**
- * Sets up groups for display in mygroups.php and find.php
+ * Sets up groups for display in group/index.php
  *
  * @param array $groups    Initial group data, including the current user's
- *                         membership type in each group. See mygroups.php for
+ *                         membership type in each group. See index.php for
  *                         the query to build this information.
- * @param string $returnto Where forms generated for display should be told to return to
  */
-function group_prepare_usergroups_for_display($groups, $returnto='mygroups') {
+function group_prepare_usergroups_for_display($groups) {
     if (!$groups) {
         return;
     }
 
-    $groupids = array_map(create_function('$a', 'return $a->id;'), $groups);
+    $groupids = array_map(function($a) { return $a->id; }, $groups);
     $groupadmins = group_get_admins($groupids);
 
     $i = 0;
@@ -1706,9 +1733,10 @@ function group_prepare_usergroups_for_display($groups, $returnto='mygroups') {
             $group->canleave = group_user_can_leave($group->id);
         }
         else if ($group->membershiptype == 'invite') {
-            $group->invite = group_get_accept_form('invite' . $i++, $group->id, $returnto);
+            $group->invite = group_get_accept_form('invite' . $i++, $group->id);
         }
-        else if ($group->jointype == 'open') {
+        // When 'isolatedinstitutions' is set, people cannot join public groups by themselves
+        else if ($group->jointype == 'open' && !(is_isolated() && $group->public == 1)) {
             $group->groupjoin = group_get_join_form('joingroup' . $i++, $group->id);
         }
 
@@ -1755,13 +1783,13 @@ function group_format_editwindow($group) {
 /*
  * Used by admin/groups/groups.php and admin/groups/groups.json.php for listing groups.
  */
-function build_grouplist_html($query, $limit, $offset, &$count=null, $institution) {
+function build_grouplist_html($query, $limit, $offset, &$count=null, $institution, $groupcategory='') {
     global $USER;
 
-    $groups = search_group($query, $limit, $offset, 'all', '', $institution);
+    $groups = search_group($query, $limit, $offset, 'all', $groupcategory, $institution);
     $count = $groups['count'];
 
-    if ($ids = array_map(create_function('$a', 'return intval($a->id);'), $groups['data'])) {
+    if ($ids = array_map(function($a) { return intval($a->id); }, $groups['data'])) {
         $sumsql = "(m.role = 'admin')";
         if (is_postgres()) {
             $sumsql .= '::int';
@@ -1943,7 +1971,7 @@ function group_get_grouptypes() {
 function group_get_grouptype_options($currentgrouptype=null) {
     $groupoptions = array();
     $grouptypes = group_get_grouptypes();
-    $enabled = array_map(create_function('$a', 'return $a->name;'), plugins_installed('grouptype'));
+    $enabled = array_map(function($a) { return $a->name; }, plugins_installed('grouptype'));
     if (is_null($currentgrouptype) || in_array($currentgrouptype, $enabled)) {
         $grouptypes = array_intersect($enabled, $grouptypes);
     }
@@ -2057,16 +2085,16 @@ function group_get_menu_tabs() {
         );
     }
 
-    if ($role) {
-        safe_require('grouptype', $group->grouptype);
-        $artefactplugins = call_static_method('GroupType' . $group->grouptype, 'get_group_artefact_plugins');
-        if ($plugins = plugins_installed('artefact')) {
-            foreach ($plugins as &$plugin) {
-                if (!in_array($plugin->name, $artefactplugins)) {
-                    continue;
-                }
-                safe_require('artefact', $plugin->name);
-                $plugin_menu = call_static_method(generate_class_name('artefact',$plugin->name), 'group_tabs', $group->id);
+    foreach (plugin_types_installed() as $plugin_type_installed) {
+        foreach (plugins_installed($plugin_type_installed) as $plugin) {
+            safe_require($plugin_type_installed, $plugin->name);
+            if (method_exists(generate_class_name($plugin_type_installed, $plugin->name),'group_tabs')) {
+                $plugin_menu = call_static_method(
+                      generate_class_name($plugin_type_installed, $plugin->name),
+                      'group_tabs',
+                      $group->id,
+                      $role
+                );
                 $menu = array_merge($menu, $plugin_menu);
             }
         }
@@ -2081,11 +2109,8 @@ function group_get_menu_tabs() {
         );
     }
 
-    if (defined('MENUITEM')) {
-        $key = substr(MENUITEM, strlen('groups/'));
-        if ($key && isset($menu[$key])) {
-            $menu[$key]['selected'] = true;
-        }
+    if (defined('MENUITEM_SUBPAGE') && isset($menu[MENUITEM_SUBPAGE])) {
+        $menu[MENUITEM_SUBPAGE]['selected'] = true;
     }
 
     // Sort the menu items by weight
@@ -2166,7 +2191,7 @@ function group_current_group($cache=true) {
     return $group;
 }
 
-function group_get_associated_groups($userid, $filter='all', $limit=20, $offset=0, $category='') {
+function group_get_associated_groups($userid, $filter='all', $limit=20, $offset=0, $category='', $query_string='') {
 
     // Strangely, casting is only needed for invite, request and admin and only in
     // postgres
@@ -2183,6 +2208,9 @@ function group_get_associated_groups($userid, $filter='all', $limit=20, $offset=
         $empty      = "CAST('' AS TEXT)";
     }
     // TODO: make it work on other databases?
+
+    $ltijoin = is_plugin_active('lti', 'module') ? ' LEFT JOIN {lti_assessment} a ON g.id = a.group ' : '';
+    $ltiwhere = is_plugin_active('lti', 'module') ? ' AND a.id IS NULL ' : '';
 
     // Different filters join on the different kinds of association
     if ($filter == 'admin') {
@@ -2259,7 +2287,20 @@ function group_get_associated_groups($userid, $filter='all', $limit=20, $offset=
         }
     }
 
-    $count = count_records_sql('SELECT COUNT(*) FROM {group} g ' . $sql . ' WHERE g.deleted = ?'.$catsql, $values);
+    $sql .= $ltijoin;
+
+    $query_where = "";
+    if ($query_string) {
+        $query_where .= "
+            AND (
+                g.name " . db_ilike() . " '%' || ? || '%'
+                OR g.description " . db_ilike() . " '%' || ? || '%'
+                OR g.shortname " . db_ilike() . " '%' || ? || '%'
+            )";
+        $values = array_merge($values, array($query_string, $query_string, $query_string));
+    }
+
+    $count = count_records_sql('SELECT COUNT(*) FROM {group} g ' . $sql . ' WHERE g.deleted = ? ' . $ltiwhere . $catsql . $query_where, $values);
 
     // almost the same as query used in find - common parts should probably be pulled out
     // gets the groups filtered by above
@@ -2275,8 +2316,8 @@ function group_get_associated_groups($userid, $filter='all', $limit=20, $offset=
             FROM {group} g
             LEFT JOIN {group_member} gm ON (gm.group = g.id)' .
             $sql . '
-            WHERE g.deleted = ?' .
-            $catsql . '
+            WHERE g.deleted = ? ' .
+            $ltiwhere  . $catsql . $query_where . '
             GROUP BY g.id, g.name, g.description, g.public, g.jointype, g.request, g.grouptype, g.submittableto,
                 g.hidemembers, g.hidemembersfrommembers, g.groupparticipationreports, g.urlid, t.membershiptype, t.reason, t.role, g.editwindowstart, g.editwindowend
         ) g1
@@ -2327,16 +2368,17 @@ function group_get_user_groups($userid=null, $roles=null, $sort=null, $limit=nul
     }
 
     if (!$fromcache || !isset($usergroups[$userid])) {
-
+        $ltijoin = is_plugin_active('lti', 'module') ? ' LEFT JOIN {lti_assessment} a ON g.id = a.group ' : '';
+        $ltiwhere = is_plugin_active('lti', 'module') ? ' AND a.id IS NULL ' : '';
         $groups = get_records_sql_array("
             SELECT g.id, g.name, gm.role, g.jointype, g.request, g.grouptype, gtr.see_submitted_views, g.category,
                 g.hidemembers, g.invitefriends, g.urlid, gm.ctime, gm1.role AS loggedinrole
             FROM {group} g
                 JOIN {group_member} gm ON gm.group = g.id
                 JOIN {grouptype_roles} gtr ON g.grouptype = gtr.grouptype AND gm.role = gtr.role
-                LEFT OUTER JOIN {group_member} gm1 ON gm1.group = gm.group AND gm1.member = ?
+                LEFT OUTER JOIN {group_member} gm1 ON gm1.group = gm.group AND gm1.member = ?" . $ltijoin . "
             WHERE gm.member = ?
-                AND g.deleted = 0
+                AND g.deleted = 0" . $ltiwhere . "
             ORDER BY g.name, gm.role = 'admin' DESC, gm.role, g.id",
             array($loggedinid, $userid)
         );
@@ -2404,6 +2446,58 @@ function group_get_user_groups($userid=null, $roles=null, $sort=null, $limit=nul
     return $filtered;
 }
 
+function group_get_extended_data($data) {
+    global $USER;
+
+    $groupids = array();
+    if (!empty($data) && is_array($data)) {
+        foreach ($data as $group) {
+            $groupids[] = $group->id;
+        }
+    }
+    if (!empty($groupids)) {
+        $groups =  get_records_sql_array("
+            SELECT g1.id, g1.name, g1.description, g1.public, g1.jointype, g1.request, g1.grouptype, g1.submittableto,
+            g1.hidemembers, g1.hidemembersfrommembers, g1.urlid, g1.role, g1.membershiptype, g1.membercount, COUNT(gmr.member) AS requests,
+            g1.editwindowstart, g1.editwindowend
+            FROM (
+                SELECT g.id, g.name, g.description, g.public, g.jointype, g.request, g.grouptype, g.submittableto,
+                g.hidemembers, g.hidemembersfrommembers, g.urlid, t.role, t.membershiptype, COUNT(gm.member) AS membercount,
+                g.editwindowstart, g.editwindowend
+                FROM {group} g
+                LEFT JOIN {group_member} gm ON (gm.group = g.id)
+                LEFT JOIN (
+                    SELECT g.id, 'admin' AS membershiptype, gm.role AS role
+                    FROM {group} g
+                    INNER JOIN {group_member} gm ON (gm.group = g.id AND gm.member = ? AND gm.role = 'admin')
+                    UNION
+                    SELECT g.id, 'member' AS membershiptype, gm.role AS role
+                    FROM {group} g
+                    INNER JOIN {group_member} gm ON (g.id = gm.group AND gm.member = ? AND gm.role != 'admin')
+                    UNION
+                    SELECT g.id, 'invite' AS membershiptype, gmi.role
+                    FROM {group} g
+                    INNER JOIN {group_member_invite} gmi ON (gmi.group = g.id AND gmi.member = ?)
+                    UNION
+                    SELECT g.id, 'request' AS membershiptype, NULL as role
+                    FROM {group} g
+                    INNER JOIN {group_member_request} gmr ON (gmr.group = g.id AND gmr.member = ?)
+                ) t ON t.id = g.id
+                WHERE g.id IN (" . implode($groupids, ',') . ")
+                GROUP BY g.id, g.name, g.description, g.public, g.jointype, g.request, g.grouptype, g.submittableto,
+                g.hidemembers, g.hidemembersfrommembers, g.urlid, t.role, t.membershiptype, g.editwindowstart, g.editwindowend
+            ) g1
+            LEFT JOIN {group_member_request} gmr ON (gmr.group = g1.id)
+            GROUP BY g1.id, g1.name, g1.description, g1.public, g1.jointype, g1.request, g1.grouptype, g1.submittableto,
+            g1.hidemembers, g1.hidemembersfrommembers, g1.urlid, g1.role, g1.membershiptype, g1.membercount, g1.editwindowstart, g1.editwindowend
+            ORDER BY g1.name",
+            array($USER->get('id'), $USER->get('id'), $USER->get('id'), $USER->get('id'))
+        );
+        return $groups;
+    }
+    return array();
+}
+
 function group_get_user_admintutor_groups() {
     $groups = array();
 
@@ -2436,6 +2530,31 @@ function group_can_create_groups() {
         return true;
     }
     return $creators == 'staff' && ($USER->get('staff') || $USER->is_institutional_staff());
+}
+
+function group_can_create_public_groups() {
+    global $USER;
+
+    $creators = get_config('createpublicgroups');
+
+    // Only site administrators can create public groups when 'isolatedinstitutions' is set
+    if (is_isolated()) {
+        if ($USER->get('admin')) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    // Different user roles can create public groups when 'isolatedinstitutions' is not set
+    if ($creators == 'all' && !is_isolated()) {
+        return true;
+    }
+    if (($USER->get('admin') || $USER->is_institutional_admin()) && !is_isolated()) {
+        return true;
+    }
+    return $creators == 'staff' && (($USER->get('staff') || $USER->is_institutional_staff()) && !is_isolated());
 }
 
 /* Returns groups containing a given member which accept view submissions */
@@ -2550,7 +2669,7 @@ function install_system_grouphomepage_view() {
         'template'    =>  View::SITE_TEMPLATE,
         'numrows'     => 1,
         'columnsperrow' => array((object)array('row' => 1, 'columns' => 1)),
-        'title'       => get_string('grouphomepage', 'view'),
+        'title'       => get_string('Grouphomepage', 'view'),
     ));
     $view->set_access(array(array(
         'type' => 'loggedin'
@@ -2559,22 +2678,19 @@ function install_system_grouphomepage_view() {
         array(
             'blocktype' => 'groupinfo',
             'title' => '',
-            'row'    => 1,
-            'column' => 1,
+            'positiony' => 0,
             'config' => null,
         ),
         array(
             'blocktype' => 'recentforumposts',
             'title' => '',
-            'row'    => 1,
-            'column' => 1,
+            'positiony' => 3,
             'config' => null,
         ),
         array(
             'blocktype' => 'groupviews',
             'title' => '',
-            'row'    => 1,
-            'column' => 1,
+            'positiony' => 6,
             'config' => array(
                     'showgroupviews' => 1,
                     'showsharedviews' => 1,
@@ -2584,23 +2700,21 @@ function install_system_grouphomepage_view() {
         array(
             'blocktype' => 'groupmembers',
             'title' => '',
-            'row'    => 1,
-            'column' => 1,
+            'positiony' => 9,
             'config' => null,
         ),
     );
     $installed = get_column_sql('SELECT name FROM {blocktype_installed}');
-    $weights = array(1 => 0);
     foreach ($blocktypes as $blocktype) {
         if (in_array($blocktype['blocktype'], $installed)) {
-            $weights[$blocktype['column']]++;
             $newblock = new BlockInstance(0, array(
                     'blocktype'  => $blocktype['blocktype'],
                     'title'      => $blocktype['title'],
                     'view'       => $view->get('id'),
-                    'row'        => $blocktype['row'],
-                    'column'     => $blocktype['column'],
-                    'order'      => $weights[$blocktype['column']],
+                    'positionx'  => 0,
+                    'positiony'  => $blocktype['positiony'],
+                    'width'      => 12,
+                    'height'     => 3,
                     'configdata' => $blocktype['config'],
             ));
             $newblock->commit();
@@ -2660,7 +2774,7 @@ function group_quota_add($groupid, $bytes) {
         throw new GroupNotFoundException(get_string('groupnotfound', 'group', $groupid));
     }
     $newquota = $group->quotaused + $bytes;
-    $group = new StdClass;
+    $group = new stdClass();
     $group->id = $groupid;
     $group->quotaused = $newquota;
     update_record('group', $group);
@@ -2674,7 +2788,7 @@ function group_quota_remove($groupid, $bytes) {
         throw new GroupNotFoundException(get_string('groupnotfound', 'group', $groupid));
     }
     $newquota = max(0, $group->quotaused - $bytes);
-    $group = new StdClass;
+    $group = new stdClass();
     $group->id = $groupid;
     $group->quotaused = $newquota;
     update_record('group', $group);
@@ -2831,6 +2945,8 @@ function group_get_allowed_group_csv_keys() {
         'hidemembersfrommembers',
         'invitefriends',
         'suggestfriends',
+        'viewnotify',
+        'category',
     );
 
     if ($USER->get('admin')) {
@@ -3054,9 +3170,6 @@ function group_copy($groupid, $return) {
         case 'adminlist':
             $path = get_config('wwwroot') . 'admin/groups/groups.php';
             break;
-        case 'mylist':
-            $path = get_config('wwwroot') . 'groups/mygroups.php';
-            break;
         default:
             $path = get_config('wwwroot') . 'group/view.php?id=' . $new_groupid;
     }
@@ -3125,4 +3238,13 @@ function group_sort_categories() {
             update_record('group_category', $gcategory);
         }
     }
+}
+
+function get_group_access_roles() {
+    $roles = get_records_array('grouptype_roles');
+    $data = array();
+    foreach ($roles as $r) {
+        $data[$r->grouptype][] = array('name' => $r->role, 'display' => get_string($r->role, 'grouptype.' . $r->grouptype));
+    }
+    return $data;
 }

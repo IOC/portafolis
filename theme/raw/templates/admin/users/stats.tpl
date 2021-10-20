@@ -1,6 +1,6 @@
 {if !$fromindex}
-<div class="statinfoblock panel panel-info">
-  <h3>{str tag="Overview" section=statistics}</h3>
+<div class="statinfoblock">
+  <h3 class="card-header">{str tag="Overview" section=statistics}</h3>
 {/if}
   <table class="table">
     <tr>
@@ -11,7 +11,7 @@
     <tr>
         <th>{str tag=users}</th>
         <td>{$institutiondata.users}
-            <small>{str tag=activeusers section=admin}: {$institutiondata.usersloggedin}</small>
+            <div><small>{str tag=activeusers section=admin}: {$institutiondata.usersloggedin}</small></div>
         </td>
     </tr>
     {/if}
@@ -19,14 +19,14 @@
     <tr>
         <th>{str tag=groups}</th>
         <td>{$institutiondata.groups}
-            <small>{$institutiondata.strgroupmemberaverage}</small>
+            <div><small>{$institutiondata.strgroupmemberaverage}</small></div>
         </td>
     {/if}
     {if $institutiondata.views}
     <tr>
         <th>{str tag=Views section=view}</th>
         <td>{$institutiondata.views}
-            <small>{$institutiondata.strviewsperuser}</small>
+            <div><small>{$institutiondata.strviewsperuser}</small></div>
         </td>
     {/if}
     {if $institutiondata.dbsize}
@@ -43,8 +43,23 @@
     {if $showall}
     <tr>
         <th>{str tag=maharaversion section=admin}</th>
-        <td>{$institutiondata.release}{if $institutiondata.strlatestversion} ({$institutiondata.strlatestversion|clean_html|safe}){/if}</td>
+        <td>{$institutiondata.release}</td>
     </tr>
+    {if $institutiondata.strlatestbranchversion || $institutiondata.strnotinsupport || $institutiondata.strlatestversion || $institutiondata.uptodate}
+    <tr>
+        <td colspan="2">
+        {if $institutiondata.uptodate}
+            {$institutiondata.uptodate}
+        {else}
+            <ul>
+            {if $institutiondata.strlatestbranchversion}<li>{$institutiondata.strlatestbranchversion|clean_html|safe}</li>{/if}
+            {if $institutiondata.strnotinsupport}<li><span class="text-danger">{$institutiondata.strnotinsupport}</span></li>{/if}
+            {if $institutiondata.strlatestversion}<li>{$institutiondata.strlatestversion|clean_html|safe}</li>{/if}
+            </ul>
+        {/if}
+        </td>
+    </tr>
+    {/if}
     <tr>
         <th>{str tag=Cron section=admin}</th>
         <td>{if $institutiondata.cronrunning}{str tag=runningnormally section=admin}{else}
@@ -62,29 +77,29 @@
 </div>
 {/if}
 {if $institutiondata.usersinfo}
-<div class="statinfoblock panel panel-info">
-    <h3>{str tag="usersinfo" section=statistics}</h3>
+<div class="statinfoblock">
+    <h3 class="card-header">{str tag="usersinfo" section=statistics}</h3>
     {$institutiondata.usersinfo|safe}
 </div>
 {/if}
 {if $institutiondata.viewsinfo}
-<div class="statinfoblock panel panel-info">
-    <h3>{str tag="viewsinfo" section=statistics}</h3>
+<div class="statinfoblock">
+    <h3 class="card-header">{str tag="viewsinfo" section=statistics}</h3>
     {$institutiondata.viewsinfo|safe}
 </div>
 {/if}
 {if $institutiondata.groupinfo}
-<div class="statinfoblock panel panel-info">
-    <h3>{str tag="groupinfo" section=statistics}</h3>
+<div class="statinfoblock">
+    <h3 class="card-header">{str tag="groupinfo" section=statistics}</h3>
     {$institutiondata.groupinfo|safe}
 </div>
 {/if}
 {if $institutiondata.weekly}
-<div class="statinfoblock panel panel-info">
-    <h3>{str tag="weeklytrend" section=statistics}</h3>
-    <div class="panel-body">
+<div class="statinfoblock">
+    <h3 class="card-header">{str tag="weeklytrend" section=statistics}</h3>
+    <div class="card-body">
         <canvas class="graphcanvas" id="sitestatsgraph"></canvas>
-        <script type="application/javascript">
+        <script>
         {literal}
         jQuery(function() {
             fetch_graph_data({'id':'sitestatsgraph','type':'line','graph':'graph_institution_data_weekly',

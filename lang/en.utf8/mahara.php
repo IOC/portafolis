@@ -78,9 +78,35 @@ $string['disabled'] = 'Disabled';
 $string['complaint'] = 'Complaint';
 $string['notifyadministrator'] = 'Notify administrator';
 $string['notifyadministratorconfirm'] = 'Are you sure you wish to report this page as containing objectionable material?';
+$string['notifyadministratorreview'] = 'Are you sure you are ready for the administrator to review this page again?';
 $string['notobjectionable'] = 'Not objectionable';
 $string['reportobjectionablematerial'] = 'Report objectionable material';
+$string['objectionablematerialreported'] = 'Objectionable material reported';
+$string['objectionablematerialreportedowner'] = 'Someone reported your page to contain objectionable content. Please review your page and make adjustments where needed.';
+$string['objectionablematerialreportedreply'] = 'Click the "Review objectionable content" button to let your administrator know that you\'ve made changes or to ask for clarification.';
+$string['objectionablematerialreportreplied'] = 'An administrator reviewed the page again and still finds it to contain objectionable content. Please check your notification for more information. You can then make changes and send a message to the administrator by clicking the "Review objectionable content" button or ask for clarification.';
+$string['objectionreviewsent'] = 'Objection review has been sent to page owner. Click on "Still objectionable" if you want to adjust and send another review.';
+$string['lastobjection'] = 'Last objection';
+$string['objectionnotreviewed'] = 'Objection not yet reviewed';
+$string['objectionnotreviewedreply'] = 'Reply to un-reviewed objection:
+
+%s';
+$string['lastobjectionartefact'] = 'Last objection for "%s"';
+$string['replyingtoobjection'] = 'Replying to objection:
+"%s"
+
+%s';
 $string['reportsent'] = 'Your report has been sent.';
+$string['reviewrequestsent'] = 'Your review request has been sent.';
+$string['stillobjectionable'] = 'Still objectionable';
+$string['objectionreview'] = 'Review objectionable material';
+$string['objectionreviewonview'] = 'Replying to objectionable material can only be done via the page';
+$string['reviewcomplaint'] = 'Review of complaint';
+$string['reviewcomplaintdesc'] = 'Enter a message that you would like to send along to give more details to the author on what they should change. If you leave the field empty, the original complaint will be sent instead.';
+$string['reviewnotification'] = 'The administrator was notified to review the portfolio and check if objectionable material still exists.';
+$string['reviewnotificationdesc'] = 'Please review if objectionable material still exists.';
+$string['removeaccess'] = 'Remove access';
+$string['removeaccessdesc'] = 'Revoke access to this page (and collection if the page is in one) immediately until the objectionable material has been removed.';
 // responsive design strings
 $string['tabs'] = 'Tabs';
 $string['tab'] = 'tab';
@@ -107,6 +133,7 @@ $string['sortorder'] = 'Sort order of files';
 $string['All'] = 'All';
 $string['Allinstitutions'] = 'All institutions';
 $string['none']   = 'None';
+$string['samepage'] = 'Same page';
 $string['selectall']   = 'Select all';
 $string['selectnone']   = 'Select none';
 
@@ -158,6 +185,8 @@ $string['select'] = 'Select';
 $string['tags'] = 'Tags';
 $string['tagsdesc'] = 'Search for/enter tags for this item.';
 $string['tagsdescprofile'] = 'Search for/enter tags for this item. Items tagged with \'profile\' are displayed in your sidebar.';
+$string['tagsdescblock'] = 'Search for/enter tags for this block.';
+$string['viewtags'] = 'Page tags';
 $string['youhavenottaggedanythingyet'] = 'You have not tagged anything yet';
 $string['mytags'] = 'My tags';
 $string['Tag'] = 'Tag';
@@ -191,6 +220,12 @@ $string['tagfilter_image'] = 'Images';
 $string['tagfilter_text'] = 'Text';
 $string['tagfilter_view'] = 'Pages';
 $string['tagfilter_collection'] = 'Collections';
+$string['tagfilter_blog'] = 'Journal';
+$string['tagfilter_blogpost'] = 'Journal entry';
+$string['tagfilter_plan'] = 'Plan';
+$string['tagfilter_task'] = 'Plan task';
+$string['tagfilter_external'] = 'External';
+$string['tagfilter_resume'] = 'Résumé';
 $string['edittags'] = 'Edit tags';
 $string['selectatagtoedit'] = 'Select a tag to edit';
 $string['edittag'] = 'Edit <a href="%s">%s</a>';
@@ -201,9 +236,36 @@ $string['confirmdeletetag'] = 'Do you really want to delete this tag from all it
 $string['deletetagdescription'] = 'Remove this tag from all items in your portfolio';
 $string['tagupdatedsuccessfully'] = 'Tag updated successfully';
 $string['tagdeletedsuccessfully'] = 'Tag deleted successfully';
+$string['relatedtags'] = 'Tagged content of %s';
+$string['relatedtagsinview'] = 'Tagged content of %s in portfolio "%s"';
+$string['norelatedtaggeditemstoview'] = 'There is nothing you can view with tag "%s" owned by "%s".';
+$string['norelatedtaggeditemstoviewfiltered'] = 'There is no %s you can view with tag "%s" owned by "%s".';
 
 $string['selfsearch'] = 'Search my portfolio';
 $string['resultsperpage'] = 'Results per page';
+
+// Institution tags
+$string['allowinstitutiontags'] = 'Allow institution tags';
+$string['allowinstitutiontagsdescription'] = 'Administrators can define a set of tags that institution members can use.';
+$string['cantlistinstitutiontags'] = 'You are not allowed to list institution tags.';
+$string['createtag'] = 'Create tag';
+$string['deleteinstitutiontag'] = 'Delete institution tag';
+$string['deleteinstitutiontagspecific'] = 'Delete institution tag "%s"';
+$string['editinstitutiontag'] = 'Edit institution tag';
+$string['error:duplicatetag'] = 'Institutional tag already exists.';
+$string['error:emptytag'] = 'Institutional tag cannot be empty.';
+$string['institutiontagcantbesaved'] = 'Institution tag can\'t be saved.';
+$string['institutiontag'] = 'Institution tag';
+$string['institutiontagdesc'] = 'You can add one tag at a time';
+$string['institutiontagdeleted'] = 'Institution tag deleted successfully.';
+$string['institutiontagdeletefail'] = 'Failed to delete institution tag.';
+$string['institutiontags'] = 'Institution tags';
+$string['institutiontagsdescription'] = 'The institution tags are predefined by the institution and available for use by all institution members. You can create as many tags as you like.';
+$string['institutiontagsaved'] = 'Institution tag saved.';
+$string['notags'] = 'No tags for this institution.';
+$string['tag'] = 'Tag';
+$string['timesused'] = 'Times used';
+$string['usedtagscantbedeleted'] = 'Used tags can\'t be deleted';
 
 // License metadata
 $string['license'] = 'License';
@@ -417,7 +479,8 @@ $string['accountinactivewarninghtml1'] = '<p>Dear %s,</p>
 
 <p>Regards,<br>
 %s site administrator</p>';
-$string['accountsuspended'] = 'Your account has been suspended as of %s.<br />The reason for your suspension is: %s';
+$string['accountsuspended'] = 'Your account has been suspended as of %s.
+The reason for your suspension is: %s';
 $string['youraccounthasbeensuspended'] = 'Your account has been suspended.';
 $string['youraccounthasbeenunsuspended'] = 'Your account has been unsuspended.';
 $string['changepasswordinfo'] = 'You are required to change your password before you can proceed.';
@@ -430,6 +493,7 @@ $string['senddeletenotification'] = 'Send request';
 $string['javascriptnotenabled'] = 'Your browser does not have JavaScript enabled. This site requires JavaScript to be enabled before you can log in.';
 $string['cookiesnotenabled'] = 'Your browser does not have cookies enabled or is blocking cookies. This site requires cookies to be enabled before you can log in.';
 $string['institution'] = 'Institution';
+$string['institutionnotfound'] = 'Institution "%s" not found';
 $string['institutioncontacts'] = '\'%s\' contacts';
 $string['institutionlink'] = '<a href="%s">%s</a>';
 $string['link'] = '<a href="%s">%s</a>';
@@ -697,6 +761,7 @@ $string['emailnotsent']             = 'Failed to send contact email. Error messa
 
 // mahara.js
 $string['namedfieldempty'] = 'The required field "%s" is empty';
+$string['duplicatenamedfield'] = 'The value entered already exists';
 $string['processing']     = 'Processing';
 $string['unknownerror']       = 'An unknown error occurred (0x20f91a0)';
 
@@ -707,12 +772,15 @@ $string['overview']     = 'Overview';
 $string['home']         = 'Home';
 $string['Content']      = 'Content';
 $string['myportfolio']  = 'Portfolio';
+$string['Create']       = 'Create';
+$string['Engage']       = 'Engage';
+$string['Manage']       = 'Manage';
 $string['settings']     = 'Settings';
+$string['people']       = 'People';
 $string['myfriends']          = 'My friends';
 $string['findpeople']        = 'Find people';
 $string['groups']             = 'Groups';
 $string['mygroups']           = 'My groups';
-$string['findgroups']         = 'Find groups';
 $string['returntosite']       = 'Return to site';
 $string['administration'] = 'Administration';
 $string['siteinformation']    = 'Site information';
@@ -810,15 +878,22 @@ $string['filter'] = 'Filter';
 $string['expand'] = 'Expand';
 $string['collapse'] = 'Collapse';
 $string['more...'] = 'More...';
+$string['moreoptions'] = 'More options';
 $string['moreoptionsfor'] = 'More options for "%s"';
 $string['details'] = 'details';
+$string['Details'] = 'Details';
 $string['nohelpfound'] = 'There was no help found for this item.';
 $string['nohelpfoundpage'] = 'There was no help found for this page.';
 $string['couldnotgethelp'] = 'An error occurred trying to retrieve the help page.';
 $string['profileimagetext'] = "%s's profile picture";
+$string['profileimagetexttemplate'] = "User's profile picture will go here";
 $string['profileimagetextanonymous'] = "anonymous profile picture";
 $string['primaryemailinvalid'] = 'Your primary email address is invalid.';
 $string['addemail'] = 'Add email address';
+$string['connectedapps'] = 'Connected apps';
+$string['acccountappsdescription'] = 'Here you can administer any applications that require token access.';
+$string['acccountaddappsdescription'] = 'Currently, there are no plugins active that allow token administration.';
+$string['acccountchooseappsdescription'] = 'To administer your application tokens, please select the application from the "Connected apps" bar.';
 
 // Search
 $string['search'] = 'Search';
@@ -931,7 +1006,7 @@ $string['country.bz'] = 'Belize';
 $string['country.bj'] = 'Benin';
 $string['country.bm'] = 'Bermuda';
 $string['country.bt'] = 'Bhutan';
-$string['country.bo'] = 'Bolivia';
+$string['country.bo'] = 'Bolivia (Plurinational State of)';
 $string['country.bq'] = 'Bonaire';
 $string['country.ba'] = 'Bosnia and Herzegovina';
 $string['country.bw'] = 'Botswana';
@@ -1005,7 +1080,7 @@ $string['country.gw'] = 'Guinea-bissau';
 $string['country.gy'] = 'Guyana';
 $string['country.ht'] = 'Haiti';
 $string['country.hm'] = 'Heard Island and McDonald Islands';
-$string['country.va'] = 'Holy See (Vatican City State)';
+$string['country.va'] = 'Holy See';
 $string['country.hn'] = 'Honduras';
 $string['country.hk'] = 'Hong Kong';
 $string['country.hu'] = 'Hungary';
@@ -1040,7 +1115,7 @@ $string['country.li'] = 'Liechtenstein';
 $string['country.lt'] = 'Lithuania';
 $string['country.lu'] = 'Luxembourg';
 $string['country.mo'] = 'Macao';
-$string['country.mk'] = 'Macedonia, The Former Yugoslav Republic of';
+$string['country.mk'] = 'North Macedonia';
 $string['country.mg'] = 'Madagascar';
 $string['country.mw'] = 'Malawi';
 $string['country.my'] = 'Malaysia';
@@ -1094,7 +1169,7 @@ $string['country.ro'] = 'Romania';
 $string['country.ru'] = 'Russian Federation';
 $string['country.rw'] = 'Rwanda';
 $string['country.bl'] = 'Saint Barthelemy';
-$string['country.sh'] = 'Saint Helena';
+$string['country.sh'] = 'Saint Helena, Ascension and Tristan da Cunha';
 $string['country.kn'] = 'Saint Kitts and Nevis';
 $string['country.lc'] = 'Saint Lucia';
 $string['country.mf'] = 'Saint Martin (French part)';
@@ -1149,7 +1224,7 @@ $string['country.um'] = 'United States Minor Outlying Islands';
 $string['country.uy'] = 'Uruguay';
 $string['country.uz'] = 'Uzbekistan';
 $string['country.vu'] = 'Vanuatu';
-$string['country.ve'] = 'Venezuela';
+$string['country.ve'] = 'Venezuela (Bolivarian Republic of)';
 $string['country.vn'] = 'Viet Nam';
 $string['country.vg'] = 'Virgin Islands, British';
 $string['country.vi'] = 'Virgin Islands, U.S.';
@@ -1160,7 +1235,8 @@ $string['country.zm'] = 'Zambia';
 $string['country.zw'] = 'Zimbabwe';
 
 $string['nocountryselected'] = 'No country selected';
-
+$string['countryisodisclaimer'] = 'Country names are displayed as defined in ISO 3166, published by the International Organization for Standardization (ISO).';
+$string['countryisocustomise'] = 'To adjust any country names for your site, please edit the "mahara.php" language file in each translation or <a href="https://wiki.mahara.org/wiki/Developer_Area/Language_strings#Custom_lang_strings_in_.2Flocal">create strings in the local directory</a>.';
 // general stuff that doesn't really fit anywhere else
 $string['system'] = 'System';
 $string['done'] = 'Done';
@@ -1232,6 +1308,9 @@ href="%s">Settings</a>.';
 
 // Blocktype
 $string['setblocktitle'] = 'Set a block title';
+$string['blockinstanceownerchange'] = 'Edit this block to choose content to display.';
+$string['blockinstanceconfigownerauto'] = 'This block will be automatically populated with data once it is copied as a user\'s portfolio page.';
+$string['blockinstanceconfigownerchange'] = 'This block will need to be edited / configured once it is copied as a user\'s portfolio page for content to show up.';
 
 // Download
 $string['filenotfound'] = 'File not found';
@@ -1290,3 +1369,7 @@ $string['scroll_to_top'] = 'Back to top';
 $string['tabgroup'] = 'Group';
 $string['tabinstitution'] = 'Institution';
 $string['version.'] = 'v.'; // version shortname, used when duplicating pages and collections
+$string['viewartefact'] = 'View ';
+
+//Accessing an outdated url that will now redirect with session message
+$string['viewartefactdatavuamodal'] = 'The data for %s artefact "%s" cannot be viewed this way anymore. Please go to page "%s" to view it.';

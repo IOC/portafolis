@@ -87,74 +87,7 @@ class Session {
         }
 
         // Now lets use the correct session handler
-        // Currently only deals with file and memcached
-        switch (get_config('sessionhandler')) {
-            case 'memcache':
-                throw new ConfigSanityException(get_string('memcacheusememcached', 'error'));
-                break;
-            case 'memcached':
-                $memcacheservers = get_config('memcacheservers');
-                if (!$memcacheservers) {
-                    throw new ConfigSanityException(get_string('nomemcacheserversdefined', 'error', get_config('sessionhandler')));
-                }
-                if (!extension_loaded(get_config('sessionhandler'))) {
-                    throw new ConfigSanityException(get_string('nophpextension', 'error', get_config('sessionhandler')));
-                }
-                // Because we only want memcached servers we need to strip off any 'tcp://' if accidentally added
-                $servers = preg_replace('#tcp://#', '', $memcacheservers);
-                foreach (explode(',', $servers) as $server) {
-                    list($destination, $port) = explode(':', $server);
-                    $nc = 'nc -z ' . $destination . ' ' . $port;
-                    $status = exec($nc, $out, $fail);
-                    if ($fail === 1) {
-                        // if server has 'nc' command but can't reach the server:port
-                        throw new ConfigSanityException(get_string('nomemcachedserver', 'error', $server));
-                    }
-                }
-                ini_set('session.save_handler', 'memcached');
-                ini_set('session.save_path', $servers);
-
-                $sess = new MemcachedSession();
-                session_set_save_handler($sess, true);
-                break;
-            case 'file':
-                $sessionpath = get_config('sessionpath');
-                ini_set('session.save_path', '3;' . $sessionpath);
-                // Attempt to create session directories
-                if (!is_dir("$sessionpath/0")) {
-                    // Create three levels of directories, named 0-9, a-f
-                    Session::create_directory_levels($sessionpath);
-                }
-                break;
-            case 'redis':
-                if (!extension_loaded(get_config('sessionhandler'))) {
-                    throw new ConfigSanityException(get_string('nophpextension', 'error', get_config('sessionhandler')));
-                }
-                else if (
-                         ($redissentinelservers = get_config('redissentinelservers')) &&
-                         ($redismastergroup = get_config('redismastergroup')) &&
-                         ($redisprefix = get_config('redisprefix'))
-                        ) {
-                    require_once(get_config('libroot') . 'redis/sentinel.php');
-
-                    $sentinel = new sentinel($redissentinelservers);
-                    $master = $sentinel->get_master_addr($redismastergroup);
-
-                    if (!empty($master)) {
-                        ini_set('session.save_handler', 'redis');
-                        ini_set('session.save_path', 'tcp://' . $master->ip . ':' . $master->port . '?prefix=' . $redisprefix);
-                    }
-                    else {
-                        throw new ConfigSanityException(get_string('badsessionhandle', 'error', get_config('sessionhandler')));
-                    }
-                }
-                else {
-                    throw new ConfigSanityException(get_string('badsessionhandle', 'error', get_config('sessionhandler')));
-                }
-                break;
-            default:
-                throw new ConfigSanityException(get_string('wrongsessionhandle', 'error', get_config('sessionhandler')));
-        }
+        auth_configure_session_handlers('site');
     }
 
     public static function create_directory_levels($sessionpath) {

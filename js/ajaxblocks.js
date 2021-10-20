@@ -1,6 +1,6 @@
 /*jslint browser: true, nomen: true,  white: true */
 /* global jQuery, $ */
-jQuery(function($) {
+jQuery(window).on('blocksloaded', {}, function() {
 "use strict";
 
     function ajaxBlocks() {
@@ -10,6 +10,8 @@ jQuery(function($) {
             blocks,
             i,
             id;
+        // keep count of the blocks loaded by ajax
+        window.ajaxBlocksCount = $('div.block[data-blocktype-ajax]').length;
 
         if($('.block').is('[data-blocktype-ajax]')){
             blocks = $('.block[data-blocktype-ajax]');
@@ -19,10 +21,15 @@ jQuery(function($) {
 
                $(blocks[i]).load(baseurl + "blocktype/blocktype.ajax.php?blockid="+ id, function(){
                     if ($(this).is(':empty')){
-                        $(this).closest('.panel').addClass('hidden');
+                        $(this).closest('.card').addClass('d-none');
                     }
                     if (config.mathjax && MathJax !== undefined) {
                         MathJax.Hub.Queue(["Typeset", MathJax.Hub, blocks.get(i)]);
+                    }
+                    window.ajaxBlocksCount--;
+                    // trigger block resize after the last ajax block has been loaded
+                    if (window.ajaxBlocksCount == 0) {
+                        $(window).trigger('colresize');
                     }
                });
 

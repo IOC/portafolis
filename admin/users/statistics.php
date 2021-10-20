@@ -34,7 +34,7 @@ if (!$USER->get('admin') && !$USER->is_institutional_admin($institution) &&
 }
 
 if (!$notallowed) {
-    // Get the institution selector to worl out what institutions they are allowed to see
+    // Get the institution selector to work out what institutions they are allowed to see
     $institutionelement = get_institution_selector(true, false, true, ($allstaffstats || $userstaffstats), ($USER->get('admin') || $USER->get('staff')));
 }
 
@@ -95,8 +95,8 @@ else {
 
 $start = param_variable('start', null);
 $end = param_variable('end', null);
-$start = $start ? format_date(strtotime($start), 'strftimew3cdate') : null;
-$end = $end ? format_date(strtotime($end), 'strftimew3cdate') : null;
+$start = $start ? format_date(strtotime(str_replace('/', '-', $start)), 'strftimew3cdate') : null;
+$end = $end ? format_date(strtotime(str_replace('/', '-', $end)), 'strftimew3cdate') : null;
 
 $activecolumns = $SESSION->get('columnsforstats');
 $activecolumns = !empty($activecolumns) ? $activecolumns : array();
@@ -211,7 +211,7 @@ jQuery(function ($) {
 
     // We need to show/hide modal explicitly so the on 'show.bs.modal' fires allowing
     // us to do ajax call for form as modal opens
-    $('#configbtn').click(function() {
+    $('#configbtn').on("click", function() {
         $("#modal-configs").modal("show");
     });
     $("#modal-configs").on('show.bs.modal', function () {
@@ -232,13 +232,6 @@ jQuery(function ($) {
 
     $('#messages .alert-success').delay(1000).hide("slow");
     update_table_headers(null);
-
-    if ($('.statinfoblock').length > 0) {
-        var maxHeight = Math.max.apply(null, $(".statinfoblock").map(function () {
-            return $(this).height();
-        }).get());
-        $('.statinfoblock').css('height', maxHeight + 'px');
-    }
 });
 
 JS;
@@ -281,7 +274,8 @@ JS;
     }
 }
 
-$smarty = smarty(array('paginator','js/chartjs/Chart.min.js'));
+$smarty = smarty(array('paginator','js/chartjs/dist/Chart.min.js'));
+setpageicon($smarty, 'icon-chart-pie');
 $smarty->assign('INLINEJAVASCRIPT', $js);
 $smarty->assign('institutiondata', $institutiondata);
 $smarty->assign('type', $type);
