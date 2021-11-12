@@ -20,7 +20,7 @@ defined('INTERNAL') || die();
  * @return string that is the registation form
  * @ingroup Registration
  */
-function register_site()  {
+function register_site($registered = null)  {
     $strfield = get_string('Field', 'admin');
     $strvalue = get_string('Value', 'admin');
     $info = <<<EOF
@@ -35,6 +35,7 @@ function register_site()  {
     <tbody>
 EOF;
     $data = registration_data();
+    // Format each line of data to be sent.
     foreach($data as $key => $val) {
         $info .= '<tr><th>'. hsc($key) . '</th><td>' . hsc($val) . "</td></tr>\n";
     }
@@ -46,7 +47,7 @@ EOF;
         'elements' => array(
             'whatsent' => array(
                 'type' => 'fieldset',
-                'legend' => get_string('datathatwillbesent', 'admin'),
+                'legend' => get_string('dataincluded', 'admin'),
                 'collapsible'  => true,
                 'collapsed'    => true,
                 'class' => 'last',
@@ -57,20 +58,28 @@ EOF;
                     ),
                 )
             ),
-            'sendweeklyupdates' => array(
+            'registeryesno' => array(
                 'type' => 'switchbox',
-                'title' => get_string('sendweeklyupdates', 'admin'),
-                'defaultvalue' => true,
+                'title' => get_string('registerwithmahara', 'admin'),
+                'description' => get_string('registerwithmaharadescription', 'admin'),
+                'defaultvalue' => $registered,
+                'disabled' => $registered,
+            ),
+            'sendweeklyupdates' => array(
+                'type'         => 'switchbox',
+                'title'        => get_string('sendweeklyupdates', 'admin'),
+                'description'  => get_string('sendweeklyupdatesdescription', 'admin'),
+                'defaultvalue' => (!$registered || get_config('registration_sendweeklyupdates')),
+                'class'        => 'd-none',
             ),
             'register' => array(
                 'type' => 'submitcancel',
                 'class' => 'btn-primary',
-                'value' => array(get_string('Register', 'admin'), get_string('cancel', 'mahara')),
+                'value' => array(get_string('save', 'mahara'), get_string('cancel', 'mahara')),
             ),
-        )
-     );
-
-     return pieform($form);
+        ),
+    );
+    return pieform($form);
 }
 /**
  * Runs when registration form is submitted
@@ -78,6 +87,25 @@ EOF;
 function register_submit(Pieform $form, $values) {
     global $SESSION;
 
+    // If there is a timecode in this field, the site was registered at this time.
+    $registered = get_config('registration_lastsent') && !get_config('new_registration_policy');
+    // Depending on if the site was registered previously and what value was submitted in the 'sendweeklyupdates' field,
+    // there are three options:
+    $registerchanged = (!$registered && $values['registeryesno']);
+    $weeklyupdateschanged =
+            ($registered || $values['registeryesno']) &&
+            (get_config('registration_sendweeklyupdates') != $values['sendweeklyupdates']);
+
+    // 1. cancel (i.e, the user made no changes)
+    if (!$registerchanged  && !$weeklyupdateschanged) {
+        register_cancel_register();
+    }
+    // 2. add/remove weekly updates
+    else if ($registered && $weeklyupdateschanged) {
+        update_weeklyupdates($values);
+    }
+
+    // 3. registering, continue
     $result = registration_send_data();
     $data = json_decode($result->data);
 
@@ -87,6 +115,9 @@ function register_submit(Pieform $form, $values) {
     }
     else {
         set_config('registration_lastsent', time());
+        if (!get_config('registration_firstsent')) {
+            set_config('registration_firstsent', time());
+        }
         set_config('registration_sendweeklyupdates', $values['sendweeklyupdates']);
         if (get_config('new_registration_policy')) {
             set_config('new_registration_policy', false);
@@ -115,13 +146,32 @@ function register_submit(Pieform $form, $values) {
 }
 
 /**
+ * Runs when the 'Weekly updates' switch is changed
+ */
+
+function update_weeklyupdates($values) {
+    global $SESSION;
+
+    set_config('registration_sendweeklyupdates', $values['sendweeklyupdates']);
+    if (get_config('new_registration_policy')) {
+        set_config('new_registration_policy', false);
+    }
+    if ($values['sendweeklyupdates']) {
+        $SESSION->add_ok_msg(get_string('startsendingdata', 'admin'), false);
+    }
+    else {
+        $SESSION->add_ok_msg(get_string('stoppedsendingdata', 'admin'));
+    }
+    redirect('/admin/index.php');
+}
+
+/**
  * Runs when registration form is cancelled
  */
 function register_cancel_register() {
     global $SESSION;
 
     if (get_config('new_registration_policy')) {
-        set_config('new_registration_policy', -1);
         $SESSION->add_ok_msg(get_string('registrationcancelled', 'admin', get_config('wwwroot')), false);
     }
 

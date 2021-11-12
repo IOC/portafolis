@@ -16,7 +16,7 @@ require(dirname(dirname(__FILE__)) . '/init.php');
 define('TITLE', get_string('deleteaccountuser', 'account', display_name($USER, null, false, false, true)));
 
 if (!$USER->can_delete_self()) {
-    throw new AccessDeniedException(get_string('accessdenied', 'error'));
+    throw new AccessDeniedException();
 }
 
 $deleteform = array(
@@ -40,7 +40,7 @@ if ($requiresapproval) {
             'rules' => array('required' => true),
         ),
         'submit' => array(
-            'class' => 'btn-default',
+            'class' => 'btn-secondary',
             'type' => 'submitcancel',
             'value' => array(get_string('senddeletenotification', 'mahara'), get_string('back')),
             'goto' => get_config('wwwroot'). 'account/index.php',
@@ -48,19 +48,54 @@ if ($requiresapproval) {
     );
 }
 else {
-  $elements = array(
-      'submit' => array(
-          'class' => 'btn-default',
-          'type' => 'submitcancel',
-          'value' => array(get_string('deleteaccount1', 'mahara'), get_string('back')),
-          'goto' => get_config('wwwroot'). 'account/index.php',
-      ),
-  );
+    $authobj = AuthFactory::create($USER->authinstance);
+    if (method_exists($authobj, 'change_password')) {
+        $elements['confirmpassword'] = array(
+            'type' => 'password',
+            'title' => get_string('oldpassword'),
+            'help'  => false,
+            'rules' => array(
+                'required' => true,
+            ),
+            'autocomplete' => 'off',
+        );
+    }
+    $elements['submit'] = array(
+        'class' => 'btn-secondary',
+        'type' => 'submitcancel',
+        'value' => array(get_string('deleteaccount1', 'mahara'), get_string('back')),
+        'goto' => get_config('wwwroot'). 'account/index.php',
+    );
 }
 
 $deleteform['elements'] = $elements;
 
 $deleteform = pieform($deleteform);
+
+function account_delete_validate(Pieform $form, $values) {
+    global $USER;
+
+    $authobj = AuthFactory::create($USER->authinstance);
+    if (isset($values['confirmpassword'])) {
+        if ($values['confirmpassword'] !== '') {
+            try {
+                if (!$authobj->authenticate_user_account($USER, $values['confirmpassword'])) {
+                    $form->set_error('confirmpassword', get_string('oldpasswordincorrect', 'account'));
+                    return;
+                }
+            }
+            // propagate error correctly for User validation issues - this should
+            // be catching AuthUnknownUserException and AuthInstanceException
+            catch  (UserException $e) {
+                $form->set_error('confirmpassword', $e->getMessage());
+                return;
+            }
+        }
+        else {
+            $form->set_error('confirmpassword', get_string('mustspecifyoldpassword'));
+        }
+    }
+}
 
 function account_delete_submit(Pieform $form, $values) {
     global $SESSION, $USER, $user;

@@ -1,16 +1,15 @@
-<tr id="{$prefix}_edit_row"{if !$fileinfo} class="text-regular hidden editrow no-hover"{/if}>
-    <td colspan="6" class="fileedittablewrap form-condensed">
+<tr id="{$prefix}_edit_row"{if !$fileinfo} class="text-regular d-none editrow no-hover"{/if}>
+    <td colspan="{$colspan}" class="fileedittablewrap form-condensed">
         <div class="fileedittable">
             <h4 id="{$prefix}_edit_heading" class="edit-heading">
-                {if $fileinfo}{if $fileinfo->artefacttype == 'folder'}{str tag=editfolder section=artefact.file}{else}{str tag=editfile section=artefact.file}{/if}{/if}
+                {if $fileinfo && $fileinfo->artefacttype == 'folder'}{str tag=editfolder section=artefact.file}{else}{str tag=editfile section=artefact.file}{/if}
             </h4>
             <div class="form-group requiredmarkerdesc">{str tag='requiredfields' section='pieforms' arg1='*'}</div>
             <div id="{$prefix}_rotator" class="form-group image-rotator">
-                <label for="{$prefix}_edit_orientation">{str tag=orientation}</label>
                 <span class="image-rotator-inner">
-                    <img role="presentation" aria-hidden="true" src="" title="" alt="">
+                    <img role="presentation" aria-hidden="true" src="{$WWWROOT}theme/raw/images/no_userphoto25.png" title="" alt="">
                 </span>
-                <span class="icon icon-rotate-right btn btn-default"></span>
+                <span class="icon icon-redo btn btn-secondary"></span>
                 <input type="hidden" id="{$prefix}_edit_orientation" name="{$prefix}_edit_orientation" value="0">
             </div>
             <div class="required form-group">
@@ -33,6 +32,10 @@
                 </select>
                 <span>{contextualhelp plugintype='artefact' pluginname='file' section='tags'}</span>
                 <div class="description">{str tag=tagsdescprofile}</div>
+            </div>
+            <div>
+                <label for="{$prefix}_edit_uploadedby">{str tag=uploadedby section=artefact.file}</label>
+                <span id="{$prefix}_edit_uploadedby"></span>
             </div>
             {if $groupinfo}
             <div>
@@ -58,7 +61,7 @@
                                     {else}
                                     <td>
                                         <!-- <label for="{$prefix}_permission_{$r}_{$permid}">{str tag=changerolepermissions section=group arg1=$permid arg2=$r}</label> -->
-                                        <input type="checkbox" class="permission checkbox" id="{$prefix}_permission_{$r}_{$permid}" name="{$prefix}_permission:{$r}:{$permid}" {if $r == 'admin'} checked disabled{/if}/>
+                                        <input type="checkbox" class="permission form-check" id="{$prefix}_permission_{$r}_{$permid}" name="{$prefix}_permission:{$r}:{$permid}" {if $r == 'admin'} checked disabled{/if}/>
                                     </td>
                                     {/if}
                                     {/foreach}
@@ -68,16 +71,16 @@
                     </table>
                 </div>
             </div>
-          </div>
-{/if}
+            {/if}
+        </div>
         {license_form_files($prefix, 'edit')}
         <div class="form-group">
             <label for="{$prefix}_edit_allowcomments">
                 {str tag=Comments section=artefact.comment}
             </label>
             <div class="form-switch">
-                <div class="switch onoff" style="width: {$switchwidth}">
-                    <input class="switchbox" type="checkbox" name="{$prefix}_edit_allowcomments" id="{$prefix}_edit_allowcomments" {if $fileinfo->allowcomments}checked {/if} aria-describedby />
+                <div class="switch onoff"{if $switchwidth} style="width: {$switchwidth}"{/if}>
+                    <input class="switchbox" type="checkbox" name="{$prefix}_edit_allowcomments" id="{$prefix}_edit_allowcomments" {if $fileinfo->allowcomments}checked {/if} />
                     <label class="switch-label" tabindex="1" for="{$prefix}_edit_allowcomments">
                         <span class="switch-inner" role="presentation" aria-hidden="true"></span>
                         <span class="switch-indicator" role="presentation" aria-hidden="true"></span>
@@ -86,7 +89,7 @@
                     </label>
                 </div>
             </div>
-                <script type="application/javascript">Switchbox.computeWidth("{$prefix}_edit_allowcomments");</script>
+                <script>Switchbox.computeWidth("{$prefix}_edit_allowcomments");</script>
         </div>
         <div>
             <div class="submitcancel form-group">

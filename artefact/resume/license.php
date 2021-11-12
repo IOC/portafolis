@@ -10,11 +10,11 @@
  */
 
 define('INTERNAL', true);
-define('MENUITEM', 'content/resume');
+define('MENUITEM', 'create/resume');
 define('SECTION_PLUGINTYPE', 'artefact');
 define('SECTION_PLUGINNAME', 'resume');
 define('SECTION_PAGE', 'index');
-define('RESUME_SUBPAGE', 'license');
+define('MENUITEM_SUBPAGE', 'license');
 
 require_once(dirname(dirname(dirname(__FILE__))) . '/init.php');
 define('TITLE', get_string('resume', 'artefact.resume'));
@@ -78,6 +78,7 @@ function resumelicense_submit(Pieform $form, $values) {
 }
 
 $smarty = smarty(array('artefact/resume/js/simpleresumefield.js'));
+setpageicon($smarty, 'icon-regular icon-address-book');
 $smarty->assign('licensesform', $form);
 $smarty->assign('SUBPAGENAV', PluginArtefactResume::submenu_items());
 $smarty->display('artefact:resume:licenses.tpl');

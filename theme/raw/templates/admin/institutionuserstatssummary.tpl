@@ -7,9 +7,9 @@
 </ul>
 {if $data}
     <h4>{str tag=usersbytype section=statistics}</h4>
-    <div class="panel-body">
+    <div class="card-body">
         <canvas class="graphcanvas" id="sitestatsusersgraph" width="300" height="200"></canvas>
-        <script type="application/javascript">
+        <script>
         {literal}
         jQuery(function() {
             fetch_graph_data({

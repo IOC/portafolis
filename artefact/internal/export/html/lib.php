@@ -33,8 +33,13 @@ class HtmlExportInternal extends HtmlExportArtefactPlugin {
                 $smarty->assign('breadcrumbs', array(array('text' => 'Profile page', 'path' => 'profilepage.html')));
                 $view = $this->exporter->get('user')->get_profile_view();
                 $outputfilter = new HtmlExportOutputFilter('../../', $this->exporter);
-                $smarty->assign('view', $outputfilter->filter($view->build_rows(false, true)));
-
+                if (!$view->uses_new_layout()) {
+                    $smarty->assign('view', $outputfilter->filter($view->build_rows(false, true)));
+                }
+                else {
+                    $smarty->assign('newlayout', true);
+                    $smarty->assign('blocks', $view->get_blocks(false, true));
+                }
                 $content = $smarty->fetch('export:html/internal:profilepage.tpl');
                 if (!file_put_contents($this->fileroot . 'profilepage.html', $content)) {
                     throw new SystemException("Unable to write profile page");
@@ -61,7 +66,7 @@ class HtmlExportInternal extends HtmlExportArtefactPlugin {
         // Export all profile fields except 'socialprofile'
         unset($elementlist['socialprofile']);
         $profilefields = get_column_sql('SELECT id FROM {artefact} WHERE "owner" = ? AND artefacttype IN ('
-            . join(",",array_map(create_function('$a','return db_quote($a);'), array_keys($elementlist)))
+            . join(",",array_map(function($a) { return db_quote($a); }, array_keys($elementlist)))
             . ")", array($this->exporter->get('user')->get('id')));
         foreach ($profilefields as $id) {
             $artefact = artefact_instance_from_id($id);
@@ -92,7 +97,7 @@ class HtmlExportInternal extends HtmlExportArtefactPlugin {
 
         // Sort the data and then drop the weighting information
         foreach ($sections as &$section) {
-            uasort($section, create_function('$a, $b', 'return $a["weight"] > $b["weight"];'));
+            uasort($section, function($a, $b) { return $a["weight"] > $b["weight"]; });
             foreach ($section as &$data) {
                 $data = $data['html'];
             }

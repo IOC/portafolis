@@ -124,6 +124,7 @@ function log_environ ($message, $escape=true, $backtrace=true) {
 function log_message ($message, $loglevel, $escape, $backtrace, $file=null, $line=null, $trace=null) {
     global $SESSION, $CFG;
     if (!$SESSION && function_exists('get_config') && $CFG) {
+        require_once(get_config('docroot') . 'auth/lib.php');
         require_once(get_config('docroot') . 'auth/session.php');
         $SESSION = Session::singleton();
     }
@@ -502,9 +503,8 @@ function error ($code, $message, $file, $line, $vars) {
     }
 
     // Ignore errors from smarty templates, which happen all too often
-    if (function_exists('get_config')) {
-        $compiledir = realpath(get_config('dataroot') . 'dwoo/compile');
-
+    if (function_exists('get_config') && function_exists('get_dwoo_dir')) {
+        $compiledir = realpath(get_dwoo_dir() . 'compile');
         if (E_NOTICE == $code && substr($file, 0, strlen($compiledir)) == $compiledir) {
             return;
         }

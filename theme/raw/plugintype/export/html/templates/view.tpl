@@ -1,5 +1,26 @@
 {include file="export:html:header.tpl"}
 
+{if $newlayout}
+<script>
+$(function () {
+    var options = {
+        verticalMargin: 5,
+        cellHeight: 10,
+        float: true,
+        ddPlugin: false,
+    };
+    var grid = $('.grid-stack');
+    grid.gridstack(options);
+    grid = $('.grid-stack').data('gridstack');
+
+    // should add the blocks one by one
+    var blocks = {json_encode arg=$blocks};
+    loadGrid(grid, blocks);
+    jQuery(document).trigger('blocksloaded');
+});
+</script>
+{/if}
+
 {if $collectionmenu}
 <div class="breadcrumbs collection">
    <ul>
@@ -13,8 +34,21 @@
 {/if}
 
 <p id="view-description">{$viewdescription|clean_html|safe}</p>
+{if $viewinstructions}
+    <div>{str tag='instructions' section='view'}</div>
+    <div class="viewinstruction-export">
+        {$viewinstructions|clean_html|safe}
+    </div>
+{/if}
 
-{$view|safe}
+{if $view}
+    {$view|safe}
+{else}
+    <div class="container-fluid">
+      <div class="grid-stack">
+      </div>
+    </div>
+{/if}
 
 {if $feedback && $feedback->count}
 <div class="viewfooter">

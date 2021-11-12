@@ -28,6 +28,7 @@ jQuery(function($) {
 
         $('body, .navbar-fixed-top').width('auto');
         $('body').removeClass('modal-open modal-open-docked');
+        $('.active-block').removeClass('active-block');
     };
 
     /*
@@ -45,21 +46,21 @@ jQuery(function($) {
         }
         else {
             // Open form here even though it's currently empty (its quicker)
-            newblock.find('.modal-title').html(get_string('loading'));
+            newblock.find('.modal-title').html('loading');
 
             if (replaceContent) {
                 contentArea.html(content);
             }
             else {
                 contentArea.append(content);
-                contentArea.find('.block-inner').addClass('hidden');
+                contentArea.find('.block-inner').addClass('d-none');
             }
         }
 
         // Prevent disappearing scroll bars from interfering with smooth animation
         $('body, .navbar-fixed-top').width($('body').width());
         $('body').addClass('modal-open modal-open-docked');
-        newblock.removeClass('hidden').removeClass('closed').addClass('active');
+        newblock.removeClass('d-none').removeClass('closed').addClass('active');
     };
 
     dock.getLoadingIndicator = function() {
@@ -74,7 +75,9 @@ jQuery(function($) {
             var targetID = $(this).attr('data-target'),
                 target = $(targetID);
 
-            dock.show(target, false, true);
+            if (!$(this).hasClass('no-modal')) {
+                dock.show(target, false, true);
+            }
         });
 
         scope.find('[data-dismiss="modal-docked"]').on('click', function(e){
@@ -83,7 +86,9 @@ jQuery(function($) {
         });
 
         scope.find('.submitcancel').on('click', function(){
-            dock.hide();
+            if (!$('#configureblock').hasClass('active')) {
+                dock.hide();
+            }
         });
     };
 

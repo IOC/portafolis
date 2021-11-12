@@ -1,4 +1,4 @@
-<div class="panel-body flush">
+<div class="card-body flush">
     {$text|clean_html|safe}
 
     {if $artefact->get('tags')}
@@ -10,14 +10,14 @@
 
 {if $attachments}
 {* @TODO: this could probably be a reusable template *}
-<div class="has-attachment panel panel-default collapsible">
-    <h4 class="panel-heading">
+<div class="has-attachment card collapsible">
+    <h4 class="card-header">
         <a class="text-left collapsed" aria-expanded="false" href="#note-attach-{$blockid}" data-toggle="collapse">
             <span class="icon icon-paperclip left" role="presentation" aria-hidden="true"></span>
 
             <span class="text-small">{str tag=attachedfiles section=artefact.blog}</span>
             <span class="metadata">({$count})</span>
-            <span class="icon icon-chevron-down pull-right collapse-indicator" role="presentation" aria-hidden="true"></span>
+            <span class="icon icon-chevron-down float-right collapse-indicator" role="presentation" aria-hidden="true"></span>
         </a>
     </h4>
     {* Attachment list with view and download link *}
@@ -37,19 +37,21 @@
                 {/if}
 
                 <span class="title list-group-item-heading text-inline">
-                    <a href="{$item->viewpath}" class="inner-link">
+                    {if !$editing}
+                    <a class="modal_link inner-link" data-toggle="modal-docked" data-target="#configureblock" href="#" data-blockid="{$blockid}" data-artefactid="{$item->id}">
                         {$item->title}
                     </a>
+                    {else}
+                    <span class="inner-link">{$item->title}</span>
+                    {/if}
                     <span class="metadata"> -
                         [{$item->size|display_size}]
                     </span>
                 </span>
-                <span class="icon icon-download icon-lg pull-right text-watermark icon-action" role="presentation" aria-hidden="true"></span>
+                <span class="icon icon-download icon-lg float-right text-watermark icon-action" role="presentation" aria-hidden="true"></span>
             </li>
             {/foreach}
         </ul>
     </div>
 </div>
 {/if}
-
-{$comments|safe}

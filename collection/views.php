@@ -57,7 +57,8 @@ $groupid = $collection->get('group');
 $institutionname = $collection->get('institution');
 $urlparams = array();
 if (!empty($groupid)) {
-    define('MENUITEM', 'groups/views');
+    define('MENUITEM', 'engage/index');
+    define('MENUITEM_SUBPAGE', 'views');
     define('GROUP', $groupid);
     $group = group_current_group();
     define('TITLE', $group->name . ' - ' . get_string('editviews', 'collection'));
@@ -79,7 +80,7 @@ else if (!empty($institutionname)) {
     $urlparams['institution'] = $institutionname;
 }
 else {
-    define('MENUITEM', 'myportfolio/views');
+    define('MENUITEM', 'create/views');
     define('TITLE', get_string('editviews', 'collection'));
     $baseurl = get_config('wwwroot') . 'view/index.php';
 }
@@ -104,7 +105,7 @@ if ($views) {
     foreach ($views['views'] as &$v) {
         $v->remove = pieform(array(
             'renderer' => 'div',
-            'class' => 'form-as-button pull-right',
+            'class' => 'form-as-button float-right',
             'name' => 'removeview_' . $v->view,
             'successcallback' => 'removeview_submit',
             'elements' => array(
@@ -145,7 +146,7 @@ if ($available = Collection::available_views($owner, $groupid, $institutionname)
     );
 
     $elements['submit'] = array(
-        'class' => 'btn-primary pull-right add-pages',
+        'class' => 'btn-primary float-right add-pages',
         'type' => 'button',
         'usebuttontag' => true,
         'value' => '<span class="icon icon-arrow-right left" role="presentation" aria-hidden="true"></span>' . get_string('addviews','collection'),

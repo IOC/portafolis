@@ -5,13 +5,13 @@
     {$topic->subscribe|safe}
     {/if}
     {if $topic->canedit}
-    <a href="{$WWWROOT}interaction/forum/edittopic.php?id={$topic->id}" class="btn btn-default editforum">
-        <span class="icon icon-pencil icon-lg left" role="presentation" aria-hidden="true"></span>
+    <a href="{$WWWROOT}interaction/forum/edittopic.php?id={$topic->id}" class="btn btn-secondary editforum">
+        <span class="icon icon-pencil-alt icon-lg left" role="presentation" aria-hidden="true"></span>
         {str tag=edittopic section=interaction.forum}
     </a>
     {if $moderator}
-    <a href="{$WWWROOT}interaction/forum/deletetopic.php?id={$topic->id}" class="btn btn-default deletetopic">
-        <span class="icon icon-trash icon-lg left text-danger" role="presentation" aria-hidden="true"></span>
+    <a href="{$WWWROOT}interaction/forum/deletetopic.php?id={$topic->id}" class="btn btn-secondary deletetopic">
+        <span class="icon icon-trash-alt icon-lg left text-danger" role="presentation" aria-hidden="true"></span>
         {str tag=deletetopic section=interaction.forum}
     </a>
     {/if}

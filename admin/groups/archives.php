@@ -48,7 +48,7 @@ else {
 list($html, $columns, $pagination, $search) = build_admin_archived_submissions_results($search, $offset, $limit);
 
 $js = <<<EOF
-jQuery(document).ready(function() {
+jQuery(function() {
     var p = {$pagination['javascript']}
 
     new UserSearch(p);
@@ -56,10 +56,10 @@ jQuery(document).ready(function() {
 EOF;
 
 $smarty = smarty(array('adminusersearch', 'adminexportqueue','paginator'), array(), array('ascending' => 'mahara', 'descending' => 'mahara'));
-setpageicon($smarty, 'icon-users');
+setpageicon($smarty, 'icon-archive');
 $smarty->assign('search', $search);
 $smarty->assign('limit', $limit);
-$smarty->assign('institutions', $institutions);
+$smarty->assign('institutions', !empty($institutions) ? $institutions : array());
 $smarty->assign('results', $html);
 $smarty->assign('pagination', $pagination['html']);
 $smarty->assign('columns', $columns);

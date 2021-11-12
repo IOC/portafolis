@@ -10,7 +10,7 @@
  */
 
 define('INTERNAL', true);
-define('MENUITEM', 'content/resume');
+define('MENUITEM', 'create/resume');
 define('SECTION_PLUGINTYPE', 'artefact');
 define('SECTION_PLUGINNAME', 'resume');
 
@@ -34,7 +34,7 @@ $a = artefact_instance_from_id($artefact);
 $type = $a->get('artefacttype');
 
 $tabs = PluginArtefactResume::composite_tabs();
-define('RESUME_SUBPAGE', $tabs[$type]);
+define('MENUITEM_SUBPAGE', $tabs[$type]);
 define('SUBSECTIONHEADING', get_string($type, 'artefact.resume'));
 
 if ($a->get('owner') != $USER->get('id')) {
@@ -108,6 +108,14 @@ function editcomposite_callback(form, data) {
         formError(form, data);
     }
 };
+$(function($) {
+    $('#page-modal').on('hidden.bs.modal', function (e) {
+        // check if the upload file modal is still visible and if so put the body class back to allow scrolling
+        if ($('#editcomposite_filebrowser_upload_browse').hasClass('show')) {
+            $('body').addClass('modal-open');
+        }
+    });
+});
 EOF;
 
 $smarty = smarty(array('js/switchbox.js'));

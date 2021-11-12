@@ -10,7 +10,8 @@
  */
 
 define('INTERNAL', 1);
-define('MENUITEM', 'groups/groupsiown');
+define('MENUITEM', 'engage/index');
+define('MENUITEM_SUBPAGE', 'info');
 require(dirname(dirname(__FILE__)) . '/init.php');
 require_once('group.php');
 require_once(get_config('libroot') . 'antispam.php');
@@ -22,7 +23,7 @@ if ($id = param_integer('id', null)) {
 
     if (!group_user_can_configure($id)) {
         $SESSION->add_error_msg(get_string('canteditdontown', 'group'));
-        redirect('/group/mygroups.php');
+        redirect('/group/index.php');
     }
 
     $group_data = group_get_groups_for_editing(array($id));
@@ -42,7 +43,7 @@ else {
     define('CREATEGROUP', true);
 
     if (!group_can_create_groups()) {
-        throw new AccessDeniedException(get_string('accessdenied', 'error'));
+        throw new AccessDeniedException();
     }
 
     $group_data = (object) array(
@@ -101,7 +102,7 @@ $form = array(
         'description' => array(
             'type'         => 'wysiwyg',
             'title'        => get_string('groupdescription', 'group'),
-            'rules'        => array('maxlength' => 65536),
+            'rules'        => array('maxlength' => 1000000),
             'rows'         => 10,
             'cols'         => 55,
             'defaultvalue' => $group_data->description,
@@ -127,7 +128,7 @@ $form = array(
             'type'         => 'submitcancel',
             'class'        => 'btn-primary',
             'value'        => array(get_string('savegroup', 'group'), get_string('cancel')),
-            'goto'         => get_config('wwwroot') . 'group/mygroups.php',
+            'goto'         => get_config('wwwroot') . 'group/index.php',
         ),
     ),
 );
@@ -230,7 +231,7 @@ $elements['editroles'] = array(
     'type'         => 'select',
     'options'      => group_get_editroles_options(),
     'title'        => get_string('editroles1', 'group'),
-    'description'  => get_string('editrolesdescription1', 'group'),
+    'description'  => get_string('editrolesdescription2', 'group'),
     'defaultvalue' => $group_data->editroles,
     'help'         => true,
 );
@@ -262,8 +263,7 @@ else {
     );
 }
 
-$publicallowed = get_config('createpublicgroups') == 'all' || (get_config('createpublicgroups') == 'admins' && $USER->get('admin'));
-$publicallowed = $publicallowed && !is_probationary_user();
+$publicallowed = group_can_create_public_groups() && !is_probationary_user();
 
 if (!$id && !param_exists('pieform_editgroup')) {
     // If a 'public=0' parameter is passed on the first page load, hide the
@@ -294,7 +294,7 @@ if ($cancreatecontrolled) {
     $elements['hidden'] = array(
         'type'         => 'switchbox',
         'title'        => get_string('hiddengroup', 'group'),
-        'description'  => get_string('hiddengroupdescription1', 'group'),
+        'description'  => get_string('hiddengroupdescription2', 'group'),
         'defaultvalue' => $group_data->hidden,
     );
     $elements['hidemembers'] = array(
@@ -304,7 +304,6 @@ if ($cancreatecontrolled) {
         'description'  => get_string('hidemembersdescription', 'group'),
         'defaultvalue' => ($group_data->hidemembersfrommembers ? $group_data->hidemembersfrommembers : ($group_data->hidemembers ? $group_data->hidemembers : 0)),
         'disabled'     => $group_data->hidemembersfrommembers,
-        'help'         => true,
     );
     $elements['hidemembersfrommembers'] = array(
         'type'         => 'select',
@@ -348,7 +347,7 @@ $elements['editwindowstart'] = array (
     'class'        => '',
     'title'        => get_string('windowstart', 'group'),
     'defaultvalue' => $group_data->editwindowstart,
-    'description'  => get_string('windowstartdesc', 'group'),
+    'description'  => get_string('windowstartdescription', 'group'),
     'minyear'      => $currentdate['year'],
     'maxyear'      => $currentdate['year'] + 20,
     'time'         => true,
@@ -359,7 +358,7 @@ $elements['editwindowend'] = array (
     'class'        => '',
     'title'        => get_string('windowend', 'group'),
     'defaultvalue' => $group_data->editwindowend,
-    'description'  => get_string('windowenddesc', 'group'),
+    'description'  => get_string('windowenddescription', 'group'),
     'minyear'      => $currentdate['year'],
     'maxyear'      => $currentdate['year'] + 20,
     'time'         => true
@@ -492,7 +491,7 @@ function editgroup_validate(Pieform $form, $values) {
 }
 
 function editgroup_cancel_submit() {
-    redirect('/group/mygroups.php');
+    redirect('/group/index.php');
 }
 
 function editgroup_submit(Pieform $form, $values) {
@@ -529,6 +528,19 @@ function editgroup_submit(Pieform $form, $values) {
         'sendnow'        => intval($values['sendnow']),
         'feedbacknotify'     => intval($values['feedbacknotify']),
     );
+
+    // Check to see if the group's forum is being used as a landing page url and if the changes affect it
+    if ($group_data->id && get_config('homepageredirect') && !empty(get_config('homepageredirecturl'))) {
+        $landing = translate_landingpage_to_tags(array(get_config('homepageredirecturl')));
+        foreach ($landing as $land) {
+            $forumgroup = get_field('interaction_instance', 'group', 'id', $land->typeid);
+            if ($land->type == 'forum' && !empty($forumgroup) && $forumgroup == $group_data->id && empty($newvalues['public'])) {
+                set_config('homepageredirecturl', null);
+                notify_landing_removed($land);
+                $SESSION->add_error_msg(get_string('landingpagegone', 'admin', $land->text));
+            }
+        }
+    }
 
     // Only admins can only update shortname.
     if (isset($values['shortname']) && $USER->can_edit_group_shortname($group_data)) {
@@ -570,56 +582,56 @@ function editgroup_submit(Pieform $form, $values) {
 
 $js = '
 jQuery(function($) {
-    $("#editgroup_controlled").click(function() {
+    $("#editgroup_controlled").on("click", function() {
         if (this.checked) {
-            $("#editgroup_request").removeAttr("disabled");
-            $("#editgroup_open").removeAttr("checked");
+            $("#editgroup_request").prop("disabled", false);
+            $("#editgroup_open").prop("checked", false);
             if (!$("#editgroup_request").attr("checked")) {
-                $("#editgroup_suggestfriends").removeAttr("checked");
-                $("#editgroup_suggestfriends").attr("disabled", true);
+                $("#editgroup_suggestfriends").prop("checked", false);
+                $("#editgroup_suggestfriends").prop("disabled", true);
             }
         }
     });
-    $("#editgroup_open").click(function() {
+    $("#editgroup_open").on("click", function() {
         if (this.checked) {
-            $("#editgroup_controlled").removeAttr("checked");
-            $("#editgroup_request").removeAttr("checked");
-            $("#editgroup_request").attr("disabled", true);
-            $("#editgroup_suggestfriends").removeAttr("disabled");
+            $("#editgroup_controlled").prop("checked", false);
+            $("#editgroup_request").prop("checked", false);
+            $("#editgroup_request").prop("disabled", true);
+            $("#editgroup_suggestfriends").prop("disabled", false);
         }
         else {
-            $("#editgroup_request").removeAttr("disabled");
+            $("#editgroup_request").prop("disabled", false);
             if (!$("#editgroup_request").attr("checked")) {
-                $("#editgroup_suggestfriends").removeAttr("checked");
-                $("#editgroup_suggestfriends").attr("disabled", true);
+                $("#editgroup_suggestfriends").prop("checked", false);
+                $("#editgroup_suggestfriends").prop("disabled", true);
             }
         }
     });
-    $("#editgroup_request").click(function() {
+    $("#editgroup_request").on("click", function() {
         if (this.checked) {
-            $("#editgroup_suggestfriends").removeAttr("disabled");
+            $("#editgroup_suggestfriends").prop("disabled", false);
         }
         else {
             if (!$("#editgroup_open").attr("checked")) {
-                $("#editgroup_suggestfriends").removeAttr("checked");
-                $("#editgroup_suggestfriends").attr("disabled", true);
+                $("#editgroup_suggestfriends").prop("checked", false);
+                $("#editgroup_suggestfriends").prop("disabled", true);
             }
         }
     });
-    $("#editgroup_invitefriends").click(function() {
+    $("#editgroup_invitefriends").on("click", function() {
         if (this.checked) {
             if ($("#editgroup_request").attr("checked") || $("#editgroup_open").attr("checked")) {
-                $("#editgroup_suggestfriends").removeAttr("disabled");
+                $("#editgroup_suggestfriends").prop("disabled", false);
             }
-            $("#editgroup_suggestfriends").removeAttr("checked");
+            $("#editgroup_suggestfriends").prop("checked", false);
         }
     });
-    $("#editgroup_suggestfriends").click(function() {
+    $("#editgroup_suggestfriends").on("click", function() {
         if (this.checked) {
-            $("#editgroup_invitefriends").removeAttr("checked");
+            $("#editgroup_invitefriends").prop("checked", false);
         }
     });
-    $("#editgroup_hidemembersfrommembers").change(function() {
+    $("#editgroup_hidemembersfrommembers").on("change", function() {
         if ($("#editgroup_hidemembersfrommembers option:selected").val() != "0") {
             $("#editgroup_hidemembers").prop("selectedIndex", $("#editgroup_hidemembersfrommembers option:selected").val());
             $("#editgroup_hidemembers").prop("disabled", "disabled");
@@ -628,13 +640,13 @@ jQuery(function($) {
             $("#editgroup_hidemembers").prop("disabled", false);
         }
     });
-    $("#editgroup_submittableto").click(function() {
+    $("#editgroup_submittableto").on("click", function() {
         if (this.checked) {
-            $("#editgroup_allowarchives").attr("disabled", false);
+            $("#editgroup_allowarchives").prop("disabled", false);
         }
         else {
-            $("#editgroup_allowarchives").removeAttr("checked");
-            $("#editgroup_allowarchives").attr("disabled", true);
+            $("#editgroup_allowarchives").prop("checked", false);
+            $("#editgroup_allowarchives").prop("disabled", true);
         }
     });
 });

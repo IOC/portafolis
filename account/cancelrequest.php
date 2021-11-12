@@ -16,7 +16,7 @@ require(dirname(dirname(__FILE__)) . '/init.php');
 define('TITLE', get_string('deleteaccountuser', 'account', display_name($USER, null, false, false, true)));
 
 if (!$USER->can_delete_self()) {
-    throw new AccessDeniedException(get_string('accessdenied', 'error'));
+    throw new AccessDeniedException();
 }
 
 $cancelrequestform = pieform(array(
@@ -30,7 +30,7 @@ $cancelrequestform = pieform(array(
         ),
         'submit' => array(
             'type' => 'submitcancel',
-            'class' => 'btn-default',
+            'class' => 'btn-secondary',
             'value' => array(get_string('yes'), get_string('no')),
             'goto' => get_config('wwwroot') . "account/index.php",
         ),

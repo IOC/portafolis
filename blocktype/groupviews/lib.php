@@ -31,6 +31,10 @@ class PluginBlocktypeGroupViews extends MaharaCoreBlocktype {
         return true;
     }
 
+    public static function single_artefact_per_block() {
+        return false;
+    }
+
     public static function get_categories() {
         return array('general' => 18000);
     }
@@ -79,7 +83,7 @@ class PluginBlocktypeGroupViews extends MaharaCoreBlocktype {
         }
     }
 
-    public static function render_instance(BlockInstance $instance, $editing=false) {
+    public static function render_instance(BlockInstance $instance, $editing=false, $versioning=false) {
         global $USER;
 
         $configdata = $instance->get('configdata');
@@ -319,8 +323,12 @@ class PluginBlocktypeGroupViews extends MaharaCoreBlocktype {
                                                     null, $limit, 0, true, $sort, null, false, null, null,
                                                     null, null, true);
             foreach ($data['groupviews']->data as &$view) {
+                if (empty($view['displaytitle'])) {
+                    $view['displaytitle'] = $view['title']; // add for collections
+                }
                 if (!$editing && isset($view['template']) && $view['template']) {
-                    $view['form'] = pieform(create_view_form(null, null, $view['id']));
+                    $collid = !empty($view['collid']) ? $view['collid'] : null;
+                    $view['form'] = pieform(create_view_form(null, null, $view['viewid'], $collid, $collid));
                 }
             }
 

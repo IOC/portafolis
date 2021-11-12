@@ -46,8 +46,10 @@ function pieform_element_viewacl(Pieform $form, $element) {
         $allowedpresets[] = 'public';
         $loggedinindex = 1;
     }
-    $allowedpresets[] = 'loggedin';
-    if ($form->get_property('userview')) {
+    if (!is_isolated()) {
+        $allowedpresets[] = 'loggedin';
+    }
+    if ($form->get_property('userview') && !get_config('friendsnotallowed')) {
         $allowedpresets[] = 'friends';
     }
 
@@ -55,7 +57,7 @@ function pieform_element_viewacl(Pieform $form, $element) {
     $lockedpreset = null;
     if ($value) {
         foreach ($value as $item) {
-            if (is_array($item)) {
+            if (is_array($item) && !empty($item['type'])) {
                 if ($item['type'] == 'public') {
                     $item['publicallowed'] = (int)$public;
                 }
@@ -80,6 +82,9 @@ function pieform_element_viewacl(Pieform $form, $element) {
                         $item[$datetype] = Pieform::hsc(strftime($datetimeformat, $item[$datetype]));
                     }
                 }
+                if ($item['type'] == 'group') {
+                    $item['grouptype'] = get_field('group', 'grouptype', 'id', $item['id']);
+                }
 
                 // only show access that is still current. Expired access will be deleted if the form is saved
                 if ($form->is_submitted() || !$rawstopdate || (time() <= $rawstopdate)) {
@@ -94,12 +99,12 @@ function pieform_element_viewacl(Pieform $form, $element) {
 
     $defaultaccesslist = ($accesslist) ? 0 : 1;
     $myinstitutions = array();
-    if ($USER->get('admin')) {
+    $viewid = $form->get_property('viewid');
+    $view = new View($viewid);
+    if ($USER->get('admin') && $view->get('institution')) {
         $institutions = array();
         // Allow site admins to choose to share with the institution
         // that the first selected view/collection belongs to
-        $viewid = $form->get_property('viewid');
-        $view = new View($viewid);
         $institution = $view->get('institution');
         if ($institution) {
             $institutions = array(
@@ -203,6 +208,9 @@ function pieform_element_viewacl(Pieform $form, $element) {
         }
     }
 
+    $userroles = View::get_user_access_roles();
+    $grouproles = get_group_access_roles();
+
     $smarty->assign('datepickeroptions', $datepickeroptionstr);
     $smarty->assign('datepickertooltips', json_encode($tooltips));
     $smarty->assign('viewtype', $element['viewtype']);
@@ -217,6 +225,8 @@ function pieform_element_viewacl(Pieform $form, $element) {
     $smarty->assign('allgroups', json_encode($allgroups));
     $smarty->assign('mygroups', json_encode($mygroups));
     $smarty->assign('faves', json_encode($faves));
+    $smarty->assign('userroles', json_encode($userroles));
+    $smarty->assign('grouproles', json_encode($grouproles));
     return $smarty->fetch('form/viewacl.tpl');
 }
 

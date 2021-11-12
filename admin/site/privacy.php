@@ -66,7 +66,7 @@ if ($versionid) {
                     'title'       => get_string('pagetext', 'admin'),
                     'defaultvalue' => $pageoptions->content,
                     'rules'       => array(
-                        'maxlength' => 65536,
+                        'maxlength' => 1000000,
                         'required' => true
                     )
                 ),
@@ -94,7 +94,7 @@ function editsitepage_validate(Pieform $form, $values) {
 function editsitepage_submit(Pieform $form, $values) {
     global $USER, $SESSION;
 
-    $data = new StdClass;
+    $data = new stdClass();
     $data->content = $values['pagetext'];
     $data->author = $USER->get('id');
     $data->institution = $values['pageinstitution'];
@@ -129,7 +129,7 @@ function editsitepage_submit(Pieform $form, $values) {
 
 // JQuery logic for tab hide/show and to keep the same tab active on page refresh.
 $js = <<< EOF
-$(document).ready(function() {
+$(function() {
     checkActiveTab('$selectedtab');
 })
 EOF;
@@ -143,7 +143,7 @@ if ($versionid && $pageoptions) {
 else {
     $smarty = smarty(array('privacy'));
 }
-setpageicon($smarty, 'icon-umbrella');
+setpageicon($smarty, 'icon-gavel');
 $smarty->assign('INLINEJAVASCRIPT', $js);
 $smarty->assign('results', $data);
 $smarty->assign('selectedtab', $selectedtab);

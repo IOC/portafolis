@@ -3,16 +3,16 @@
 </a>
 {/if}
 
-    <div class="media forum-post">
+    <div class="media forum-post {if !$post->approved} alert-warning {/if}">
         <div class="forumpostleft media-left text-small">
             {if $deleteduser}
-                <img src="{profile_icon_url user=null maxwidth=40 maxheight=40}" valign="middle" alt="{str tag=profileimagetextanonymous}" class="media-object">
+                <span class="user-icon user-icon-40"><img src="{profile_icon_url user=null maxwidth=40 maxheight=40}" valign="middle" alt="{str tag=profileimagetextanonymous}" class="media-object"></span>
 
                 <div class="poster">
                     <span>{$poster|full_name}</span>
                 </div>
             {else}
-                <img src="{profile_icon_url user=$post->poster maxwidth=40 maxheight=40}" alt="{str tag=profileimagetext arg1=$post->poster|display_default_name}" class="media-object">
+                <span class="user-icon user-icon-40"><img src="{profile_icon_url user=$post->poster maxwidth=40 maxheight=40}" alt="{str tag=profileimagetext arg1=$post->poster|display_default_name}" class="media-object"></span>
 
                 <div class="poster">
                     <a href="{profile_url($post->poster)}"{if in_array($post->poster, $groupadmins)} class="groupadmin"{elseif $post->moderator} class="moderator"{/if}>{$post->poster|display_name}
@@ -46,7 +46,28 @@
             </p>
 
             {$post->body|clean_html|safe}
-
+            {if $post->attachments}
+            <div class="postattachments">
+                <h5 class="title">
+                    <span class="icon left icon-paperclip" role="presentation" aria-hidden="true"></span>
+                    {str tag="attachedfiles" section="artefact.blog"}
+                </h5>
+                <ul class="list-group list-group-unbordered">
+                    {foreach from=$post->attachments item=file}
+                    <li class="list-group-item list-group-item-link small">
+                        <a href="{$WWWROOT}artefact/file/download.php?file={$file->fileid}&post={$file->post}" {if $file->fileid} title="{$file->description}" data-toggle="tooltip"{/if}>
+                        {if $file->icon}
+                            <img src="{$file->icon}" alt="" class="file-icon">
+                        {else}
+                            <span class="icon icon-{$file->artefacttype} icon-lg text-default left" role="presentation" aria-hidden="true"></span>
+                        {/if}
+                        <span>{$file->title|truncate:40} - ({$file->size|display_size})</span>
+                        </a>
+                    </li>
+                    {/foreach}
+                </ul>
+            </div>
+            {/if}
             {if $post->edit}
             <div class="editstopost">
                 <h5 class="title">
@@ -71,10 +92,10 @@
                     <span class="posttime text-muted">
                         {$edit.edittime}
                     </span>
-                </li>
-                {/foreach}
-            </ul>
+                    </li>
+                    {/foreach}
+                </ul>
+            </div>
+            {/if}
         </div>
-        {/if}
     </div>
-</div>

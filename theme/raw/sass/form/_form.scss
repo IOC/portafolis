@@ -11,6 +11,7 @@ input[type=text],
 input[type=password],
 textarea,
 select {
+    @extend .form-control;
     .modal & {
         width: auto;
         max-width: 100%;
@@ -29,7 +30,8 @@ select {
 
 label,
 .pseudolabel {
-    @extend .control-label;
+    // .col-form-label is adding too much padding to <label> commenting out
+    // @extend .col-form-label;
     max-width: 100%;
     padding-right: 10px;
     font-weight: normal;
@@ -62,7 +64,7 @@ label,
         min-width: 0;
     }
 
-    @media (min-width: $screen-sm-min) {
+    @include media-breakpoint-up(md) {
         min-width: 265px;
     }
 
@@ -83,7 +85,7 @@ label,
 
 .stacked-label {
     display: inline-block;
-    @media (min-width: $screen-sm-min) {
+    @include media-breakpoint-up(md) {
         width:200px;
     }
 }
@@ -96,7 +98,7 @@ label,
     }
 }
 
-.as-panel form {
+.as-card form {
     margin-top:0;
 }
 
@@ -104,14 +106,59 @@ label,
     margin:0;
 }
 
-.wysiwyg label,
-.textarea label {
-    vertical-align: top;
+.wysiwyg {
+    label {
+        display: block;
+        vertical-align: top;
+        + .tox-tinymce {
+            width:100%;
+        }
+    }
+    &.view-description {
+        width: 70%;
+    }
+    &.under-label-help {
+        label + .tox-tinymce {
+            width:70%;
+        }
+    }
 }
-.radio label,
-.checkbox label {
-    margin-top: 0;
+
+// BS3 code - begin
+.radio,
+.checkbox {
+  position: relative;
+  display: block;
+  margin-top: 10px;
+  input.checkboxes,
+  input.radio {
+      z-index: 3;
+  }
+
+  label {
+    min-height: $line-height-computed; // Ensure the input doesn't jump when there is no text
+    padding-left: 20px;
+    margin-bottom: 0;
+    font-weight: normal;
+    cursor: pointer;
+  }
 }
+
+.radio input[type="radio"],
+.radio-inline input[type="radio"],
+.checkbox input[type="checkbox"],
+.checkbox-inline input[type="checkbox"] {
+  position: absolute;
+  margin-left: -20px;
+  margin-top: 4px \9;
+}
+
+input[type="radio"],
+input[type="checkbox"] {
+  margin: 4px 0 0;
+  line-height: normal;
+}
+// BS3 code - end
 
 .radio-aligned {
     display: inline-block;
@@ -128,9 +175,24 @@ label,
 .align-with-input {
     display: inline-block;
     margin-left: 0;
-    @media (min-width: $screen-sm-min) {
+    @include media-breakpoint-up(md) {
         margin-left: 265px;
     }
+    &.file {
+        margin-top: -30px;
+    }
+    .option-alt & {
+        margin: 0;
+        display: block;
+    }
+}
+
+.align-with-input-desc {
+    display: inline-block;
+    margin-left: 0;
+}
+.form-group.file label {
+    vertical-align: top;
 }
 
 textarea {
@@ -145,13 +207,29 @@ textarea.resizable {
     position: relative;
     label {
         display: block;
+        &.inline-label {
+            display: inline-block;
+        }
     }
     .form-group {
         padding: 0;
-        border-bottom: 0px none;
+        border-bottom: 0 none;
+        align-items: flex-start;
+        display: inline-block;
+
+        input.checkbox {
+            width: auto;
+            margin-top: -6px;
+        }
+    }
+    @include media-breakpoint-down(md) {
+        > .form-group {
+            width: 100%;
+        }
     }
     &.form-inline-align-bottom .form-group{
         vertical-align: bottom;
+        align-self: flex-end;
     }
     &.form-short {
         select, input:not(.submit) {
@@ -165,6 +243,7 @@ textarea.resizable {
 
 .form-inline-align-bottom a {
     vertical-align: bottom;
+    align-self: flex-end;
 }
 
 .form-control.file {
@@ -191,22 +270,23 @@ textarea.resizable {
     padding-right: 20px;
 }
 .hasDatepickerwrapper:after {
-    font-family: "FontAwesome";
-    font-size: 16px;
-    content: "\f073";
-    color: lighten($text-color, 20%);
+    @include fonttype(regular);
+    content: fa-content($fa-var-calendar-alt);
+    font-size: 18px;
+    color: scale-color($theme-text-color, $lightness: 25%);
     position:relative;
-    right: 20px;
+    right: 25px;
+    pointer-events: none;
+    cursor: text;
 }
 .hasDatepickerwrapperacl:after {
-    font-family: "FontAwesome";
-    font-size: 16px;
-    content: "\f073";
-    color: lighten($text-color, 20%);
+    @include fonttype(regular);
+    content: fa-content($fa-var-calendar-alt);
+    color: scale-color($theme-text-color, $lightness: 25%);
     right: 10px;
     position: absolute;
     font-size: 16px;
-    top: 3px;
+    top: 5px;
 }
 .date-picker {
     position: relative;
@@ -222,4 +302,17 @@ textarea.resizable {
             opacity: 0.5;
         }
     }
+}
+
+.progress {
+    background: repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 10px, #eeeeee 10px, #eeeeee 20px);
+    .progress-bar.small-progress {
+        span {
+            color: #666666;
+        }
+    }
+}
+
+input:disabled[type="text"] {
+    color: $black;
 }

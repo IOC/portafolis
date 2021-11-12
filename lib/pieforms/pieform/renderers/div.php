@@ -80,6 +80,11 @@ function pieform_renderer_div(Pieform $form, $element) {/*{{{*/
             $element['class'] = $element['class'] . ' has-error';
         }
 
+        // add bootstrap has-error class to any error fields
+        if (strpos($element['class'], 'oneof') !== false) {
+            $element['class'] = $element['class'] . ' has-oneof';
+        }
+
         $prefix .= ' class="' . Pieform::hsc($element['class']) . '"';
 
         $prefix .= '>';
@@ -89,6 +94,10 @@ function pieform_renderer_div(Pieform $form, $element) {/*{{{*/
 
     if (isset($element['labelhtml'])) {
         $inner .= $element['labelhtml'];
+    }
+
+    if (isset($element['helphtml']) && $element['help'] === 'top') {
+        $inner .= ' ' . $element['helphtml'];
     }
 
     if (isset($element['prehtml'])) {
@@ -103,7 +112,7 @@ function pieform_renderer_div(Pieform $form, $element) {/*{{{*/
         $inner .= '<span class="posthtml">' . $element['posthtml'] . '</span>';
     }
 
-    if (isset($element['helphtml'])) {
+    if (isset($element['helphtml']) && $element['help'] !== 'top') {
         $inner .= ' ' . $element['helphtml'];
     }
 

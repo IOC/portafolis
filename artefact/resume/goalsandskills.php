@@ -9,11 +9,11 @@
  */
 
 define('INTERNAL', 1);
-define('MENUITEM', 'content/resume');
+define('MENUITEM', 'create/resume');
 define('SECTION_PLUGINTYPE', 'artefact');
 define('SECTION_PLUGINNAME', 'resume');
 define('SECTION_PAGE', 'index');
-define('RESUME_SUBPAGE', 'goalsandskills');
+define('MENUITEM_SUBPAGE', 'goalsandskills');
 
 require_once(dirname(dirname(dirname(__FILE__))) . '/init.php');
 define('TITLE', get_string('resume', 'artefact.resume'));
@@ -29,17 +29,18 @@ $skills = ArtefactTypeResumeGoalAndSkill::get_goals_and_skills('skills');
 
 $js = '
 jQuery(function($) {
-    $("a.goaltitle").click(function(e) {
+    $("a.goaltitle").on("click", function(e) {
         e.preventDefault();
-        $j("#" + this.id + "_desc").toggleClass("hidden");
+        $j("#" + this.id + "_desc").toggleClass("d-none");
     });
-    $("a.skilltitle").click(function(e) {
+    $("a.skilltitle").on("click", function(e) {
         e.preventDefault();
-        $("#" + this.id + "_desc").toggleClass("hidden");
+        $("#" + this.id + "_desc").toggleClass("d-none");
     });
 });';
 
 $smarty = smarty(array('tablerenderer'));
+setpageicon($smarty, 'icon-regular icon-address-book');
 $smarty->assign('goals', $goals);
 $smarty->assign('skills', $skills);
 $smarty->assign('INLINEJAVASCRIPT', $js);

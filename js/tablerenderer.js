@@ -94,7 +94,13 @@ return function (target, source, columns, options) {
                       tr.append($('<td>').append(row[column]));
                     }
                     else if ( typeof(column) == 'function' ) {
-                      tr.append($('<td>').append(column(row,data)));
+                        var columncontent = column(row,data);
+                        if (columncontent.nodeName == 'TD') {
+                            tr.append(columncontent);
+                        }
+                        else {
+                            tr.append($('<td>').append(columncontent));
+                        }
                     }
                     else if ( typeof(column) == 'undefined' ) {
                         return;
@@ -107,7 +113,7 @@ return function (target, source, columns, options) {
                 self.tbody.append(tr);
                 if (options && row.id == options.focusid && self.options.focusElement) {
                     if (tr.find(self.options.focusElement).length) {
-                        tr.find(self.options.focusElement).focus();
+                        tr.find(self.options.focusElement).trigger("focus");
                     }
                 }
             });
@@ -146,12 +152,12 @@ return function (target, source, columns, options) {
                 }
 
                 if (self.count > 0) {
-                    self.emptycontent.addClass('hidden');
+                    self.emptycontent.addClass('d-none');
                     self.table.css('display', '');
                 }
                 else {
                     self.table.css('display', 'none');
-                    self.emptycontent.removeClass('hidden');
+                    self.emptycontent.removeClass('d-none');
                 }
             }
 
@@ -162,7 +168,7 @@ return function (target, source, columns, options) {
 
             self.renderdata(response, options);
 
-            self.table.removeClass('hidden');
+            self.table.removeClass('d-none');
 
             try {
                 self.postupdatecallback(response);
@@ -180,7 +186,7 @@ return function (target, source, columns, options) {
             self.doupdate();
         }
         else {
-            $(document).ready(self.doupdate.bind(null, request_args, null));
+            $(self.doupdate.bind(null, request_args, null));
         }
     };
 
@@ -188,7 +194,7 @@ return function (target, source, columns, options) {
         this.init();
     }
     else {
-        $(document).ready(this.init);
+        $(this.init);
     }
 };
 }(jQuery));

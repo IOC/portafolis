@@ -12,9 +12,6 @@
 defined('INTERNAL') || die();
 require_once(get_config('docroot') . 'auth/internal/lib.php');
 
-$path = get_config('docroot') . 'webservice/libs/zend';
-set_include_path($path . PATH_SEPARATOR . get_include_path());
-
 require_once(get_config('docroot') . '/webservice/lib.php');
 require_once(get_config('docroot') . 'api/xmlrpc/lib.php');
 
@@ -114,7 +111,7 @@ class PluginAuthWebservice extends PluginAuth {
                 'url'    => 'webservice/admin/index.php',
                 'title'  => get_string('webservice', 'auth.webservice'),
                 'weight' => 75,
-                'accesskey' => 'w',
+                'iconclass' => 'project-diagram',
             ),
             'webservices/config' => array(
                 'path'   => 'webservices/config',
@@ -191,7 +188,7 @@ class PluginAuthWebservice extends PluginAuth {
             external_reload_webservices();
             // Install a cron job to clean webservices logs
             if (!get_record('cron', 'callfunction', 'webservice_clean_webservice_logs')) {
-                $cron = new StdClass;
+                $cron = new stdClass();
                 $cron->callfunction = 'webservice_clean_webservice_logs';
                 $cron->minute       = '5';
                 $cron->hour         = '01';

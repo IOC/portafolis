@@ -16,6 +16,7 @@ $string['title'] = 'Web services';
 $string['description'] = 'Web services-only users authenticated against Mahara\'s database';
 $string['webservicesconfig'] = 'Configuration';
 $string['webservicesconfigdesc'] = 'Here you can set up the varying web services rules and enable or disable them.';
+$string['webservicesconfigdescshort'] = 'Set up and manage web services access for your site';
 $string['webserviceconnectionsconfigdesc'] = 'Set up the connection objects that registered plugins can use for communication with external systems';
 $string['completeregistration'] = 'Complete registration';
 $string['emailalreadytaken'] = 'This email address has already registered here';
@@ -25,7 +26,7 @@ $string['registeredemailsubject'] = 'You have registered at %s';
 $string['registeredemailmessagetext'] = 'Hello %s,
 
 Thank you for registering an account on %s. Please follow this link to
-complete the signup process:
+complete the sign-up process:
 
 %sregister.php?key=%s
 
@@ -34,11 +35,42 @@ The link will expire in 24 hours.
 --
 Regards,
 The %s Team';
-$string['registeredemailmessagehtml'] = '<p>Hello %s,</p>
-<p>Thank you for registering an account on %s. Please follow this link
-to complete the signup process:</p>
+$string['registeredemailmessagetextmessage'] = 'Hello %s,
+
+Thank you for registering an account on %s.
+
+Please follow this link to
+complete the sign-up process:
+
+%sregister.php?key=%s
+
+The link will expire in 24 hours.
+
+%s
+
+--
+Regards,
+The %s Team';
+$string['registeredemailmessagehtmlmessage'] = '<p>Hello %s,</p>
+
+<p>Thank you for registering an account on %s.</p>
+<p>Please follow this link
+to complete the sign-up process:</p>
 <p><a href="%sregister.php?key=%s">%sregister.php?key=%s</a></p>
 <p>The link will expire in 24 hours.</p>
+
+<p>%s</p>
+
+<pre>--
+Regards,
+The %s Team</pre>';
+$string['registeredemailmessagehtml'] = '<p>Hello %s,</p>
+
+<p>Thank you for registering an account on %s. Please follow this link
+to complete the sign-up process:</p>
+<p><a href="%sregister.php?key=%s">%sregister.php?key=%s</a></p>
+<p>The link will expire in 24 hours.</p>
+
 
 <pre>--
 Regards,
@@ -133,7 +165,9 @@ $string['servicenamemustbeunique'] = 'That name is already in use by another ser
 $string['serviceshortnamemustbeunique'] = 'That short name is already in use by another service group.';
 
 $string['apptokens'] = 'Application connections';
+$string['apptokensdesc'] = 'Generate tokens for web services access';
 $string['connections'] = 'Connection manager';
+$string['connectionsdesc'] = 'Manage existing web service connections';
 $string['servicetokens'] = 'Manage service access tokens';
 $string['tokens'] = 'Service access tokens';
 $string['users'] = 'Service users';
@@ -143,7 +177,7 @@ $string['owner'] = 'Owner';
 $string['servicename'] = 'Service';
 $string['generate'] = 'Generate token';
 $string['invalidtoken'] = 'Invalid token selected';
-$string['invalidtokennotsuppied'] = 'Invalid token selected or none supplied';
+$string['invalidtokennotsupplied'] = 'Invalid token selected or none supplied';
 $string['token'] = 'Token';
 $string['tokenid'] = 'Token "%s"';
 $string['invaliduserselected'] = 'Invalid user selected';
@@ -158,6 +192,7 @@ $string['oobinfo'] = 'The following is your verification code that will authoris
 $string['instructions'] = 'Instructions';
 
 $string['webservicelogs'] = 'Web services logs';
+$string['webservicelogsdesc'] = 'Configure and view logs for web services';
 $string['webservicelogsnav'] = 'Logs';
 $string['timetaken'] = 'Time taken';
 $string['timelogged'] = 'When';
@@ -221,6 +256,7 @@ $string['unabletoruntestclient'] = 'Web service test client needs to be run unde
 $string['accesstokens'] = 'OAuth access tokens';
 $string['notokens'] = 'You have no application tokens';
 $string['externalapps'] = 'External apps';
+$string['externalappsdesc'] = 'Register external applications for web services access';
 $string['oauth1'] = 'OAuth1.x';
 $string['externalappsregister'] = 'Registration of external apps';
 $string['userapplications1'] = 'Settings for external applications';
@@ -242,6 +278,8 @@ $string['authorise'] = 'Authorise application access';
 $string['oauth_access'] = 'This application will have access to your users\' details and resources';
 $string['oauth_instructions'] = 'If you wish to grant access to this application, then click "Authorise application access". If you do not want to grant access, press "Cancel".';
 $string['setauthinstancefailed'] = 'Setting the "Web services" authentication for institution "%s" failed. Please try adding it via Administration -> Institutions -> Settings page.';
+$string['needtosetowner'] = 'Need to set an owner for this service';
+$string['confirmdeleteexternalapp'] = 'Are you sure you want to delete this external app?';
 
 // running webservices messages
 $string['accesstofunctionnotallowed'] = 'Access to the function %s() is not allowed. Please check if a service containing the function is enabled. In the service settings: If the service is restricted, check that the user is listed. Still in the service settings check for IP restriction or if the service requires a capability.';
@@ -337,6 +375,7 @@ $string['servicecomponentnote'] = 'This service provides functionality for the c
 $string['simpleauthlog'] = 'Simple authentication login';
 $string['step'] = 'Step';
 $string['testclient'] = 'Web service test client';
+$string['testclientdescshort'] = 'Test web services by running functions against your site';
 $string['testclientdescription'] = '* The web service test client <strong>executes</strong> the functions for <strong>REAL</strong>. Do not test functions that you don\'t know. <br/>* All existing web service functions are not yet implemented into the test client. <br/>* In order to check that a user cannot access some functions, you can test some functions that you didn\'t allow.<br/>* To see clearer error messages, set the debugging to <strong>{$a->mode}</strong> into {$a->atag}<br/>* Access the {$a->amfatag}.';
 $string['testwithtestclient'] = 'Test the service';
 $string['tokenauthlog'] = 'Token authentication';
@@ -390,5 +429,6 @@ $string['membersinvalidaction'] = 'invalid action "%s" for user "%s" on group "%
 $string['passwordmustbechangedviawebsite'] = 'You need to change your password. Please log in via a web browser in order to update your password.';
 $string['featuredisabled'] = 'This web services feature is not enabled. Please contact your site administrator for more information.';
 $string['institutionunknown'] = '- unknown -';
-
+$string['unabletodeleteadmin'] = 'Unable to delete user with ID "%s" as they are an admin';
 $string['notuserblog'] = 'The journal is not owned by "%s"';
+$string['oneof'] = 'One of';

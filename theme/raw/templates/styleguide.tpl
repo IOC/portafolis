@@ -13,7 +13,7 @@
 ### Title of element
 Description of element, this can include any markdown formatting, multiple paragraphs etc (optional).
 ```
-<code for the element goes in between the triple backticks - there should only be one triple backtick part per section>
+<code for the element goes in between the triple backticks - there should only be one triple backtick part per section - Make sure you dont include any blank lines in the code>
 ```
 </section>
 
@@ -26,7 +26,7 @@ display the rendered example, and unrendered example code, for each one.)
 ### Add button
 This button has padding on the right of the icon due to the plus class.
 ```
-<button class="btn-default button btn">
+<button class="btn-secondary button btn">
     <span class="icon icon-plus icon-lg left" role="presentation"></span>
     {str tag=add section=mahara}
 </button>
@@ -37,7 +37,7 @@ This button has padding on the right of the icon due to the plus class.
 ### Add button (small)
 This button is used for adding items to a list or table, e.g. URLs and users.
 ```
-<button class="btn-default btn-sm btn">
+<button class="btn-secondary btn-sm btn">
     <span class="icon icon-plus icon-lg" role="presentation"></span>
 </button>
 ```
@@ -47,7 +47,7 @@ This button is used for adding items to a list or table, e.g. URLs and users.
 ### Default button
 This button is generally the one you use for most things.
 ```
-<button class="btn-default button btn">
+<button class="btn-secondary button btn">
     Default button
 </button>
 ```
@@ -68,10 +68,10 @@ This button is used for accepting something. It is used for the primary action o
 This pair of buttons is used for deleting or editing an item.
 ```
 <div id="delete_submit_container" class=" default submitcancel form-group">
-    <button type="submit" class="btn-default submitcancel submit btn" name="submit" tabindex="0">
+    <button type="submit" class="btn-secondary submitcancel submit btn" name="submit" tabindex="0">
         {str tag='yes'}
     </button>
-    <input type="submit" class="btn-default submitcancel cancel" name="cancel_submit" tabindex="0" value="{str tag='no'}">
+    <input type="submit" class="btn-secondary submitcancel cancel" name="cancel_submit" tabindex="0" value="{str tag='no'}">
 </div>
 ```
 </section>
@@ -80,15 +80,19 @@ This pair of buttons is used for deleting or editing an item.
 ### Block edit buttons
 This pair of buttons is used for editing or deleting a block item on a page.
 ```
-<div class="panel-heading">
-<span class="pull-left btn-group btn-group-top">
-    <button class="configurebutton btn btn-inverse btn-xs">
-        <span class="icon icon-cog icon-lg"></span>
-    </button>
-    <button class="deletebutton btn btn-inverse btn-xs">
-        <span class="icon icon-trash text-danger icon-lg"></span>
-    </button>
-</span>
+<div class="blockinstance card card-secondary clearfix">
+    <div class="card-header">
+      <span class="blockinstance-controls">
+          <span class="float-right btn-group btn-group-top">
+              <button class="configurebutton btn btn-inverse btn-sm">
+                  <span class="icon icon-cog icon-lg"></span>
+              </button>
+              <button class="deletebutton btn btn-inverse btn-sm">
+                  <span class="icon icon-trash-alt text-danger icon-lg"></span>
+              </button>
+          </span>
+      </span>
+    </div>
 </div>
 ```
 </section>
@@ -98,13 +102,12 @@ This pair of buttons is used for editing or deleting a block item on a page.
 A group of buttons.
 ```
 <div class=" btn-group">
-    <a href="#" class="btn btn-default">
+    <a href="#" class="btn btn-secondary">
         Button group
     </a>
-    <a href="#" class="btn btn-default">
+    <a href="#" class="btn btn-secondary">
         Button group
     </a>
-
 </div>
 ```
 </section>
@@ -115,10 +118,10 @@ A group of buttons aligned at the top. Note: The box around the buttons is only 
 ```
 <div style="border: 1px solid #cfcfcf; min-height: 50px; padding-right: 10px; width: 500px;">
     <div class="btn-top-right btn-group btn-group-top">
-        <a class="btn btn-default addpost" href="">
+        <a class="btn btn-secondary addpost" href="">
             Button group top
         </a>
-        <a class="btn btn-default settings" href="">
+        <a class="btn btn-secondary settings" href="">
             Button group top
         </a>
     </div>
@@ -126,17 +129,6 @@ A group of buttons aligned at the top. Note: The box around the buttons is only 
         <h4>Context</h4>
     </div>
 </div>
-```
-</section>
-
-<section data-markdown data-category="buttons">
-### Display page
-This button is used to display a page you have just edited.
-```
-<button class="btn-default button btn">
-    {str tag=displayview section=view}
-    <span class="icon icon-arrow-circle-right right" role="presentation"></span>
-</button>
 ```
 </section>
 
@@ -174,19 +166,18 @@ Switchboxes are used for Yes/No, On/Off or other true/false type fields. They ar
 This button is used to show there are more options available. An example can be found on a regular portfolio page where the items of the "Watchlist" and "Objectionable content" are available via the "More options" button. Note: Styles are only added for layout here in the style guide.
 ```
 <div class="btn-group" style="margin-left: 200px;">
-    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+    <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" title="{str tag='moreoptions'}" aria-expanded="false">
         <span class="icon icon-ellipsis-h icon-lg" role="presentation" aria-hidden="true"></span>
-        <span class="sr-only">{str tag=more...}</span>
+        <span class="sr-only">{str tag=moreoptions}</span>
     </button>
     <ul class="dropdown-menu dropdown-menu-right" role="menu">
-        <li>
+        <li class="dropdown-item">
             <a id="toggle_watchlist_link" class="watchlist" href="">
-                <span class="icon icon-eye left" role="presentation" aria-hidden="true"></span>
+                <span class="icon icon-regular icon-eye left" role="presentation" aria-hidden="true"></span>
                 {str tag=addtowatchlist section=view}
-
             </a>
         </li>
-        <li>
+        <li class="dropdown-item">
             <a id="objection_link" href="#" data-toggle="modal" data-target="#report-form">
                 <span class="icon icon-lg icon-flag text-danger left" role="presentation" aria-hidden="true"></span>
                 {str tag=reportobjectionablematerial}
@@ -208,35 +199,40 @@ details on navigation styles.
 
 <!-- Styles to fix searchbar positioning - used in this styleguide only -->
 <style>
-.navbar-main .navbar-collapse.nav-one,
-.navbar-main .navbar-collapse.nav-two,
-.navbar-main .navbar-collapse.nav-three {
+section .navbar-main .navbar-collapse.nav-one,
+section .navbar-main .navbar-collapse.nav-two,
+section .navbar-main .navbar-collapse.nav-three {
     position: relative;
     top: 0;
     right: 0;
 }
-.navbar-form.navbar-collapse.search-form {
+section .navbar-form.navbar-collapse.search-form {
     position: static;
     top: auto;
     right: auto;
 }
 @media only screen and (max-width: 768px) {
-    .navbar-form.navbar-collapse.search-form {
+    section .navbar-form.navbar-collapse.search-form {
         position: initial;
+    }
+}
+@media (min-width: 768px) {
+    section .nav-toggle-area .user-icon {
+        left: 0;
     }
 }
 </style>
 ```
 <div class="row">
-    <div class="navbar-default navbar-main pull-right">
+    <div class="navbar-default navbar-main float-right">
         <div class="nav-toggle-area">
             <!-- Nav One Button -->
-            <button class="nav-one-toggle navbar-toggle collapsed" role="button" data-toggle="collapse" data-target=".nav-one" aria-expanded="false" aria-controls="nav-one" title="Nav one">
+            <button class="nav-one-toggle navbar-toggle collapsed" type="button" data-toggle="collapse" data-target=".nav-one" aria-expanded="false" aria-controls="nav-one" title="Nav one">
                 <span class="sr-only">Show nav one</span>
                 <span class="icon icon-bars icon-lg" role="presentation" aria-hidden="true"></span>
             </button>
             <!-- Nav Two Button -->
-            <button class="nav-two-toggle navbar-toggle collapsed" role="button" data-toggle="collapse" data-target=".nav-two" aria-expanded="false" aria-controls="nav-two" title="Nav two">
+            <button class="nav-two-toggle navbar-toggle collapsed" type="button" data-toggle="collapse" data-target=".nav-two" aria-expanded="false" aria-controls="nav-two" title="Nav two">
                 <span class="sr-only">Show nav two</span>
                 <span class="icon icon-wrench icon-large" role="presentation" aria-hidden="true"></span>
             </button>
@@ -244,26 +240,25 @@ details on navigation styles.
             <a href="" class="user-icon" title="Profile page">
                 <img src="{$WWWROOT}theme/raw/images/no_userphoto25.png">
             </a>
-            <button class="user-toggle nav-three-toggle navbar-toggle collapsed" role="button" data-toggle="collapse" data-target=".nav-three" aria-expanded="false" aria-controls="nav-three" title="Nav three">
+            <button class="user-toggle nav-three-toggle navbar-toggle collapsed" type="button" data-toggle="collapse" data-target=".nav-three" aria-expanded="false" aria-controls="nav-three" title="Nav three">
                 <span class="sr-only">Show nav three</span>
                 <span class="icon icon-chevron-down collapsed"></span>
             </button>
             <!-- Hide Search When on Desktop -->
-            <button class="search-toggle navbar-toggle collapsed" role="button" data-toggle="collapse" data-target=".navbar-form" aria-expanded="false" aria-controls="navbar-form">
+            <button class="search-toggle navbar-toggle collapsed" type="button" data-toggle="collapse" data-target=".navbar-form" aria-expanded="false" aria-controls="navbar-form">
                 <span class="icon icon-search icon-lg" role="presentation" aria-hidden="true"></span>
                 <span class="nav-title sr-only">{str tag=showsearch}</span>
             </button>
         </div>
-
         <!-- Nav One -->
-        <nav id="nav-one" class="nav collapse navbar-collapse nav-one" role="tabpanel">
+        <nav id="nav-one" class="nav collapse navbar-collapse nav-one" role="tabcard">
            <ul id="navone" class="nav navbar-nav">
               <li>
                   <a href="">Link 1</a>
               </li>
               <li>
                  <a href="">Link 2</a>
-                 <button type="button" class="navbar-showchildren navbar-toggle dropdown-toggle collapsed" data-toggle="collapse" data-parent="navone" data-target="#subnavone">
+                 <button type="button" class="navbar-showchildren navbar-toggle dropdown-toggle collapsed" data-toggle="collapse" data-parent="#navone" data-target="#subnavone">
                      <span class="icon icon-chevron-down" role="presentation" aria-hidden="true"></span>
                      <span class="nav-title sr-only">Link 2</span>
                  </button>
@@ -274,7 +269,7 @@ details on navigation styles.
               </li>
               <li>
                  <a href="">Link 2</a>
-                 <button type="button" class="navbar-showchildren navbar-toggle dropdown-toggle collapsed" data-toggle="collapse" data-parent="navone" data-target="#subnavtwo">
+                 <button type="button" class="navbar-showchildren navbar-toggle dropdown-toggle collapsed" data-toggle="collapse" data-parent="#navone" data-target="#subnavtwo">
                      <span class="icon icon-chevron-down" role="presentation" aria-hidden="true"></span>
                      <span class="nav-title sr-only">Link 2</span>
                  </button>
@@ -285,7 +280,7 @@ details on navigation styles.
               </li>
               <li>
                  <a href="">Link 4</a>
-                 <button type="button" class="navbar-showchildren navbar-toggle dropdown-toggle collapsed" data-toggle="collapse" data-parent="navone" data-target="#subnavthree">
+                 <button type="button" class="navbar-showchildren navbar-toggle dropdown-toggle collapsed" data-toggle="collapse" data-parent="#navone" data-target="#subnavthree">
                      <span class="icon icon-chevron-down" role="presentation" aria-hidden="true"></span>
                      <span class="nav-title sr-only">Link 4</span>
                  </button>
@@ -296,13 +291,12 @@ details on navigation styles.
               </li>
            </ul>
         </nav>
-
         <!-- Nav Two -->
-        <nav id="nav-two" class="nav navbar-collapse nav-two collapse" role="tabpanel" aria-expanded="false">
+        <nav id="nav-two" class="nav navbar-collapse nav-two collapse" role="tabcard" aria-expanded="false">
             <ul id="navtwo" class="nav navbar-nav">
                 <li>
                     <a href="">Link 1</a>
-                    <button type="button" class="navbar-showchildren navbar-toggle dropdown-toggle collapsed" data-toggle="collapse" data-parent="navtwo" data-target="#subnavfour">
+                    <button type="button" class="navbar-showchildren navbar-toggle dropdown-toggle collapsed" data-toggle="collapse" data-parent="#navtwo" data-target="#subnavfour">
                         <span class="icon icon-chevron-down" role="presentation" aria-hidden="true"></span>
                         <span class="nav-title sr-only">Link 1</span>
                     </button>
@@ -313,19 +307,18 @@ details on navigation styles.
                 </li>
                 <li>
                     <a href="">Link 2</a>
-                    <button type="button" class="navbar-showchildren navbar-toggle dropdown-toggle collapsed" data-toggle="collapse" data-parent="navtwo" data-target="#subnavfive">
+                    <button type="button" class="navbar-showchildren navbar-toggle dropdown-toggle collapsed" data-toggle="collapse" data-parent="#navtwo" data-target="#subnavfive">
                         <span class="icon icon-chevron-down" role="presentation" aria-hidden="true"></span>
                         <span class="nav-title sr-only">Link 2</span>
                     </button>
                     <ul id="subnavfive" class=" collapse child-nav" role="menu">
                         <li><a href="">Sublink 1</a></li>
                         <li><a href="">Sublink 2</a></li>
-
                     </ul>
                 </li>
                 <li>
                     <a href="">Link 3</a>
-                    <button type="button" class="navbar-showchildren navbar-toggle dropdown-toggle collapsed" data-toggle="collapse" data-parent="navtwo" data-target="#subnavsix">
+                    <button type="button" class="navbar-showchildren navbar-toggle dropdown-toggle collapsed" data-toggle="collapse" data-parent="#navtwo" data-target="#subnavsix">
                         <span class="icon icon-chevron-down" role="presentation" aria-hidden="true"></span>
                         <span class="nav-title sr-only">Link 3</span>
                     </button>
@@ -336,9 +329,8 @@ details on navigation styles.
                 </li>
             </ul>
         </nav>
-
         <!-- Nav Three -->
-        <nav id="nav-three" class=" nav collapse navbar-collapse nav-three" role="tabpanel">
+        <nav id="nav-three" class=" nav collapse navbar-collapse nav-three" role="tabcard">
             <ul id="navthree" class="nav navbar-nav">
                 <li class="has-icon">
                     <a href="">
@@ -351,7 +343,7 @@ details on navigation styles.
                         <span class="icon icon-cogs" role="presentation" aria-hidden="true"></span>
                         <span class="nav-title">Link 2</span>
                     </a>
-                    <button type="button" class="navbar-showchildren navbar-toggle dropdown-toggle collapsed" data-toggle="collapse" data-parent="navuser" data-target="#subnavseven">
+                    <button type="button" class="navbar-showchildren navbar-toggle dropdown-toggle collapsed" data-toggle="collapse" data-parent="#navuser" data-target="#subnavseven">
                         <span class="icon icon-chevron-down" role="presentation" aria-hidden="true"></span>
                         <span class="nav-title sr-only">Link 2</span>
                     </button>
@@ -368,7 +360,7 @@ details on navigation styles.
                 </li>
                 <li class="has-icon">
                     <a href="">
-                        <span class="icon icon-sign-out" role="presentation" aria-hidden="true"></span>
+                        <span class="icon icon-sign-out-alt" role="presentation" aria-hidden="true"></span>
                         <span class="nav-title">Link 4</span>
                     </a>
                 </li>
@@ -383,11 +375,11 @@ details on navigation styles.
 ### Pagination
 The pagination has "Previous" and "Next" buttons.
 ```
-<ul class="pagination pagination-xs">
-    <li class=""><span>«<span class="sr-only">{str tag=prevpage section=collection}</span></span></li>
-    <li class="active"><span>1</span></li>
-    <li class=""><a title="" href="link">2</a></li>
-    <li class=""><a title="Next page" href="link"> »<span class="sr-only">{str tag=nextpage section=collection}</span></a></li>
+<ul class="pagination pagination-sm">
+    <li class="page-item"><span class="page-link">«<span class="sr-only">{str tag=prevpage section=collection}</span></span></li>
+    <li class="active page-item"><span class="page-link">1</span></li>
+    <li class="page-item"><a class="page-link" title="" href="link">2</a></li>
+    <li class="page-item"><a class="page-link" title="Next page" href="link"> »<span class="sr-only">{str tag=nextpage section=collection}</span></a></li>
 </ul>
 ```
 </section>
@@ -398,21 +390,21 @@ The pagination has "Previous" and "Next" buttons buttons and a drop-down menu to
 ```
 <div>
     <div class="pagination-wrapper">
-        <div class="lead text-small results pull-right">
+        <div class="lead text-small results float-right">
             11 {str tag=results}
         </div>
-        <ul class="pagination pagination-xs">
-            <li class="">
-                <span>«<span class="sr-only">{str tag=prevpage section=collection}</span></span>
+        <ul class="pagination pagination-sm">
+            <li class="page-item">
+                <span class="page-link">«<span class="sr-only">{str tag=prevpage section=collection}</span></span>
             </li>
-            <li class="active">
-                <span>1</span>
+            <li class="active page-item">
+                <span class="page-link">1</span>
             </li>
-            <li class="">
-                <a href="" title="">2</a>
+            <li class="page-item">
+                <a class="page-link" href="" title="">2</a>
             </li>
-            <li class="">
-                <a href="" title="Next page">
+            <li class="page-item">
+                <a class="page-link" href="" title="Next page">
                     »
                     <span class="sr-only">{str tag=nextpage section=collection}</span>
                 </a>
@@ -422,8 +414,8 @@ The pagination has "Previous" and "Next" buttons buttons and a drop-down menu to
             <label for="setlimitselect" class="set-limit">
                 {str tag=maxitemsperpage1}
             </label>
-            <span class="picker input-sm">
-                <select id="setlimitselect" class="js-pagination input-sm select form-control" name="limit">
+            <span class="picker form-control-sm">
+                <select id="setlimitselect" class="js-pagination form-control-sm select form-control" name="limit">
                     <option value="1"> 1 </option>
                     <option value="10" selected="selected"> 10 </option>
                     <option value="20"> 20 </option>
@@ -433,20 +425,19 @@ The pagination has "Previous" and "Next" buttons buttons and a drop-down menu to
                 </select>
             </span>
             <input class="currentoffset" type="hidden" name="offset" value="0">
-            <input class="pagination js-hidden hidden" type="submit" name="submit" value="Change">
+            <input class="pagination js-hidden d-none" type="submit" name="submit" value="Change">
         </form>
     </div>
 </div>
 ```
 </section>
-
 <section data-markdown data-category="navigation">
 ### Navigation tabs
 These are tabs to switch between pages within one section, for example in the "Profile" under "Content". The tabs navigation style is used when the entire section has only one "Save" button.
 ```
 <ul class="nav nav-tabs" role="tablist">
-    <li role="presentation" class="active">
-        <a href="#" role="tab" data-toggle="tab" aria-expanded="true">Tab 1</a>
+    <li role="presentation">
+        <a href="#" role="tab" data-toggle="tab" aria-expanded="true" class="active">Tab 1</a>
     </li>
     <li role="presentation">
         <a href="#" role="tab" data-toggle="tab" aria-expanded="false">Tab 2</a>
@@ -463,10 +454,10 @@ These are tabs to switch between pages within one section, for example in the "P
 
 <section data-markdown data-category="navigation">
 ### Arrow bar
-This style of tabs is used for third-level navigation in areas where each page within this section is saved separately, for example in a group, in the résumé or in the web services configuration.
+This style of tabs is used for third-level navigation in areas where each page within this section is saved separately, for example in a group, in the résumé or in the web services configuration. When the primary school theme is selected, each arrow bar can be a different colour. This is determined by the class in the very first div. The 2 choices are 'group' (green) and 'resume' (red). There is a default option (blue) when no extra class is given.
 ```
 <div class="arrow-bar group">
-    <span class="arrow hidden-xs">
+    <span class="arrow d-none d-md-block">
         <span class="text">
             Tabs
         </span>
@@ -504,15 +495,15 @@ This style of tabs is used for third-level navigation in areas where each page w
 </section>
 
 
-<section data-markdown data-category="panels">
-### Panel
-A basic panel.
+<section data-markdown data-category="cards">
+### card
+A basic card.
 ```
-<div class="panel panel-default">
-    <h3 class="panel-heading has-link">
-        <a href="#">Basic panel</a>
+<div class="card">
+    <h3 class="card-header has-link">
+        <a href="#">Basic card</a>
     </h3>
-    <div class="tagblock panel-body">
+    <div class="tagblock card-body">
         <a title="1 item" href="#" class="tag">Mahara</a>
         <a title="1 item" href="#" class="tag">{str tag=myportfolio}</a>
     </div>
@@ -520,64 +511,62 @@ A basic panel.
 ```
 </section>
 
-<section data-markdown data-category="panels">
-### Delete panel
-A delete panel.
+<section data-markdown data-category="cards">
+### Delete card
+A delete card.
 ```
-<div class="panel panel-danger view-container">
-    <h2 class="panel-heading">{str tag=delete}</h2>
-    <div class="panel-body">
+<div class="card bg-danger view-container">
+    <h2 class="card-header">{str tag=delete}</h2>
+    <div class="card-body">
         <p><strong>{str tag=Title}</strong></p>
         <p>{str tag=deleteinstitutionconfirm section=admin}</p>
         <div class=" default submitcancel form-group">
-            <button type="submit" class="btn-default submitcancel submit btn" tabindex="0">{str tag='yes'}</button>
-            <input type="submit" class="btn-default submitcancel cancel" tabindex="0" value="{str tag='no'}">
+            <button type="submit" class="btn-secondary submitcancel submit btn" tabindex="0">{str tag='yes'}</button>
+            <input type="submit" class="btn-secondary submitcancel cancel" tabindex="0" value="{str tag='no'}">
         </div>
-
     </div>
 </div>
 ```
 </section>
 
-<section data-markdown data-category="panels">
-### Side panel
-A side panel is used in the sideblock area, e.g. on the dashboard for "Online users".
+<section data-markdown data-category="cards">
+### Side card
+A side card is used in the sideblock area, e.g. on the dashboard for "Online users".
 ```
 <div class="col-md-3 sidebar">
-    <div class="panel panel-default">
-        <h3 class="panel-heading">
-            Side panel
+    <div class="card">
+        <h3 class="card-header">
+            Side card
             <br>
             <span  class="text-small text-midtone">({str tag=description})</span>
         </h3>
         <ul class="list-group">
             <li class="list-group-item list-unstyled list-group-item-link">
                 <a>
-                    Side panel link
+                    Side card link
                 </a>
             </li>
-
         </ul>
-        <a href="" class="panel-footer text-small">
-            Side panel footer
-            <span class="icon icon-arrow-circle-right pull-right"></span>
+        <a href="" class="card-footer text-small">
+            Side card footer
+            <span class="icon icon-arrow-circle-right float-right"></span>
         </a>
     </div>
 </div>
 ```
 </section>
 
-<section data-markdown data-category="panels">
-### Side panel (no footer)
-A side panel without a footer. An examples is the "Tags" sideblock on the dashboard.
+<section data-markdown data-category="cards">
+### Side card (no footer)
+A side card without a footer. An examples is the "Tags" sideblock on the dashboard.
 ```
 <div class="col-md-3 sidebar">
     <div id="sb-tags">
-        <div class="panel panel-default">
-            <h3 class="panel-heading has-link">
-                <a href="">Side panel<span class="icon icon-arrow-right pull-right" role="presentation" aria-hidden="true"></span></a>
+        <div class="card">
+            <h3 class="card-header has-link">
+                <a href="">Side card<span class="icon icon-arrow-right float-right" role="presentation" aria-hidden="true"></span></a>
             </h3>
-            <div class="tagblock panel-body">
+            <div class="tagblock card-body">
                 <div class="no-results-small text-small">Lorem ipsum</div>
             </div>
         </div>
@@ -586,9 +575,9 @@ A side panel without a footer. An examples is the "Tags" sideblock on the dashbo
 ```
 </section>
 
-<section data-markdown data-category="panels">
-### Dropdown panel
-A dropdown panel.
+<section data-markdown data-category="cards">
+### Dropdown card
+A dropdown card.
 ```
 <div class="last form-group collapsible-group">
     <fieldset class="pieform-fieldset last collapsible">
@@ -596,7 +585,7 @@ A dropdown panel.
             <h4>
                 <a href="#dropdown" data-toggle="collapse" aria-expanded="false" aria-controls="dropdown" class="collapsed">
                     Drop-down
-                    <span class="icon icon-chevron-down collapse-indicator right pull-right"> </span>
+                    <span class="icon icon-chevron-down collapse-indicator right float-right"> </span>
                 </a>
             </h4>
         </legend>
@@ -608,38 +597,35 @@ A dropdown panel.
 ```
 </section>
 
-<section data-markdown data-category="panels">
-### Blocks drop-down panel
-This type of drop-down panel is used in blocks, for example the "Inbox" block.
+<section data-markdown data-category="cards">
+### Blocks drop-down card
+This type of drop-down card is used in blocks, for example the "Inbox" block.
 ```
-<div class="bt-inbox panel panel-secondary clearfix collapsible">
-    <h3 class="title panel-heading js-heading">
+<div class="bt-inbox card card-secondary clearfix collapsible">
+    <h3 class="title card-header js-heading">
         <a data-toggle="collapse" href="#target" aria-expanded="true" class="outer-link"></a>
         Blocks drop-down
-        <span class="icon icon-chevron-up collapse-indicator pull-right inner-link" role="presentation" aria-hidden="true"></span>
+        <span class="icon icon-chevron-up collapse-indicator float-right inner-link" role="presentation" aria-hidden="true"></span>
     </h3>
-
-    <div class="block collapse in" id="target" aria-expanded="true">
+    <div class="block collapse show" id="target" aria-expanded="true">
         <div class="inboxblock list-group">
-            <div class="has-attachment panel-default collapsible list-group-item">
+            <div class="has-attachment card collapsible list-group-item">
                 <a class="collapsed link-block" data-toggle="collapse" href="#item1" aria-expanded="false">
                     <span class="icon icon-university text-default left" role="presentation" aria-hidden="true"></span>
                     Item 1
-                    <span class="icon icon-chevron-down collapse-indicator pull-right text-small" role="presentation" aria-hidden="true"></span>
+                    <span class="icon icon-chevron-down collapse-indicator float-right text-small" role="presentation" aria-hidden="true"></span>
                 </a>
-
                 <div class="collapse" id="item1">
                     <p class="content-text">
                         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus at turpis commodo, pretium turpis ac, porttitor dolor.
                     </p>
                 </div>
             </div>
-
-            <div class="has-attachment panel-default collapsible list-group-item">
+            <div class="has-attachment card collapsible list-group-item">
                 <a class="collapsed link-block" data-toggle="collapse" href="#item2" aria-expanded="false">
                     <span class="icon icon-wrench text-default left" role="presentation" aria-hidden="true"></span>
                     Item 2
-                    <span class="icon icon-chevron-down collapse-indicator pull-right text-small" role="presentation" aria-hidden="true"></span>
+                    <span class="icon icon-chevron-down collapse-indicator float-right text-small" role="presentation" aria-hidden="true"></span>
                 </a>
                 <div class="collapse" id="item2">
                     <p class="content-text">
@@ -648,7 +634,6 @@ This type of drop-down panel is used in blocks, for example the "Inbox" block.
                 </div>
             </div>
         </div>
-
         <div class="artefact-detail-link">
             <a class="link-blocktype last" href="">
                 <span class="icon icon-arrow-circle-right" role="presentation" aria-hidden="true"></span>
@@ -660,12 +645,12 @@ This type of drop-down panel is used in blocks, for example the "Inbox" block.
 ```
 </section>
 
-<section data-markdown data-category="panels">
+<section data-markdown data-category="cards">
 ### Block layout
 This is the general layout of blocks. An example of this being used is the 'Latest changes I can view' block on the dashboard.
 ```
-<div class="bt-newviews panel panel-secondary clearfix">
-    <h3 class="title panel-heading js-heading">Block</h3>
+<div class="bt-newviews card clearfix">
+    <h3 class="title card-header js-heading">Block</h3>
     <div class="block">
         <div class="list-group">
             <div class="list-group-item">
@@ -696,24 +681,22 @@ This is the general layout of blocks. An example of this being used is the 'Late
 ```
 </section>
 
-<section data-markdown data-category="panels">
+<section data-markdown data-category="cards">
 ### Collection navigation
 ```
 <div class="collection-nav">
-    <button type="button" class="btn btn-default prevpage">
+    <button type="button" class="btn btn-secondary prevpage">
         <span class="icon left icon-chevron-left" role="presentation" aria-hidden="true"></span>
         {str tag=prevpage section=collection}
     </button>
-    <button type="button" class="btn btn-default nextpage">
+    <button type="button" class="btn btn-secondary nextpage">
         {str tag=nextpage section=collection}
         <span class="icon right icon-chevron-right" role="presentation" aria-hidden="true"></span>
     </button>
-
     <h2>{str tag=Collection section=collection}: Collection 1</h2>
-
     <p class="navlabel">{str tag=navtopage section=collection}</p>
     <nav class="custom-dropdown dropdown">
-        <ul class="hidden">
+        <ul id="pagelist" class="collapse">
             <li>
                 <a href="" data-index="0">Page 1</a>
             </li>
@@ -724,7 +707,7 @@ This is the general layout of blocks. An example of this being used is the 'Late
                 <a href="" data-index="2">Page 3</a>
             </li>
         </ul>
-        <span class="picker form-control">{str tag=viewingpage section=collection}
+        <span class="picker form-control" tabindex="0" data-toggle="collapse" data-target="#pagelist" aria-expanded="false" role="button" aria-controls="#pagelist">{str tag=viewingpage section=collection}
             <span id="currentindex" data-currentindex="1">2</span>
             /3
         </span>
@@ -733,37 +716,37 @@ This is the general layout of blocks. An example of this being used is the 'Late
 ```
 </section>
 
-<section data-markdown data-category="panels">
-## Page Panel
-This panel is used to show a page.
+<section data-markdown data-category="cards">
+## Page card
+This card is used to show a page.
 ```
-<div class="panel-quarter panel-view">
-    <div class="panel panel-default">
-        <h3 class="panel-heading has-link">
+<div class="card-quarter card-view">
+    <div class="card">
+        <h3 class="card-header has-link">
             <a class="title-link title" href="" title="Dashboard page">Dashboard page</a>
         </h3>
-        <div class="panel-body">
+        <div class="card-body">
             <div class="detail">
                 <div class="detail">Your dashboard page is what you see on the homepage when you first log in. Only you have access to it.</div>
             </div>
         </div>
-        <div class="panel-footer">
+        <div class="card-footer">
             <div class="page-access"></div>
             <div class="page-controls">
-                <a href="#" class="dropdown-toggle moremenu btn btn-link" type="button" data-toggle="dropdown" aria-expanded="false" title="More...">
+                <a href="#" class="dropdown-toggle moremenu btn btn-link" data-toggle="dropdown" aria-expanded="false" title="{str tag='moreoptions'}">
                     <span class="icon icon-chevron-down open-indicator" role="presentation" aria-hidden="true"></span>
                     <span class="icon icon-ellipsis-v close-indicator" role="presentation" aria-hidden="true"></span>
                     <span class="sr-only">More options for "Dashboard page"</span>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-right" role="menu">
-                    <li>
+                    <li class="dropdown-item">
                         <a href="" title="Edit content and layout">
-                        <span class="icon icon-pencil left" role="presentation" aria-hidden="true"></span>
+                        <span class="icon icon-pencil-alt left" role="presentation" aria-hidden="true"></span>
                         <span class="link-text">Edit</span>
                         <span class="sr-only">Edit "Dashboard page"</span>
                         </a>
                     </li>
-                    <li class="view-details">
+                    <li class="view-details dropdown-item">
                         Created 18 Jan 2017,  9:02
                         <br>
                         Modified 15 Jan 2018, 11:29
@@ -777,43 +760,42 @@ This panel is used to show a page.
 ```
 </section>
 
-<section data-markdown data-category="panels">
-## Submitted Page Panel
-This panel is used to show a submitted page.
+<section data-markdown data-category="cards">
+## Submitted Page card
+This card is used to show a submitted page.
 <style>
-/* Styles for submitted and collection panels */
-.panel-quarter:nth-child(4n) .page-access .dropdown-menu {
+/* Styles for submitted and collection cards */
+section .card-quarter:nth-child(4n) .page-access .dropdown-menu {
     left: 0;
 }
 </style>
 ```
-<div class="panel-quarter panel-view">
-    <div class="panel panel-default panel-warning">
-        <h3 class="panel-heading has-link">
+<div class="card-quarter card-view">
+    <div class="card card bg-warning">
+        <h3 class="card-header has-link">
             <a class="title-link title" href="" title="Dashboard page">Unnamed page</a>
         </h3>
-        <div class="panel-body">
+        <div class="card-body">
             <div class="detail">
                 <div class="detail">Lorem ipsum</div>
             </div>
         </div>
-        <div class="panel-footer">
-
+        <div class="card-footer">
             <div class="page-access">
                 <a href="#" class="dropdown-toggle btn btn-link" data-toggle="dropdown" aria-expanded="false" title="Manage access">
                     <span class="icon icon-chevron-down open-indicator" role="presentation" aria-hidden="true"></span>
-                    <span class="icon icon-unlock-alt close-indicator" role="presentation" aria-hidden="true"></span>
+                    <span class="icon icon-unlock close-indicator" role="presentation" aria-hidden="true"></span>
                     <span class="sr-only">Access rules for "Unnamed page"</span>
                 </a>
                 <ul class="dropdown-menu" role="menu">
-                    <li>
+                    <li class="dropdown-item">
                         <a class="seperator" href="">
-                            <span class="icon icon-unlock-alt left" role="presentation" aria-hidden="true"></span>
+                            <span class="icon icon-unlock left" role="presentation" aria-hidden="true"></span>
                             <span class="link-text">Manage access</span>
                             <span class="sr-only">Manage access for "Unnamed page"</span>
                         </a>
                     </li>
-                    <li>
+                    <li class="dropdown-item">
                         <a href="">
                             <span class="icon icon-users left" role="presentation" aria-hidden="true"></span>
                             <span class="link-text">group (Submitted)</span>
@@ -822,20 +804,20 @@ This panel is used to show a submitted page.
                 </ul>
             </div>
             <div class="page-controls">
-                <a href="#" class="dropdown-toggle moremenu btn btn-link" type="button" data-toggle="dropdown" aria-expanded="false" title="More...">
+                <a href="#" class="dropdown-toggle moremenu btn btn-link" data-toggle="dropdown" aria-expanded="false" title="{str tag='moreoptions'}">
                     <span class="icon icon-chevron-down open-indicator" role="presentation" aria-hidden="true"></span>
                     <span class="icon icon-ellipsis-v close-indicator" role="presentation" aria-hidden="true"></span>
                     <span class="sr-only">More options for "Dashboard page"</span>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-right" role="menu">
-                    <li>
+                    <li class="dropdown-item">
                         <a href="" title="Edit content and layout">
-                        <span class="icon icon-pencil left" role="presentation" aria-hidden="true"></span>
+                        <span class="icon icon-pencil-alt left" role="presentation" aria-hidden="true"></span>
                         <span class="link-text">Edit</span>
                         <span class="sr-only">Edit "Unnamed page"</span>
                         </a>
                     </li>
-                    <li class="view-details">
+                    <li class="view-details dropdown-item">
                         Created 18 Jan 2017,  9:02
                         <br>
                         Modified 15 Jan 2018, 11:29
@@ -850,43 +832,42 @@ This panel is used to show a submitted page.
 </section>
 
 
-<section data-markdown data-category="panels">
-## Collections Panel
-This panel is used to show a collection.
+<section data-markdown data-category="cards">
+## Collections card
+This card is used to show a collection.
 <style>
-/* Styles for submitted and collection panels */
-.panel-quarter:nth-child(4n) .page-access .dropdown-menu {
+/* Styles for submitted and collection cards */
+section .card-quarter:nth-child(4n) .page-access .dropdown-menu {
     left: 0;
 }
 </style>
 ```
-<div class="panel-quarter panel-collection">
-    <div class="panel panel-default
-        ">
-        <h3 class="panel-heading has-link">
+<div class="card-quarter card-collection">
+    <div class="card">
+        <h3 class="card-header has-link">
             <a class="title-link title" href="" title="collection uno">
             collection
             </a>
         </h3>
-        <div class="panel-body">
+        <div class="card-body">
             <div class="detail"></div>
         </div>
-        <div class="panel-footer">
+        <div class="card-footer">
             <div class="page-access">
                 <a href="#" class="dropdown-toggle btn btn-link" data-toggle="dropdown" aria-expanded="false" title="Manage access">
                 <span class="icon icon-chevron-down open-indicator" role="presentation" aria-hidden="true"></span>
-                <span class="icon icon-unlock-alt close-indicator" role="presentation" aria-hidden="true"></span>
+                <span class="icon icon-unlock close-indicator" role="presentation" aria-hidden="true"></span>
                 <span class="sr-only">Access rules for "collection"</span>
                 </a>
                 <ul class="dropdown-menu" role="menu">
-                    <li>
+                    <li class="dropdown-item">
                         <a class="seperator" href="">
-                        <span class="icon icon-unlock-alt left" role="presentation" aria-hidden="true"></span>
+                        <span class="icon icon-unlock left" role="presentation" aria-hidden="true"></span>
                         <span class="link-text">Manage access</span>
                         <span class="sr-only">Manage access for "collection"</span>
                         </a>
                     </li>
-                    <li>
+                    <li class="dropdown-item">
                         <a href="">
                         <span class="icon icon-globe left" role="presentation" aria-hidden="true"></span>
                         <span class="link-text">Public</span>
@@ -895,34 +876,34 @@ This panel is used to show a collection.
                 </ul>
             </div>
             <div class="page-controls">
-                <a href="#" class="dropdown-toggle moremenu btn btn-link" type="button" data-toggle="dropdown" aria-expanded="false" title="More...">
+                <a href="#" class="dropdown-toggle moremenu btn btn-link" data-toggle="dropdown" aria-expanded="false" title="{str tag='moreoptions'}">
                 <span class="icon icon-chevron-down open-indicator" role="presentation" aria-hidden="true"></span>
                 <span class="icon icon-ellipsis-v close-indicator" role="presentation" aria-hidden="true"></span>
                 <span class="sr-only">More options for "collection"</span>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-right" role="menu">
-                    <li>
+                    <li class="dropdown-item">
                         <a href="" title="Manage pages">
                         <span class="icon icon-list left" role="presentation" aria-hidden="true"></span>
                         <span class="link-text">Manage</span>
                         <span class="sr-only">Manage pages in "collection"</span>
                         </a>
                     </li>
-                    <li>
+                    <li class="dropdown-item">
                         <a href="" title="Edit title and description">
-                        <span class="icon icon-pencil left" role="presentation" aria-hidden="true"></span>
+                        <span class="icon icon-pencil-alt left" role="presentation" aria-hidden="true"></span>
                         <span class="link-text">Edit</span>
                         <span class="sr-only">Edit "collection"</span>
                         </a>
                     </li>
-                    <li>
+                    <li class="dropdown-item">
                         <a href="" title="Delete collection">
-                        <span class="icon icon-trash text-danger left" role="presentation" aria-hidden="true"></span>
+                        <span class="icon icon-trash-alt text-danger left" role="presentation" aria-hidden="true"></span>
                         <span class="link-text">Delete</span>
                         <span class="sr-only">Delete "collection"</span>
                         </a>
                     </li>
-                    <li class="view-details">
+                    <li class="view-details dropdown-item">
                         Created 30 Jan 2017,  8:09
                         <br>
                         Modified 17 Jan 2018, 15:26
@@ -938,9 +919,9 @@ This panel is used to show a collection.
                 </span>
                 </a>
                 <ul class="dropdown-menu" role="menu">
-                    <li>
+                    <li class="dropdown-item">
                         <a href="">
-                        <span class="icon icon-file-o left" role="presentation" aria-hidden="true"></span>
+                        <span class="icon icon-regular icon-file left" role="presentation" aria-hidden="true"></span>
                         <span class="link-text">Untitled page</span>
                         </a>
                     </li>
@@ -958,8 +939,7 @@ This panel is used to show a collection.
 This is used to indicate that you should make the recommended change.
 ```
 <div class="admin-warning alert alert-warning">
-    <h3>Warning</h3>
-    <span class="icon icon-lg icon-exclamation-triangle left" role="presentation" aria-hidden="true"></span> This is a warning alert.
+    This is a warning alert.
 </div>
 ```
 </section>
@@ -969,8 +949,7 @@ This is used to indicate that you should make the recommended change.
 Used to show that there is an error, which must be fixed before you can continue.
 ```
 <div class="alert alert-danger">
-    <h3>Danger</h3>
-    <span class="icon icon-lg icon-times text-danger left" role="presentation" aria-hidden="true"></span>This is a danger alert.
+    This is a danger alert.
 </div>
 ```
 </section>
@@ -980,8 +959,7 @@ Used to show that there is an error, which must be fixed before you can continue
 Used to show that an action was successful.
 ```
 <div class="alert alert-success">
-    <h3>Success</h3>
-    <span class="icon icon-lg icon-check text-success left" role="presentation" aria-hidden="true"></span> This is a success alert.
+    This is a success alert.
 </div>
 ```
 </section>
@@ -991,13 +969,10 @@ Used to show that an action was successful.
 Used to show information about Mahara. Usually, this is only shown to administrators.
 ```
 <div class="alert alert-info">
-    <h3>Info</h3>
-    <span class="icon icon-lg icon-info-circle left" role="presentation" aria-hidden="true"></span> This is a info alert.
+    This is a info alert.
 </div>
 ```
 </section>
-
-
 
 <section data-markdown data-category="modals">
 ### Modal docked
@@ -1006,7 +981,6 @@ A slide-out modal. This is used to show a block's configuration for example.
 <button type="button" class="btn btn-primary" data-toggle="modal-docked" data-target="#modal-docks">
     Launch demo modal
 </button>
-
 <div class="modal modal-docked modal-docked-right modal-shown closed" id="modal-docks" tabindex="-1" role="dialog" aria-labelledby="#modal-docks-label">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
@@ -1058,10 +1032,10 @@ A fold down modal. This is typially used to report objectionable content.
                         <textarea rows="5" cols="80" class="form-control under-label required textarea resizable" id="objection_form_message" name="message" tabindex="0" aria-required="true"></textarea>
                     </div>
                     <div id="objection_form_submit_container" class=" default submitcancel form-group">
-                        <button type="submit" class="btn-default submitcancel submit btn" data-confirm="Are you sure you wish to report this page as containing objectionable material?" id="objection_form_submit" name="submit" tabindex="0">
+                        <button type="submit" class="btn-secondary submitcancel submit btn" data-confirm="Are you sure you wish to report this page as containing objectionable material?" id="objection_form_submit" name="submit" tabindex="0">
                             Notify administrator
                         </button>
-                        <input type="submit" class="btn-default submitcancel cancel" id="cancel_objection_form_submit" name="cancel_submit" tabindex="0" value="Cancel">
+                        <input type="submit" class="btn-secondary submitcancel cancel" id="cancel_objection_form_submit" name="cancel_submit" tabindex="0" value="Cancel">
                     </div>
                 </form>
             </div>
@@ -1090,7 +1064,6 @@ This is a normal table, e.g. found in a forum.
                 <h3 class="title">
                     <a href="">Item 1</a>
                 </h3>
-
                 <div class="forumpath text-small text-midtone">
                     Some description information <a href="" class="topicforum  text-midtone">Description link</a>
                 </div>
@@ -1118,7 +1091,6 @@ A striped table is most frequently found in the administration area where tables
             <th class="center">Column 2</th>
             <th class="center">Column 3</th>
             <th>Column 4</th>
-
             <th>Column 5</th>
             <th><span class="accessible-hidden sr-only">{str tag=edit}</span></th>
         </tr>
@@ -1132,11 +1104,11 @@ A striped table is most frequently found in the administration area where tables
             <td>Item 1 stuff</td>
             <td class="right">
                 <div class="btn-group">
-                    <a class="btn btn-default btn-sm" title="{str tag=groupmanage section=admin}" href="">
+                    <a class="btn btn-secondary btn-sm" title="{str tag=groupmanage section=admin}" href="">
                         <span class="icon icon-cog icon-lg"></span><span class="sr-only">{str tag=groupmanagespecific section=admin arg1='Item 1'}</span>
                     </a>
-                    <a class="btn btn-default btn-sm" title="{str tag=delete}" href="">
-                        <span class="icon icon-trash text-danger icon-lg"></span><span class="sr-only">{str tag=deletespecific section=mahara arg1='Item 1'}</span>
+                    <a class="btn btn-secondary btn-sm" title="{str tag=delete}" href="">
+                        <span class="icon icon-trash-alt text-danger icon-lg"></span><span class="sr-only">{str tag=deletespecific section=mahara arg1='Item 1'}</span>
                     </a>
                 </div>
             </td>
@@ -1146,15 +1118,14 @@ A striped table is most frequently found in the administration area where tables
             <td class="center">5</td>
             <td class="center">2</td>
             <td>Item 2 info</td>
-
             <td>Item 2 stuff</td>
             <td class="right">
                 <div class="btn-group">
-                    <a class="btn btn-default btn-sm" title="{str tag=groupmanage section=admin}" href="">
+                    <a class="btn btn-secondary btn-sm" title="{str tag=groupmanage section=admin}" href="">
                         <span class="icon icon-cog icon-lg"></span><span class="sr-only">{str tag=groupmanagespecific section=admin arg1='Item 2'}</span>
                     </a>
-                    <a class="btn btn-default btn-sm" title="{str tag=delete}" href="">
-                        <span class="icon icon-trash text-danger icon-lg"></span><span class="sr-only">{str tag=deletespecific section=mahara arg1='Item 2'}</span>
+                    <a class="btn btn-secondary btn-sm" title="{str tag=delete}" href="">
+                        <span class="icon icon-trash-alt text-danger icon-lg"></span><span class="sr-only">{str tag=deletespecific section=mahara arg1='Item 2'}</span>
                     </a>
                 </div>
             </td>
@@ -1221,11 +1192,10 @@ This drop-down select box allows you to enter text which is then searched using 
 This drop-down select box uses the select2 library. An example can be found on the compose message page in user's inbox.
 ```
 <script type="text/javascript">
-jQuery(document).ready(function() {
+jQuery(function() {
   jQuery(".js-example-basic-single").select2();
 });
 </script>
-
 <select class="js-example-basic-single">
     <option value="AK">Auckland</option>
     <option value="WN">Wellington</option>
@@ -1236,14 +1206,14 @@ jQuery(document).ready(function() {
 </section>
 
 <section data-markdown data-category="profile-pictures">
-### Profile side panel
-The profile picture size that is used on side panels. The example is the profile side panel on the dashboard.
+### Profile side card
+The profile picture size that is used on side cards. The example is the profile side card on the dashboard.
 ```
 <div class="col-md-3 sidebar">
-    <div id="sb-profile" class="sideblock-1 user-panel">
-        <div class="panel panel-default">
-            <h3 class="panel-heading profile-block">
-                <a href="" class="username">Side panel</a> <a href="" title="{str tag=editprofileicon section=artefact.file}" class="user-icon">
+    <div id="sb-profile" class="sideblock-1 user-card">
+        <div class="card">
+            <h3 class="card-header profile-block">
+                <a href="" class="username">Side card</a> <a href="" title="{str tag=editprofileicon section=artefact.file}" class="user-icon user-icon-60">
                     <img src="{profile_icon_url user=$sbdata.id maxheight=60 maxwidth=60}" alt="{str tag=editprofileicon section=artefact.file}">
                 </a>
             </h3>
@@ -1271,15 +1241,13 @@ This size of profile picture is used mainly on comment blocks.
 This size and style of profile picture is used in the friends list.
 ```
 <div class="user-thumbnails">
-    <a href="" class="item user-icon metadata user-icon-larger {cycle values='d0,d1'}">
+    <a href="" class="item user-icon metadata user-icon-100 {cycle values='d0,d1'}">
         <img src="{profile_icon_url user=$sbdata.id maxheight=100 maxwidth=100}" alt="{str tag=profileimagetext section=mahara arg1='John Smith'}">
         <p class="member-name">John Smith</p>
     </a>
 </div>
-
 ```
 </section>
-
 
 <section data-markdown data-category="text">
 ### Heading 1
@@ -1306,10 +1274,10 @@ Used as the sub subheading of a page.
 </section>
 
 <section data-markdown data-category="text">
-### Panel heading
-Used as the heading of a block or panel.
+### card header
+Used as the heading of a block or card.
 ```
-<h3 class="title panel-heading">Panel heading</h3>
+<h3 class="title card-header">card header</h3>
 ```
 </section>
 
@@ -1347,7 +1315,6 @@ Used as a description for an item. Note: the div is only there to apply the form
 ```
 </section>
 
-
 <section data-markdown data-category="icons">
 ### Add user
 As seen on the "Add user" page in the administration area.
@@ -1366,7 +1333,7 @@ As used for the Annotations" block.
 
 <section data-markdown data-category="icons">
 ### Angle double left
-Shows that a panel can be expanded or collapsed to the left.
+Shows that a card can be expanded or collapsed to the left.
 ```
 <i class="icon icon-angle-double-left" role="presentation"></i>
 ```
@@ -1374,7 +1341,7 @@ Shows that a panel can be expanded or collapsed to the left.
 
 <section data-markdown data-category="icons">
 ### Angle double right
-Shows that a panel can be expanded or collapsed to the right.
+Shows that a card can be expanded or collapsed to the right.
 ```
 <i class="icon icon-angle-double-right" role="presentation"></i>
 ```
@@ -1384,7 +1351,7 @@ Shows that a panel can be expanded or collapsed to the right.
 ### Area chart
 As seen on the "Statistics" page in the administration area.
 ```
-<i class="icon icon-area-chart" role="presentation"></i>
+<i class="icon icon-chart-pie" role="presentation"></i>
 ```
 </section>
 
@@ -1408,7 +1375,7 @@ Arrow pointing right. This usually means "next step".
 ### Arrows
 Shows that an object can be dragged and dropped.
 ```
-<i class="icon icon-arrows" role="presentation"></i>
+<i class="icon icon-arrows-alt" role="presentation"></i>
 ```
 </section>
 
@@ -1448,7 +1415,7 @@ As used on the "Journals" page.
 ### Calendar
 Usually used on buttons to signify a pop-up date selctor.
 ```
-<i class="icon icon-calendar" role="presentation"></i>
+<i class="icon icon-regular icon-calendar-alt" role="presentation"></i>
 ```
 </section>
 
@@ -1496,7 +1463,15 @@ Used to signify SmartEvidence item has been assessed as partially complete.
 ### Circle open
 Used to signify SmartEvidence has begun on the SmartEvidence martix table.
 ```
-<i class="icon icon-circle-o begun" role="presentation"></i>
+<i class="icon icon-regular icon-circle begun" role="presentation"></i>
+```
+</section>
+
+<section data-markdown data-category="icons">
+### Circle closed
+Used to signify SmartEvidence can bel placed on the SmartEvidence martix table.
+```
+<i class="icon icon-circle dot" role="presentation"></i>
 ```
 </section>
 
@@ -1544,7 +1519,7 @@ Used to show comments and used for the "Recent forum posts" block.
 ### Copy to clipboard
 As used on the secret URLs page.
 ```
-<i class="icon icon-files-o" role="presentation"></i>
+<i class="icon icon-regular icon-copy" role="presentation"></i>
 ```
 </section>
 
@@ -1592,7 +1567,7 @@ Used as "Inbox" icon.
 ### Exchange
 As seen on the "Networking" page.
 ```
-<i class="icon icon-exchange" role="presentation"></i>
+<i class="icon icon-exchange-alt" role="presentation"></i>
 ```
 </section>
 
@@ -1624,15 +1599,19 @@ Used for the "File(s) to download" block.
 ### File image
 As seen on the "Site files" page in the administration area.
 ```
-<i class="icon icon-file-image-o" role="presentation"></i>
+<i class="icon icon-regular icon-file-image" role="presentation"></i>
 ```
 </section>
 
 <section data-markdown data-category="icons">
 ### File text
+As seen on the "User pages" page.
+```
+<i class="icon icon-regular icon-file-alt" role="presentation"></i>
+```
 As seen on the "Site pages" page.
 ```
-<i class="icon icon-file-text" role="presentation"></i>
+<i class="icon icon-file-alt" role="presentation"></i>
 ```
 </section>
 
@@ -1696,7 +1675,7 @@ Shows that something has been favourited.
 ### Heart hollow
 Shows something can be favourited.
 ```
-<i class="icon icon-heart-o" role="presentation"></i>
+<i class="icon icon-regular icon-heart" role="presentation"></i>
 ```
 </section>
 
@@ -1712,7 +1691,7 @@ Used as a help icon.
 ### Image
 Used for the "Image" block.
 ```
-<i class="icon icon-image" role="presentation"></i>
+<i class="icon icon-regular icon-image" role="presentation"></i>
 ```
 </section>
 
@@ -1744,7 +1723,7 @@ As seen on the "Share" page in the site administration area.
 ### Legal
 As used on the "Licences" page in the administration area.
 ```
-<i class="icon icon-legal" role="presentation"></i>
+<i class="icon icon-gavel" role="presentation"></i>
 ```
 </section>
 
@@ -1752,7 +1731,7 @@ As used on the "Licences" page in the administration area.
 ### Level up
 Used in the file browser to signify going up to the parent folder.
 ```
-<i class="icon icon-level-up" role="presentation"></i>
+<i class="icon icon-level-up-alt" role="presentation"></i>
 ```
 </section>
 
@@ -1768,7 +1747,7 @@ Used as a security icon, for example on the "Shared by me" page.
 ### Long arrow down
 Long arrow pointing down. It is used for sorting items vertically.
 ```
-<i class="icon icon-long-arrow-down" role="presentation"></i>
+<i class="icon icon-long-arrow-alt-down" role="presentation"></i>
 ```
 </section>
 
@@ -1776,7 +1755,7 @@ Long arrow pointing down. It is used for sorting items vertically.
 ### Long arrow left
 Long arrow pointing left. It is used for sorting items horizontally.
 ```
-<i class="icon icon-long-arrow-left" role="presentation"></i>
+<i class="icon icon-long-arrow-alt-left" role="presentation"></i>
 ```
 </section>
 
@@ -1784,7 +1763,7 @@ Long arrow pointing left. It is used for sorting items horizontally.
 ### Long arrow right
 Long arrow pointing right. It is used for sorting items horizontally.
 ```
-<i class="icon icon-long-arrow-right" role="presentation"></i>
+<i class="icon icon-long-arrow-alt-right" role="presentation"></i>
 ```
 </section>
 
@@ -1792,7 +1771,7 @@ Long arrow pointing right. It is used for sorting items horizontally.
 ### Long arrow up
 Long arrow pointing up. It is used for sorting items vertically.
 ```
-<i class="icon icon-long-arrow-up" role="presentation"></i>
+<i class="icon icon-long-arrow-alt-up" role="presentation"></i>
 ```
 </section>
 
@@ -1856,7 +1835,7 @@ Used for the "PDF" block.
 ### Pencil
 Used on "Edit" buttons.
 ```
-<i class="icon icon-pencil" role="presentation"></i>
+<i class="icon icon-pencil-alt" role="presentation"></i>
 ```
 </section>
 
@@ -1904,15 +1883,7 @@ Used for the "Recent journal entries" block.
 ### Refresh
 As seen on the button on the "Networking" page.
 ```
-<i class="icon icon-refresh" role="presentation"></i>
-```
-</section>
-
-<section data-markdown data-category="icons">
-### Remove
-Pretty much the same as the times icon. Should use the trash icon instead.
-```
-<i class="icon icon-remove" role="presentation"></i>
+<i class="icon icon-sync-alt" role="presentation"></i>
 ```
 </section>
 
@@ -1959,7 +1930,7 @@ Used to signify searchable items
 ### Shield
 As used on the "Cookie consent" page in the administration area.
 ```
-<i class="icon icon-shield" role="presentation"></i>
+<i class="icon icon-shield-alt" role="presentation"></i>
 ```
 </section>
 
@@ -1967,7 +1938,7 @@ As used on the "Cookie consent" page in the administration area.
 ### Sign in
 Used to show the sign in button.
 ```
-<i class="icon icon-sign-in" role="presentation"></i>
+<i class="icon icon-sign-in-alt" role="presentation"></i>
 ```
 </section>
 
@@ -1975,7 +1946,7 @@ Used to show the sign in button.
 ### Sign out
 Used to show the sign out button.
 ```
-<i class="icon icon-sign-out" role="presentation"></i>
+<i class="icon icon-sign-out-alt" role="presentation"></i>
 ```
 </section>
 
@@ -1991,7 +1962,7 @@ Used to signify loading. The class "icon-pulse" makes it spin.
 ### Square
 Used as an un-checked check box, for example on an uncompleted task of a plan.
 ```
-<i class="icon icon-square-o" role="presentation"></i>
+<i class="icon icon-regular icon-square" role="presentation"></i>
 ```
 </section>
 
@@ -1999,7 +1970,7 @@ Used as an un-checked check box, for example on an uncompleted task of a plan.
 ### Square checked
 Used as a checked check box, for example on complete tasks of a plan.
 ```
-<i class="icon icon-check-square-o" role="presentation"></i>
+<i class="icon icon-regular icon-check-square role="presentation"></i>
 ```
 </section>
 
@@ -2047,7 +2018,7 @@ Used for the "Text" block.
 ### Trash
 Used on buttons to signify deleting an item. The class "text-danger" makes the icon red.
 ```
-<i class="icon icon-trash text-danger" role="presentation"></i>
+<i class="icon icon-trash-alt text-danger" role="presentation"></i>
 ```
 </section>
 
@@ -2071,7 +2042,7 @@ Used on the "Administer institutions" page in the administration area.
 ### Unlock
 
 ```
-<i class="icon icon-unlock-alt" role="presentation"></i>
+<i class="icon icon-unlock" role="presentation"></i>
 ```
 </section>
 
@@ -2115,8 +2086,8 @@ Used as icon for a system notification.
     <a href="#top" class="btn btn-primary">{$scrollup}</a>
 </div>
 
-<script type="text/javascript" src="https://cdn.rawgit.com/chjj/marked/v0.3.5/marked.min.js"></script>
-<script src="https://cdn.rawgit.com/zenorocha/clipboard.js/v1.5.1/dist/clipboard.min.js"></script>
+<script src="{$wwwroot}js/marked/marked.min.js"></script>
+<script src="{$wwwroot}js/clipboard/clipboard.min.js"></script>
 <script type="text/javascript">
     // using inline js here because it's so specific to the use case of the style guide
     // this is all done on the client side and would be to inefficient for anything other than the styleguide
@@ -2129,7 +2100,7 @@ Used as icon for a system notification.
 
         // modified from https://gist.github.com/paulirish/1343518
         // strip leading whitespace so it isn't evaluated as code
-        var text      = elem.innerHTML.replace(/\n\s*\n/g,'\n'),
+        var text      = elem.innerHTML.replace(/\n\s*\n/g,'\n\n'),
             // set indentation level so your markdown can be indented within your HTML
             leadingws = text.match(/^\n?(\s*)/)[1].length,
             regex     = new RegExp('\\n?\\s{' + leadingws + '}','g'),
@@ -2141,7 +2112,7 @@ Used as icon for a system notification.
         // add copy button
         var codeElem = $j(elem).find('code');
         codeElem.attr('id', 'code-block-' + i);
-        codeElem.before('<button class="copy" role="presentation" data-clipboard-target="#code-block-' + i + '" title="{$copy}"><i class="icon icon-files-o"></i></button>');
+        codeElem.before('<button class="copy" role="presentation" data-clipboard-target="#code-block-' + i + '" title="{$copy}"><i class="icon icon-regular icon-copy"></i></button>');
 
         // add the category to the sections index
         var category = $j(elem).data('category');
@@ -2157,24 +2128,24 @@ Used as icon for a system notification.
       });
 
       // init copy to clipboard buttons
-      new Clipboard('.copy');
+      new ClipboardJS('.copy');
 
       // build section tabs
       $j.each(categories, function(i, category) {
           var readableName = category.replace("-", " ");
           if (i === 0) {
-              $j('#category-tabs').append('<li class="active"><a href="#" data-category="' + category + '">' + readableName + '</a></li>');
+              $j('#category-tabs').append('<li><a class="active" href="#" data-category="' + category + '">' + readableName + '</a></li>');
           } else {
               $j('#category-tabs').append('<li><a href="#" data-category="' + category + '">' + readableName + '</a></li>');
           }
       });
 
       // handle tab click
-      $j('#category-tabs a').click(function(event) {
+      $j('#category-tabs a').on("click", function(event) {
           var category = $j(this).data('category');
           event.preventDefault();
-          $j(this).parent().siblings().removeClass('active');
-          $j(this).parent().addClass('active');
+          $j(this).parent().siblings().children().removeClass('active');
+          $j(this).first().addClass('active');
 
           $j('[data-markdown]').each(function(){
               if ($j(this).data('category') !== category) {
@@ -2188,12 +2159,12 @@ Used as icon for a system notification.
 
       // prevent example clicks going elsewhere unless it is a link
       // we do want a user to follow, eg help info
-      $j('[data-markdown] a:not(.follow)').click(function(event) {
+      $j('[data-markdown] a:not(.follow)').on("click", function(event) {
           event.preventDefault();
       });
 
       // scroll to top button position
-      $j(window).scroll(function() {
+      $j(window).on("scroll", function() {
           var scroll = $j(window).scrollTop();
           if (scroll < 100) {
               $j('#scroll-to-top').removeClass('fixed');
@@ -2202,7 +2173,7 @@ Used as icon for a system notification.
           }
       });
 
-      $j('#scroll-to-top a').click(function(event) {
+      $j('#scroll-to-top a').on("click", function(event) {
           event.preventDefault();
           $j(window).scrollTop(0);
       });

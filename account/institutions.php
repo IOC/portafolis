@@ -10,7 +10,7 @@
  */
 
 define('INTERNAL', 1);
-define('MENUITEM', 'groups/institutions');
+define('MENUITEM', 'engage/institutions');
 define('SECTION_PLUGINTYPE', 'core');
 define('SECTION_PLUGINNAME', 'account');
 define('SECTION_PAGE', 'institutions');
@@ -30,7 +30,7 @@ if (!empty($member)) {
             $elements[] = array(
                 'type' => 'submit',
                 'name' => '_leave_' . $i->institution,
-                'class' => 'btn-default',
+                'class' => 'btn-secondary',
                 'confirm' => get_string('reallyleaveinstitution'),
                 'title' => get_string('youareamemberof', 'mahara', $institutions[$i->institution]->displayname),
                 'value' => get_string('leaveinstitution')
@@ -83,7 +83,7 @@ if (!empty($requested)) {
         $elements[] = array(
             'type' => 'submit',
             'name' => '_cancelrequest_' . $i,
-            'class' => 'btn-default',
+            'class' => 'btn-secondary',
             'title' => get_string('youhaverequestedmembershipof', 'mahara',
                                   $institutions[$i]->displayname),
             'value' => get_string('cancelrequest')
@@ -131,7 +131,7 @@ if (!empty($invited)) {
             'primarychoice' => 'confirm',
             'title' => get_string('youhavebeeninvitedtojoin', 'mahara',
                                   $institutions[$i]->displayname),
-            'class' => 'btn-default',
+            'class' => 'btn-secondary',
             'value' => array(get_string('joininstitution'), get_string('decline'))
         );
         unset($institutions[$i]);
@@ -230,6 +230,7 @@ function requestmembership_submit(Pieform $form, $values) {
 }
 
 $smarty = smarty();
+setpageicon($smarty, 'icon-university');
 $smarty->assign('memberform', $memberform);
 $smarty->assign('requestedform', $requestedform);
 $smarty->assign('invitedform', $invitedform);

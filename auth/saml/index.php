@@ -45,11 +45,8 @@ $sp = 'default-sp';
 PluginAuthSaml::init_simplesamlphp();
 
 // Check the SimpleSAMLphp config is compatible
-$saml_config = SimpleSAML_Configuration::getInstance();
+$saml_config = SimpleSAML\Configuration::getInstance();
 $session_handler = $saml_config->getString('session.handler', false);
-if ($session_handler == 'memcache' && !extension_loaded('mcrypt')) {
-    throw new AuthInstanceException(get_string_php_version('errornomcrypt','auth.saml'));
-}
 $store_type = $saml_config->getString('store.type', false);
 if ($store_type == 'phpsession' || $session_handler == 'phpsession' || (empty($store_type) && empty($session_handler))) {
     throw new AuthInstanceException(get_string('errorbadssphp', 'auth.saml'));
@@ -58,12 +55,12 @@ if ($store_type == 'phpsession' || $session_handler == 'phpsession' || (empty($s
 // do we have a logout request?
 if (param_variable("logout", false)) {
     // logout the saml session
-    $as = new SimpleSAML_Auth_Simple($sp);
+    $as = new SimpleSAML\Auth\Simple($sp);
     $as->logout($CFG->wwwroot);
 }
 
 // what is the session like?
-$saml_session = SimpleSAML_Session::getSession();
+$saml_session = SimpleSAML\Session::getSession();
 $valid_saml_session = $saml_session ? $saml_session->isValid($sp) : false;
 
 // figure out what the returnto URL should be
@@ -88,7 +85,7 @@ if (!validateUrlSyntax($wantsurl, 's?H?S?F?E?u-P-a?I?p?f?q?r?')) {
 // trim off any reference to login and stash
 $SESSION->wantsurl = preg_replace('/\&login$/', '', $wantsurl);
 
-$as = new SimpleSAML_Auth_Simple($sp);
+$as = new SimpleSAML\Auth\Simple($sp);
 $idp_entityid = null;
 if (! $as->isAuthenticated()) {
     if (param_variable("idpentityid", false)) {
@@ -116,8 +113,8 @@ if (! $as->isAuthenticated()) {
 }
 
 // reinitialise config to pickup idp entityID
-SimpleSAML_Configuration::init(get_config('docroot') . 'auth/saml/config');
-$as = new SimpleSAML_Auth_Simple('default-sp');
+SimpleSAML\Configuration::init(get_config('docroot') . 'auth/saml/config');
+$as = new SimpleSAML\Auth\Simple('default-sp');
 $as->requireAuth(array('ReturnTo' => get_config('wwwroot') . "auth/saml/index.php"));
 
 // ensure that $_SESSION is cleared for simplesamlphp
@@ -189,6 +186,10 @@ if ($can_login) {
     // must be within this domain
     if (!preg_match('/'.$_SERVER['HTTP_HOST'] . '/', $wantsurl)) {
         $wantsurl = $CFG->wwwroot;
+    }
+    // if redirecting to using homepage but using custom landing page
+    if ($wantsurl === $CFG->wwwroot && get_config('homepageredirect') && !empty(get_config('homepageredirecturl'))) {
+        $wantsurl = get_config('homepageredirecturl');
     }
     @session_write_close();
     redirect($wantsurl);
@@ -305,73 +306,10 @@ function auth_saml_find_authinstance($saml_attributes) {
 */
 function auth_saml_disco_screen($list, $preferred) {
 
-    $idps = array();
-    $lang = current_language();
-    $lang = explode('.', $lang);
-    $lang = strtolower(array_shift($lang));
-    $haslogos = false;
-    foreach ($list as $entityid => $value) {
-        $desc = $name = $entityid;
-        if (isset($value['description'][$lang])) {
-            $desc = $value['description'][$lang];
-        }
-        if (isset($value['name'][$lang])) {
-            $name = $value['name'][$lang];
-        }
-        $idplogo = array();
-        if (isset($value['UIInfo']) && isset($value['UIInfo']['Logo'])) {
-            $haslogos = true;
-            // Fetch logo from provider if given
-            $logos = $value['UIInfo']['Logo'];
-            foreach ($logos as $logo) {
-                if (isset($logo['lang']) && $logo['lang'] == $lang) {
-                    $idplogo = $logo;
-                    break;
-                }
-            }
-            // None matching the lang wanted so use the first one
-            if (empty($idplogo)) {
-                $idplogo = $logos[0];
-            }
-        }
-        $idps[]= array('idpentityid' => $entityid, 'name' => $name, 'description' => $desc, 'logo' => $idplogo);
-    }
-
-    usort($idps, function($a, $b) {
-        return $a['name'] > $b['name'];
-    });
-    $idps = array(
-        'count'   => count($idps),
-        'limit'   => count($idps),
-        'offset'  => 1,
-        'data'    => $idps,
-    );
-
-    $cols = array(
-            'logo' => array('name' => get_string('logo', 'auth.saml'),
-                            'template' => 'auth:saml:idplogo.tpl',
-                            'class' => 'short',
-                            'sort' => 'false'),
-            'idpentityid' => array('name' => get_string('idpentityid', 'auth.saml'),
-                                   'template' => 'auth:saml:idpentityid.tpl',
-                                   'class' => 'col-sm-3',
-                                   'sort' => false),
-            'description' => array('name' => get_string('idpprovider','auth.saml'),
-                                   'sort' => false),
-    );
-    if ($haslogos === false) {
-        unset($cols['logo']);
-    }
-
-    $smarty = smarty_core();
-    $smarty->assign('results', $idps);
-    $smarty->assign('cols', $cols);
-    $smarty->assign('pagedescriptionhtml', get_string('selectidp', 'auth.saml'));
-    $idps = $smarty->fetch('auth:saml:idptable.tpl');
-
+    list ($cols, $html) = PluginAuthSaml::idptable($list, $preferred);
     $smarty = smarty(array(), array(), array(), array('pagehelp' => false, 'sidebars' => false));
     $smarty->assign('columns', $cols);
-    $smarty->assign('idps', $idps);
+    $smarty->assign('idps', $html);
     $smarty->assign('preferred', $preferred);
     $smarty->assign('PAGEHEADING', get_string('disco', 'auth.saml'));
     $smarty->display('auth:saml:disco.tpl');
@@ -447,7 +385,7 @@ function saml_auth_generate_login_form() {
         return;
     }
     if (count_records('institution', 'registerallowed', 1, 'suspended', 0)) {
-        $registerlink = '<a class="btn btn-primary btn-xs" href="' . get_config('wwwroot') . 'register.php">' . get_string('register') . '</a>';
+        $registerlink = '<a class="btn btn-primary btn-sm" href="' . get_config('wwwroot') . 'register.php">' . get_string('register') . '</a>';
     }
     else {
         $registerlink = '';
@@ -485,7 +423,7 @@ function saml_auth_generate_login_form() {
                 'value' => get_string('login')
             ),
             'register' => array(
-                'value' => '<div id="login-helplinks" class="panel-footer"><small>' . $registerlink
+                'value' => '<div id="login-helplinks" class="card-footer"><small>' . $registerlink
                     . '<a href="' . get_config('wwwroot') . 'forgotpass.php">' . get_string('lostusernamepassword') . '</a></small></div>'
             ),
             'loginsaml' => array(

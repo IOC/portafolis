@@ -53,6 +53,9 @@ if (!$USER->can_edit_view($view)) {
 if ($group && !group_within_edit_window($group)) {
     throw new AccessDeniedException();
 }
+if ($view->get('template') == View::SITE_TEMPLATE) {
+    throw new AccessDeniedException();
+}
 
 
 $form = array(
@@ -67,6 +70,11 @@ $form = array(
         'id' => array(
             'type' => 'hidden',
             'value' => $view->get('id'),
+        ),
+        'progress_meter_token' => array(
+            'type' => 'hidden',
+            'value' => 'copyviewexistingmembersprogress',
+            'readonly' => TRUE,
         ),
     )
 );
@@ -150,9 +158,9 @@ if ($view->get('type') == 'profile') {
     // Make sure all the user's institutions have access to profile view
     $view->add_owner_institution_access();
 
-    if (get_config('loggedinprofileviewaccess')) {
+    if (get_config('loggedinprofileviewaccess') && !is_isolated()) {
         // Force logged-in user access
-        $viewaccess = new stdClass;
+        $viewaccess = new stdClass();
         $viewaccess->accesstype = 'loggedin';
         $viewaccess->startdate = null;
         $viewaccess->stopdate = null;
@@ -166,7 +174,7 @@ $allowcomments = $view->get('allowcomments');
 
 $form['elements']['more'] = array(
     'type' => 'fieldset',
-    'class' => $view->get('type') == 'profile' ? ' hidden' : 'last form-condensed as-link link-expand-right with-heading',
+    'class' => $view->get('type') == 'profile' ? ' d-none' : 'last form-condensed as-link link-expand-right with-heading',
     'collapsible' => true,
     'collapsed' => true,
     'legend' => get_string('moreoptions', 'view'),
@@ -192,10 +200,24 @@ $form['elements']['more'] = array(
     ),
 );
 
+$admintutorids = group_get_member_ids($group, array('admin', 'tutor'));
+if ($group && in_array( $USER->get('id'), $admintutorids, true )) {
+    $form['elements']['more']['elements'] = array_merge($form['elements']['more']['elements'], array('existinggroupmembercopy' => array(
+            'type'         => 'switchbox',
+            'title'        => get_string('existinggroupmembercopy', 'view'),
+            'description'  => get_string('existinggroupmembercopydesc1', 'view'),
+            'defaultvalue' => 0,
+    )));
+}
+$viewaccess = $view->get_access('%s');
+if (is_isolated() && !empty($viewaccess)) {
+    $viewaccess = filter_isolated_view_access($view, $viewaccess);
+}
+
 $form['elements']['accesslist'] = array(
     'type'          => 'viewacl',
     'allowcomments' => $allowcomments,
-    'defaultvalue'  => $view->get_access('%s'),
+    'defaultvalue'  => $viewaccess,
     'viewtype'      => $view->get('type'),
     'isformgroup' => false
 );
@@ -249,10 +271,10 @@ if ($institution) {
 jQuery(function($) {
     function update_retainview() {
         if ($('#editaccess_template').prop('checked')) {
-            $('#editaccess_retainview_container').removeClass('hidden');
+            $('#editaccess_retainview_container').removeClass('d-none');
         }
         else {
-            $('#editaccess_retainview_container').addClass('hidden');
+            $('#editaccess_retainview_container').addClass('d-none');
             $('#editaccess_retainview').prop('checked',false);
             update_loggedin_access();
         }
@@ -266,7 +288,7 @@ EOF;
 }
 
 if (!$allowcomments) {
-    $form['elements']['more']['elements']['approvecomments']['class'] = 'hidden';
+    $form['elements']['more']['elements']['approvecomments']['class'] = 'd-none';
 }
 $allowcomments = json_encode((int) $allowcomments);
 
@@ -276,17 +298,17 @@ jQuery(function($) {
     function update_comment_options() {
         allowcomments = $('#editaccess_allowcomments').prop('checked');
         if (allowcomments) {
-            $('#editaccess_approvecomments').removeClass('hidden');
-            $('#editaccess_approvecomments_container').removeClass('hidden');
+            $('#editaccess_approvecomments').removeClass('d-none');
+            $('#editaccess_approvecomments_container').removeClass('d-none');
             $('#accesslisttable .commentcolumn').each(function () {
-                $(this).addClass('hidden');
+                $(this).addClass('d-none');
             });
         }
         else {
 
-            $('#editaccess_approvecomments_container').addClass('hidden');
+            $('#editaccess_approvecomments_container').addClass('d-none');
             $('#accesslisttable .commentcolumn').each(function () {
-                $(this).removeClass('hidden');
+                $(this).removeClass('d-none');
             });
         }
     }
@@ -397,7 +419,6 @@ function editaccess_validate(Pieform $form, $values) {
         'institution' => get_string('institution'),
     );
 
-    $loggedinaccess = false;
     if ($values['accesslist']) {
         $dateformat = get_string('strftimedatetimeshort');
         foreach ($values['accesslist'] as &$item) {
@@ -412,10 +433,6 @@ function editaccess_validate(Pieform $form, $values) {
                 $SESSION->add_error_msg(get_string('datetimeformatguide1', 'mahara', pieform_element_calendar_human_readable_dateformat()));
                 $form->set_error('accesslist', '');
                 break;
-            }
-
-            if ($item['type'] == 'loggedin' && empty($item['startdate']) && empty($item['stopdate'])) {
-                $loggedinaccess = true;
             }
 
             $now = time();
@@ -468,7 +485,7 @@ function editaccess_cancel_submit() {
 }
 
 function editaccess_submit(Pieform $form, $values) {
-    global $SESSION, $institution, $collections, $views, $view;
+    global $SESSION, $institution, $collections, $views, $view, $group;
 
     if ($values['accesslist']) {
         $dateformat = get_string('strftimedatetimeshort');
@@ -491,6 +508,32 @@ function editaccess_submit(Pieform $form, $values) {
     );
 
     $toupdate = array();
+
+    if ($group) {
+        $viewconfig['existinggroupmembercopy'] = !empty($values['existinggroupmembercopy']) ? $values['existinggroupmembercopy'] : 0;
+
+        // Add funtionality here which copies the page into existing group members pages.
+        if ($viewconfig['existinggroupmembercopy']) {
+            $groupmembers = group_get_member_ids($group, array('member'));
+            $key = 0;
+            $total = count($groupmembers);
+            foreach ($groupmembers as $groupmember) {
+                if (!($key % 5)) {
+                    set_progress_info('copyviewexistingmembersprogress', $key, $total, get_string('copyforexistingmembersprogress', 'view'));
+                }
+                $key++;
+
+                $userobj = new User();
+                $userobj->find_by_id($groupmember);
+                if (!empty($values['collections'])) {
+                    $userobj->copy_group_views_collections_to_existing_members($values['collections'], true);
+                }
+                if (!empty($values['views'])) {
+                    $userobj->copy_group_views_collections_to_existing_members($values['views']);
+                }
+            }
+        }
+    }
 
     if ($institution) {
         if (isset($values['copynewuser'])) {
@@ -544,9 +587,9 @@ function editaccess_submit(Pieform $form, $values) {
             // Ensure the user's institutions are still added to the access list
             $view->add_owner_institution_access();
 
-            if (get_config('loggedinprofileviewaccess')) {
+            if (get_config('loggedinprofileviewaccess') && !is_isolated()) {
                 // Force logged-in user access
-                $viewaccess = new stdClass;
+                $viewaccess = new stdClass();
                 $viewaccess->accesstype = 'loggedin';
                 $view->add_access($viewaccess);
             }
@@ -554,7 +597,7 @@ function editaccess_submit(Pieform $form, $values) {
     }
 
     $SESSION->add_ok_msg(get_string('updatedaccessfornumviews1', 'view', count($toupdate)));
-
+    set_progress_done('copyviewexistingmembersprogress');
     if ($view->get('owner')) {
         redirect('/view/share.php');
     }
@@ -564,7 +607,6 @@ function editaccess_submit(Pieform $form, $values) {
     if ($view->get('institution')) {
         redirect(get_config('wwwroot') . '/view/institutionshare.php?institution=' . $view->get('institution'));
     }
-    $view->post_edit_redirect();
 }
 
 $form = pieform($form);

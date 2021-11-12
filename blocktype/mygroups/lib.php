@@ -25,6 +25,10 @@ class PluginBlocktypeMyGroups extends MaharaCoreBlocktype {
         return true;
     }
 
+    public static function single_artefact_per_block() {
+        return false;
+    }
+
     public static function get_categories() {
         return array('internal' => 32000);
     }
@@ -65,7 +69,7 @@ class PluginBlocktypeMyGroups extends MaharaCoreBlocktype {
         }
     }
 
-    public static function render_instance(BlockInstance $instance, $editing=false) {
+    public static function render_instance(BlockInstance $instance, $editing=false, $versioning=false) {
         $configdata = $instance->get('configdata');
         $sort = !empty($configdata['sort']) ? $configdata['sort'] : null;
         $limit = !empty($configdata['limitto']) ? $configdata['limitto'] : null;
@@ -155,7 +159,7 @@ class PluginBlocktypeMyGroups extends MaharaCoreBlocktype {
      * Mygroups only makes sense for personal views
      */
     public static function allowed_in_view(View $view) {
-        return $view->get('owner') != null;
+        return in_array($view->get('type'), self::get_viewtypes());
     }
 
     public static function override_instance_title(BlockInstance $instance) {
@@ -176,4 +180,5 @@ class PluginBlocktypeMyGroups extends MaharaCoreBlocktype {
     public static function get_artefacts(BlockInstance $instance) {
         return array();
     }
+
 }

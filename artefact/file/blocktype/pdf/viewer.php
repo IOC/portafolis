@@ -22,13 +22,14 @@ $fileid = param_integer('file');
 $viewid = param_integer('view');
 $editing = param_boolean('editing', false);
 $ingroup = param_boolean('ingroup', false);
-
-if (!artefact_in_view($fileid, $viewid)) {
-    throw new AccessDeniedException('');
-}
+$versioning = param_boolean('versioning', false);
 
 if (!can_view_view($viewid)) {
-    throw new AccessDeniedException('');
+  throw new AccessDeniedException();
+}
+
+if (!$versioning && !artefact_in_view($fileid, $viewid)) {
+    throw new AccessDeniedException();
 }
 
 $file = artefact_instance_from_id($fileid);
@@ -50,4 +51,5 @@ if (get_config('cleanurls') && get_config('cleanurlusersubdomains') && !$editing
 $smarty = smarty();
 $smarty->assign('url', $urlbase . 'artefact/file/download.php?file='.$fileid.'&view='.$viewid.'&title='.urlencode($file->get('title')));
 $smarty->assign('title', $file->get('title'));
+$smarty->assign('cacheversion', get_config('cacheversion'));
 $smarty->display('blocktype:pdf:pdf.tpl');

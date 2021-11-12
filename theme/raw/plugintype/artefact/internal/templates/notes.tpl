@@ -7,7 +7,7 @@
                 <th>{str tag=noteTitle section=artefact.internal}</th>
                 <th>{str tag=blockTitle section=artefact.internal}</th>
                 <th>{str tag=containedin section=artefact.internal}</th>
-                <th class="text-center">
+                <th>
                     <span class="icon icon-lg icon-paperclip" role="presentation" aria-hidden="true"></span>
                     <span class="sr-only">
                         {str tag=Attachments section=artefact.resume}
@@ -27,7 +27,7 @@
 </div>
 {$pagination|safe}
 {if $pagination_js}
-    <script type="application/javascript">
+    <script>
     {$pagination_js|safe}
     </script>
 {/if}

@@ -16,19 +16,19 @@ var forceReloadElements = ['sitename', 'lang', 'theme',
 var isReloadRequired = false;
 
 // if strict privacy is enabled, disables multiple institutions per user
-function multipleinstitutionscheckallowed() {
+function multipleinstitutionscheckallowed(isolated) {
     var target = jQuery('#siteoptions_usersallowedmultipleinstitutions');
     if (jQuery('#siteoptions_institutionstrictprivacy').is(':checked')) {
         target.prop('disabled', true);
         target.prop('checked', false);
     }
-    else {
+    else if (!isolated) {
         target.prop('disabled', false);
     }
 }
 
 // if multiple institution per user is enabled, disables strict privacy
-function strictprivacycheckallowed() {
+function strictprivacycheckallowed(isolated) {
     if (!usersinmultipleinstitutions) {
         var target = jQuery('#siteoptions_institutionstrictprivacy');
         if (jQuery('#siteoptions_usersallowedmultipleinstitutions').is(':checked')) {
@@ -38,6 +38,29 @@ function strictprivacycheckallowed() {
         else {
             target.prop('disabled', false);
         }
+    }
+}
+
+// we need to toggle the homepageredirecturl field depending on state of homepageredirect
+function homepageredirect() {
+    var target = jQuery('#siteoptions_homepageredirecturl');
+    if (jQuery('#siteoptions_homepageredirect').is(':checked')) {
+        target.parent().removeClass('hidden');
+        target.prop('disabled', false);
+    }
+    else {
+        target.parent().addClass('hidden');
+        target.prop('disabled', true);
+    }
+}
+
+function update_allowpublicprofiles() {
+    if (jQuery('#siteoptions_allowpublicviews').prop('checked')) {
+        jQuery('#siteoptions_allowpublicprofiles').prop('checked', true);
+        jQuery('#siteoptions_allowpublicprofiles').prop('disabled', 'disabled');
+    }
+    else {
+        jQuery('#siteoptions_allowpublicprofiles').prop('disabled', false);
     }
 }
 
@@ -62,20 +85,7 @@ var checkReload = (function($) {
       $('#siteoptions_allowpublicviews').on('click', update_allowpublicprofiles);
   }
 
-
-
-  function update_allowpublicprofiles() {
-      if ($('#siteoptions_allowpublicviews').prop('checked')) {
-          $('#siteoptions_allowpublicprofiles').prop('checked', true);
-          $('#siteoptions_allowpublicprofiles').prop('disabled', 'disabled');
-      }
-      else {
-          $('#siteoptions_allowpublicprofiles').removeAttr('disabled');
-      }
-  }
-
   connectElements();
-
 
   // Javascript success handler for the form. Re-wires up the elements
   return function(form, data) {
@@ -84,15 +94,23 @@ var checkReload = (function($) {
       isReloadRequired = false;
       connectElements();
 
-      jQuery('#siteoptions_institutionstrictprivacy').click(function() {
-          multipleinstitutionscheckallowed();
+      jQuery('#siteoptions_institutionstrictprivacy').on("click", function() {
+          multipleinstitutionscheckallowed(isolated);
       });
-      jQuery('#siteoptions_usersallowedmultipleinstitutions').click(function() {
-          strictprivacycheckallowed();
+      jQuery('#siteoptions_usersallowedmultipleinstitutions').on("click", function() {
+          strictprivacycheckallowed(isolated);
       });
-      multipleinstitutionscheckallowed();
-      strictprivacycheckallowed();
+      jQuery('#siteoptions_homepageredirect').on("click", function() {
+          homepageredirect();
+      });
+      multipleinstitutionscheckallowed(isolated);
+      strictprivacycheckallowed(isolated);
+      homepageredirect();
 
       formSuccess(form, data);
   };
 }(jQuery));
+
+jQuery(function($) {
+    $('#siteoptions_allowpublicviews').on('click', update_allowpublicprofiles);
+});

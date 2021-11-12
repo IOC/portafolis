@@ -57,13 +57,17 @@ function pieform_element_calendar(Pieform $form, $element) {
     }
 
     // Build the HTML
+    $element['class'] .= " datetimepicker-input";
     $result = '<span class="hasDatepickerwrapper"><input type="text"'
-        . $form->element_attributes($element)
-        . ' value="' . $value . '"
-        aria-label="' . get_string('element.calendar.format.arialabel', 'pieforms') . '"
+        . $form->element_attributes($element, array('id'))
+        . ' id="' . $id . '"'
+        . ' value="' . $value . '"'
+        . ' autocomplete="off"'
+        . ' data-toggle="datetimepicker" data-target="#' . $id . '"'
+        . ' aria-label="' . get_string('element.calendar.format.arialabel', 'pieforms') . '"
         ></span>';
     $result .= '
-        <script type="application/javascript">
+        <script>
         var input_' . $id . ' = jQuery("input#' . $id . '");
         ';
     if (!empty($options['showsTime'])) {
@@ -75,17 +79,32 @@ function pieform_element_calendar(Pieform $form, $element) {
             format: "' . $options['dateFormat'] . '",';
     }
     $tooltips = json_encode(pieform_element_calendar_tooltip_lang_strings());
+    if ($value) {
+        $result .= '
+            date: moment("' . $value . '", "' . $options['dateFormat'] . '"),';
+    }
     $result .= '
         locale: "' . strstr(current_language(), '.', true) . '",
         useCurrent: false,
-        showClear: true,
-        showTodayButton: true,
+        buttons: {
+            showClear: true,
+            showToday: true,
+        },
         tooltips: ' . $tooltips . ',
         icons: {
-            clear: "icon icon-trash",
+            time: "icon icon-regular icon-clock",
+            date: "icon icon-regular icon-calendar-alt",
+            up: "icon icon-arrow-up",
+            down: "icon icon-arrow-down",
+            previous: "icon icon-chevron-left",
+            next: "icon icon-chevron-right",
+            close: "icon icon-times",
+            clear: "icon icon-trash-alt",
             today: "icon icon-crosshairs",
         },
-    }).on("dp.hide", function(selectedDate) {
+    });
+
+    input_' . $id . '.on("hide.datetimepicker", function(selectedDate) {
         if (typeof formchangemanager !== \'undefined\') {
             var form = input_' . $id . '.closest(\'form\')[0];
             formchangemanager.setFormState(form, FORM_CHANGED);
@@ -252,17 +271,15 @@ function pieform_element_calendar_get_headdata($element) {
 
     $libjs = $element['jsroot'] . 'js/jquery-ui.min.js';
     $libcss = $element['jsroot'] . 'css/smoothness/jquery-ui.min.css';
-    $timeaddonjs  = $element['jsroot'] . 'js/jquery-ui-timepicker-addon.js';
-    $bootstrapdatetimejs = '/js/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js';
-    $momentjs = '/js/momentjs/moment-with-locales.min.js';
+    $bootstrapdatetimejs = get_config('wwwroot') . 'js/bootstrap-datetimepicker/tempusdominus-bootstrap-4.js';
+    $momentjs = get_config('wwwroot') . 'js/momentjs/moment-with-locales.min.js';
     $prev = get_string('datepicker_prevText');
     $next = get_string('datepicker_nextText');
     $result = array(
         '<link rel="stylesheet" type="text/css" media="all" href="' . append_version_number($libcss) . '">',
-        '<script type="application/javascript" src="' . append_version_number($libjs) . '"></script>',
-        '<script type="application/javascript" src="' . append_version_number($timeaddonjs) . '"></script>',
-        '<script type="application/javascript" src="' . append_version_number($momentjs) . '"></script>',
-        '<script type="application/javascript" src="' . append_version_number($bootstrapdatetimejs) . '"></script>'
+        '<script src="' . append_version_number($libjs) . '"></script>',
+        '<script src="' . append_version_number($momentjs) . '"></script>',
+        '<script src="' . append_version_number($bootstrapdatetimejs) . '"></script>'
     );
     return $result;
 }
@@ -316,7 +333,12 @@ function pieform_element_calendar_convert_to_epoch($date) {
     // (See http://php.net/manual/en/function.strtotime.php#refsect1-function.strtotime-notes)
     $dateformat = get_string('pieform_calendar_dateformat', 'langconfig');
     if (preg_match('/%[ed].*%[m].*%[yY]/', $dateformat)) {
-         $value = strtotime(preg_replace('/[^0-9]/', '.', $date));
+        $timesuffix = preg_match('/(am|pm)$/i', $date, $match);
+        $fixdate = preg_replace('/[^0-9]/', '.', $date);
+        if ($timesuffix) {
+            $fixdate = preg_replace('/[^\d](\.+)$/', $match[1], $fixdate);
+        }
+        $value = strtotime($fixdate);
     }
 
     // If that didn't work, then just try doing strtotime on the plain value

@@ -47,11 +47,11 @@ class BehatNavigation extends BehatBase {
         $nodetextliteral = $this->escaper->escapeLiteral($menuitemtext);
         $exception = new ExpectationException('The menu item ' . ($byid ? 'with id ' : '') . '"' . $menuitemtext . '" not found or invisible in "' . $menu . '"', $this->getSession());
         if ($byid) {
-            $xpath = "//nav[@id='" . $menu . "']" .
+            $xpath = "//nav/div[@id='" . $menu . "']" .
               "//a[@id='" . $menuitemtext . "']";
         }
         else {
-            $xpath = "//nav[@id='" . $menu . "']" .
+            $xpath = "//nav/div[@id='" . $menu . "']" .
               "//a[normalize-space(.)=" . $nodetextliteral ."]";
         }
         $node = $this->find('xpath', $xpath, $exception);
@@ -75,12 +75,24 @@ class BehatNavigation extends BehatBase {
         $menuitemtextliteral = $this->escaper->escapeLiteral($menuitemtext);
         $exception = new ExpectationException('The sub menu item "' . $menuitemtext . '" not found or invisible in "' . $menu . '"', $this->getSession());
 
-        $xpath = "//nav[@id='" . $menu . "']" .
-            "//li[contains(normalize-space(.), " . $menuitemtextliteral .")]" .
-            "//a[normalize-space(.)=" . $submenuitemtextliteral ."]";
+        $xpath = "//nav/div[@id='" . $menu . "']" .
+            "/ul/li[contains(normalize-space(.), " . $menuitemtextliteral .")]" .
+            "//li//a[normalize-space(.)=" . $submenuitemtextliteral ."]";
         $node = $this->find('xpath', $xpath, $exception);
 
         return $node;
+    }
+
+    /**
+     * Choose inbox from menu
+     *
+     * @Given /^I choose inbox$/
+     */
+    public function i_choose_inbox() {
+        $exception = new ExpectationException('The menu item inbox not found or invisible', $this->getSession());
+        $xpath = "//a[@id='nav-inbox']";
+        $inboxnode = $this->find('xpath', $xpath, $exception);
+        $inboxnode->click();
     }
 
     /**
@@ -175,6 +187,12 @@ class BehatNavigation extends BehatBase {
             // We just want to expand the node, we don't want to follow it.
             $node = $node->getParent();
         }
+        // Check if the node is wrapped in an inner div
+        if ($node->find('css', '.collapse-inline')) {
+            // We just want to expand the parent node as this doesn't align top left to the outer-link a link.
+            $node = $node->getParent();
+        }
+
         $node->click();
     }
 
@@ -227,5 +245,36 @@ class BehatNavigation extends BehatBase {
             $node = $node->getParent();
         }
         $node->click();
+    }
+
+    /**
+     * Goes directly to the URL to open a notification based on its author.
+     *
+     * @Given I go directly to the message from :author
+     * @param string $author The message's author
+     */
+    public function i_go_directly_to_the_message($author = null) {
+        if (!$this->running_javascript()) {
+            return true;
+        }
+
+        // First go to the inbox, we'll find our message from there.
+        $this->visitPath("/module/multirecipientnotification/inbox.php");
+
+        // Now find the message itself.
+        $exception = new ExpectationException('The inbox item from ' . $author . ' could not be found.', $this->getSession());
+        $authorliteral = $this->escaper->escapeLiteral($author);
+        $xpath = "//span[@class='username'][contains(normalize-space(.),{$authorliteral})]/ancestor::a";
+        $node = $this->find('xpath', $xpath, new ExpectationException($xpath, $this->getSession()));
+
+        if (!$node->hasAttribute('data-id') || !$node->hasAttribute('data-list')) {
+            throw new ExpectationException('No data-id or data-list for inbox item "' . $author . '".', $this->getSession());
+        }
+
+        // Having found the message, let's go to it directly.
+        $msg = $node->getAttribute('data-id');
+        $msgtype = $node->getAttribute('data-list');
+
+        $this->visitPath("/module/multirecipientnotification/inbox.php?msgtype={$msgtype}&msg={$msg}");
     }
 }

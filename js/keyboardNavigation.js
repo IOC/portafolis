@@ -10,7 +10,7 @@
  */
 
 jQuery(function($) {
-    $(window).keypress(function(e) {
+    $(window).on("keypress", function(e) {
         var targetType = e.target.nodeName;
 
         if (
@@ -40,7 +40,7 @@ jQuery(function($) {
                     document.location.href = config.wwwroot + 'artefact/file/';
                     break;
                 case 'g':
-                    document.location.href = config.wwwroot + 'group/mygroups.php';
+                    document.location.href = config.wwwroot + 'group/index.php';
                     break;
                 case 'v':
                     document.location.href = config.wwwroot + 'view';
@@ -52,7 +52,7 @@ jQuery(function($) {
                     document.location.href = config.wwwroot + 'artefact/plans';
                     break;
                 case '/':
-                    document.usf.query.focus();
+                    $(document.usf.query).trigger("focus");
                     break;
             }
             config.commandMode = false;

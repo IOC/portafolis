@@ -3,10 +3,11 @@
 }
 
 .forum-post {
-    border-left: 5px solid $brand-default;
+    border-left: 5px solid theme-color("secondary");
     padding-left: 15px;
     .forumpostleft {
         min-width: 120px;
+        padding-right: 20px;
     }
     .title {
         margin: 0;
@@ -14,6 +15,9 @@
     }
     .editstopost {
         padding-top: 10px;
+    }
+    &.alert-warning .list-group-item {
+        background-color: transparent;
     }
 }
 
@@ -36,7 +40,7 @@
     .collapsible a {
         &:focus,
         &:hover {
-            background: darken($panel-default-heading-bg, 1%) !important;
+            background: scale-color($card-bg, $lightness: -1.40%) !important;
         }
     }
 }
@@ -46,6 +50,6 @@
     font-style: italic;
     padding: 5px 10px;
     color: $theme-text-midtone-color;
-    background: $gray-lighter;
-    border-radius: 5px;
+    background: $gray-100;
+    border-radius: $border-radius-lg;
 }

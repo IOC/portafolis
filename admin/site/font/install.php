@@ -141,12 +141,12 @@ $form = pieform(array(
 $inlinejs = <<<EOF
 
 jQuery(function($) {
-    $('#addfontform_fontfileZip').change(function() {
+    $('#addfontform_fontfileZip').on('change', function() {
         // need to hide the 'font files' fieldset
         $('fieldset.individualfiles').hide(500);
     });
     $('fieldset.individualfiles input').each(function() {
-        $(this).change(function() {
+        $(this).on('change', function() {
             // need to hide the 'zip archive' fieldset
             $('fieldset.zipfile').hide(500);
         });
@@ -156,6 +156,7 @@ jQuery(function($) {
 EOF;
 
 $smarty = smarty(array('tablerenderer'));
+setpageicon($smarty, 'icon-text-width');
 $smarty->assign('form', $form);
 $smarty->assign('PAGEHEADING', hsc(TITLE));
 $smarty->assign('INLINEJAVASCRIPT', $inlinejs);

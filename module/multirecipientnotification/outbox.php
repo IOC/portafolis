@@ -31,7 +31,7 @@ $USER->reload_background_fields();
 $installedtypes = get_records_assoc(
     'activity_type', '', '',
     'plugintype,pluginname,name',
-    'name,admin,plugintype,pluginname'
+    'name,"admin",plugintype,pluginname'
 );
 
 $options = array();
@@ -83,13 +83,13 @@ function toggleMessageDisplay(table, id) {
     }
     var rows = messages.parents("tr");
     if (rows.length > 0) {
-        if (jQuery(rows[0]).find(".messagedisplaylong.hidden").length > 0) {
-            jQuery(rows[0]).find(".messagedisplaylong").removeClass("hidden");
-            jQuery(rows[0]).find(".messagedisplayshort").addClass("hidden");
+        if (jQuery(rows[0]).find(".messagedisplaylong.d-none").length > 0) {
+            jQuery(rows[0]).find(".messagedisplaylong").removeClass("d-none");
+            jQuery(rows[0]).find(".messagedisplayshort").addClass("d-none");
         }
         else {
-            jQuery(rows[0]).find(".messagedisplaylong").addClass("hidden");
-            jQuery(rows[0]).find(".messagedisplayshort").removeClass("hidden");
+            jQuery(rows[0]).find(".messagedisplaylong").addClass("d-none");
+            jQuery(rows[0]).find(".messagedisplayshort").removeClass("d-none");
         }
     }
 }
@@ -194,6 +194,7 @@ function delete_all_notifications_submit() {
 }
 
 $smarty = smarty(array('paginator'));
+setpageicon($smarty, 'icon-paper-plane');
 $smarty->assign('options', $options);
 $smarty->assign('type', $type);
 
@@ -209,18 +210,22 @@ $searchdata = new stdClass();
 $searchdata->searchtext = $searchtext;
 $searchdata->searcharea = $searcharea;
 $searchdata->searchurl = 'outbox.php?type=' . $type . '&search=' . $searchtext . '&searcharea=';
-$searchdata->all_count = 0;
-$searchdata->sender_count = 0;
-$searchdata->recipient_count = 0;
-$searchdata->sub_count = 0;
-$searchdata->mes_count = 0;
+$searchdata->tabs = array();
 if ($searchtext !== null) {
     $searchresults = get_message_search($searchtext, $type, 0, 9999999, "outbox.php", $USER->get('id'));
-    $searchdata->all_count = $searchresults['All_data']['count'];
-    $searchdata->sender_count = $searchresults['Sender']['count'];
-    $searchdata->recipient_count = $searchresults['Recipient']['count'];
-    $searchdata->sub_count = $searchresults['Subject']['count'];
-    $searchdata->mes_count = $searchresults['Message']['count'];
+    unset($searchresults['Sender']);
+    foreach ($searchresults as $section => $value) {
+        $term = new stdClass();
+        $term->name = $section;
+        $term->count = $value['count'];
+        switch ($section) {
+            case 'All_data': $term->tag = 'labelall'; break;
+            case 'Subject': $term->tag = 'subject'; break;
+            case 'Message': $term->tag = 'labelmessage'; break;
+            case 'Recipient': $term->tag = 'touser';
+        }
+        $searchdata->tabs[] = $term;
+    }
 }
 $smarty->assign('searchdata', $searchdata);
 $smarty->assign('deleteall', $deleteall);

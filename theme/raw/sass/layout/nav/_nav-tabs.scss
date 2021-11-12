@@ -3,26 +3,45 @@
     margin-bottom: 0 !important;
     &.nav {
         li > a {
+            margin-right: 2px;
+            display: block;
             font-weight: 300;
+            border: 1px solid transparent;
             border-bottom: 3px solid transparent;
             padding: 8px 10px;
-            font-size: $font-size-base + 1;
-            &.inactive {
-                color: $theme-text-lighttone-color;
-                &:hover {
-                    color: $theme-text-lighttone-color;
-                    background: transparent;
-                    border-bottom: 3px solid transparent;
-                }
-            }
+            font-size: $font-size-base * 1.07142857;
+            text-decoration: none;
+
             &:hover,
             &:focus {
-                color: darken($link-color, 5%);
-                border: 1px solid transparent;
-                border-bottom: 3px solid $nav-tabs-link-hover-border-color;
-                background: lighten($gray-lighter, 3%);
+                color: scale-color($link-color, $lightness: -16%);
+                border-bottom-color: $nav-tabs-link-hover-border-color;
+                background: scale-color($gray-100, $lightness: 45%);
+                text-decoration: none;
+            }
+
+            &.inactive {
+                color: $theme-text-lighttone-color;
+                &:hover,
+                &:focus {
+                    color: $theme-text-lighttone-color;
+                    background: transparent;
+                    border-bottom-color: transparent;
+                }
+            }
+
+            &.active {
+                color: $link-color;
+                border-bottom-color: $nav-tabs-link-hover-border-color;
+                &:hover,
+                &:focus {
+                    border-bottom-color: $nav-tabs-link-hover-border-color;
+                }
             }
         }
+    }
+    > li {
+        margin-bottom: -$nav-tabs-border-width;
     }
 }
 
@@ -30,15 +49,4 @@
 .nav-tabs + .submit,
 .tab-content legend {
     display: none;
-}
-
-.nav-tabs>li.active>a {
-    color: $link-color;
-    border: 1px solid transparent;
-    border-bottom: 3px solid $nav-tabs-active-link-hover-border-color;
-    &:hover,
-    &:focus {
-        border: 1px solid transparent;
-        border-bottom: 3px solid $nav-tabs-link-hover-border-color;
-    }
 }

@@ -225,7 +225,7 @@ class AuthSaml extends Auth {
 
         if ($create) {
 
-            $user->passwordchange     = 1;
+            $user->passwordchange     = 0;
             $user->active             = 1;
             $user->deleted            = 0;
 
@@ -393,13 +393,28 @@ class PluginAuthSaml extends PluginAuth {
 
     public static function install_auth_default() {
         // Set library version to download
-        set_config_plugin('auth', 'saml', 'version', '1.15.1');
+        set_config_plugin('auth', 'saml', 'version', '1.19.0');
     }
 
-    private static function create_certificates($numberofdays = 3650) {
+    private static function delete_old_certificates() {
+        // This is actually rolling new certificate over current one
+        if (!file_exists(AuthSaml::get_certificate_path() . 'server_new.crt')) {
+            // No new cert to replace the old one with
+            return false;
+        }
+        // copy the old ones out of the way in the dataroot temp dir (in case one needs to fetch it back)
+        copy(AuthSaml::get_certificate_path() . 'server.crt', get_config('dataroot') . 'temp/server.crt.' . date('Ymdhis', time()));
+        copy(AuthSaml::get_certificate_path() . 'server.pem', get_config('dataroot') . 'temp/server.pem.' . date('Ymdhis', time()));
+        if (rename(AuthSaml::get_certificate_path() . 'server_new.crt', AuthSaml::get_certificate_path() . 'server.crt')) {
+            return rename(AuthSaml::get_certificate_path() . 'server_new.pem', AuthSaml::get_certificate_path() . 'server.pem');
+        }
+        return false;
+    }
+
+    private static function create_certificates($numberofdays = 3650, $altname = false) {
         global $CFG;
         // Get the details of the first site admin and use it for setting up the certificate
-        $userid = get_record_sql('SELECT id FROM {usr} WHERE admin = 1 AND deleted = 0 ORDER BY id LIMIT 1', array());
+        $userid = get_record_sql('SELECT id FROM {usr} WHERE "admin" = 1 AND deleted = 0 ORDER BY id LIMIT 1', array());
         $id = $userid->id;
         $user = new User;
         $user->find_by_id($id);
@@ -435,11 +450,18 @@ class PluginAuthSaml extends PluginAuth {
         if (empty($publickey)) {
             throw new Exception(get_string('nullpubliccert', 'auth.saml'), 1);
         }
-
-        if ( !file_put_contents(AuthSaml::get_certificate_path() . 'server.pem', $privatekey) ) {
+        $pemfile = 'server.pem';
+        $crtfile = 'server.crt';
+        $altcert = false;
+        if ($altname) {
+            // Save them with '_new' suffix
+            $pemfile = 'server_new.pem';
+            $crtfile = 'server_new.crt';
+        }
+        if ( !file_put_contents(AuthSaml::get_certificate_path() . $pemfile, $privatekey) ) {
             throw new Exception(get_string('nullprivatecert', 'auth.saml'), 1);
         }
-        if ( !file_put_contents(AuthSaml::get_certificate_path() . 'server.crt', $publickey) ) {
+        if ( !file_put_contents(AuthSaml::get_certificate_path() . $crtfile, $publickey) ) {
             throw new Exception(get_string('nullpubliccert', 'auth.saml'), 1);
         }
     }
@@ -502,6 +524,7 @@ class PluginAuthSaml extends PluginAuth {
             error_log("auth/saml: Creating the certificate for the first time");
             self::create_certificates();
         }
+        $data = $newdata = null;
         $cert = file_get_contents(AuthSaml::get_certificate_path() . 'server.crt');
         $pem = file_get_contents(AuthSaml::get_certificate_path() . 'server.pem');
         if (empty($cert) || empty($pem)) {
@@ -516,7 +539,6 @@ class PluginAuthSaml extends PluginAuth {
             // Load data from the current certificate.
             $data = openssl_x509_parse($cert);
         }
-
         // Calculate date expirey interval.
         $date1 = date("Y-m-d\TH:i:s\Z", str_replace ('Z', '', $data['validFrom_time_t']));
         $date2 = date("Y-m-d\TH:i:s\Z", str_replace ('Z', '', $data['validTo_time_t']));
@@ -525,6 +547,25 @@ class PluginAuthSaml extends PluginAuth {
         $interval = $datetime1->diff($datetime2);
         $expirydays = $interval->format('%a');
 
+        // check if there are two certs in parallel - during the time of rolling SP certs
+        if (file_exists(AuthSaml::get_certificate_path() . 'server_new.crt')) {
+            $newcert = file_get_contents(AuthSaml::get_certificate_path() . 'server_new.crt');
+            $newpem = file_get_contents(AuthSaml::get_certificate_path() . 'server_new.pem');
+            $newprivatekey = openssl_pkey_get_private($newpem);
+            $newpublickey  = openssl_pkey_get_public($newcert);
+            $newdata = openssl_pkey_get_details($newpublickey);
+            // Load data from the new certificate.
+            $newdata = openssl_x509_parse($newcert);
+            // Calculate date expirey interval.
+            $newdate1 = date("Y-m-d\TH:i:s\Z", str_replace ('Z', '', $newdata['validFrom_time_t']));
+            $newdate2 = date("Y-m-d\TH:i:s\Z", str_replace ('Z', '', $newdata['validTo_time_t']));
+            $newdatetime1 = new DateTime($newdate1);
+            $newdatetime2 = new DateTime($newdate2);
+            $newinterval = $newdatetime1->diff($newdatetime2);
+            $newexpirydays = $newinterval->format('%a');
+        }
+
+        $oldcert = ($data && $newdata) ? 'oldcertificate' : 'currentcertificate';
         $elements = array(
             'authname' => array(
                 'type'  => 'hidden',
@@ -559,13 +600,13 @@ class PluginAuthSaml extends PluginAuth {
             ),
             'makereallysure' => array(
                 'type'         => 'html',
-                'value'        => "<script>jQuery('document').ready(function() {     jQuery('#pluginconfig_save').on('click', function() {
+                'value'        => "<script>jQuery(function() {     jQuery('#pluginconfig_save').on('click', function() {
                 return confirm('" . get_string('reallyreallysure1', 'auth.saml') . "');
             });});</script>",
             ),
             'certificate' => array(
                                 'type' => 'fieldset',
-                                'legend' => get_string('certificate1', 'auth.saml'),
+                                'legend' => get_string($oldcert, 'auth.saml'),
                                 'elements' =>  array(
                                                 'protos_help' =>  array(
                                                 'type' => 'html',
@@ -574,7 +615,7 @@ class PluginAuthSaml extends PluginAuth {
 
                                                 'pubkey' => array(
                                                     'type'         => 'html',
-                                                    'value'        => '<h3 class="title">' . get_string('publickey','admin') . '</h3>' .
+                                                    'value'        => '<h5 class="title">' . get_string('publickey','admin') . '</h5>' .
                                                       '<pre style="font-size: 0.7em; white-space: pre;">' . $cert . '</pre>'
                                                 ),
                                                 'sha1fingerprint' => array(
@@ -596,20 +637,61 @@ class PluginAuthSaml extends PluginAuth {
                                 'name' => 'activate_webservices_networking',
                             ),
         );
+        if ($data && $newdata) {
+            $certstatus = 'deleteoldkey';
+            $elements['newcertificate'] = array(
+                'type' => 'fieldset',
+                'legend' => get_string('newcertificate', 'auth.saml'),
+                'elements' =>  array(
+                    'protos_help' =>  array(
+                        'type' => 'html',
+                        'value' => '<div><p>' . get_string('manage_new_certificate', 'auth.saml') . '</p></div>',
+                    ),
+                    'pubkey' => array(
+                        'type'         => 'html',
+                        'value'        => '<h5 class="title">' . get_string('newpublickey','auth.saml') . '</h5>' .
+                        '<pre style="font-size: 0.7em; white-space: pre;">' . $newcert . '</pre>'
+                    ),
+                    'sha1fingerprint' => array(
+                        'type'         => 'html',
+                        'value'        => '<div><p>' . get_string('sha1fingerprint', 'auth.webservice', auth_saml_openssl_x509_fingerprint($newcert, "sha1")) . '</p></div>',
+                    ),
+                    'md5fingerprint' => array(
+                        'type'         => 'html',
+                        'value'        => '<div><p>' . get_string('md5fingerprint', 'auth.webservice', auth_saml_openssl_x509_fingerprint($newcert, "md5")) . '</p></div>',
+                    ),
+                    'expires' => array(
+                        'type'         => 'html',
+                        'value'        => '<div><p>' . get_string('publickeyexpireson', 'auth.webservice',
+                                            format_date($newdata['validTo_time_t']) . " (" . $newexpirydays . " days)") . '</p></div>'
+                    ),
+                ),
+                'collapsible' => false,
+                'collapsed'   => false,
+                'name' => 'activate_webservices_networking',
+            );
+        }
+        else {
+            $certstatus = 'createnewkey';
+        }
+        $elements['deletesubmit'] = array(
+            'class' => 'btn-secondary',
+            'name' => 'submit', // must be called submit so we can access it's value
+            'type'  => 'button',
+            'usebuttontag' => true,
+            'content' => '<span class="icon icon-sync-alt icon-lg left text-danger" role="presentation" aria-hidden="true"></span> '. get_string($certstatus . 'text', 'auth.saml'),
+            'value' => $certstatus,
+        );
 
         // check extensions are loaded
         $libchecks = '';
-        // Make sure mcrypt exists
-        if (get_config('memcacheservers') && !extension_loaded('mcrypt')) {
-            $libchecks .= '<li>' . get_string_php_version('errornomcrypt', 'auth.saml') . '</li>';
-        }
         // Make sure the simplesamlphp files have been installed via 'make ssphp'
         if (!self::is_simplesamlphp_installed()) {
             $libchecks .= '<li>' . get_string('errorbadlib', 'auth.saml', get_config('docroot') .'auth/saml/extlib/simplesamlphp/vendor/autoload.php') . '</li>';
         }
         else {
             require(get_config('docroot') .'auth/saml/extlib/simplesamlphp/vendor/autoload.php');
-            $config = SimpleSAML_Configuration::getInstance();
+            $config = SimpleSAML\Configuration::getInstance();
 
             //simplesaml version we install with 'make ssphp'
             $libversion = get_config_plugin('auth', 'saml', 'version');
@@ -630,6 +712,36 @@ class PluginAuthSaml extends PluginAuth {
                                      )), $elements);
         }
 
+        // Show the current metadata installed on the site so we can delete them
+        // We need to handle this outside the current pieform as we don't want to submit that and re-create a new certificate
+        $disco = self::get_raw_disco_list();
+        if (count($disco['list']) > 0) {
+            $discoused = array();
+            if ($discousedtmp  = get_records_sql_array("SELECT i.name, i.displayname, aic.value,
+                                                         CASE WHEN i.name = 'mahara' THEN 1 ELSE 0 END AS site
+                                                        FROM {auth_instance} ai
+                                                        JOIN {auth_instance_config} aic ON aic.instance = ai.id
+                                                        JOIN {institution} i ON i.name = ai.institution
+                                                        WHERE ai.authname = ? and field = ?", array('saml', 'institutionidpentityid'))) {
+                // turn $discoused into useful array structure
+                foreach ($discousedtmp as $used) {
+                    $discoused[$used->value][] = $used;
+                }
+            }
+
+            list($cols, $html) = self::idptable($disco['list'], null, $discoused, true);
+            $smarty = smarty_core();
+            $smarty->assign('html', $html);
+            $smarty->assign('cols', $cols);
+            $out = $smarty->fetch('auth:saml:idptableconfig.tpl');
+            $elements = array_merge($elements , array(
+                                        'idptable' => array(
+                                            'type' => 'html',
+                                            'value' => $out,
+                                        )
+                                    ));
+        }
+
         return array(
             'elements' => $elements,
         );
@@ -642,6 +754,33 @@ class PluginAuthSaml extends PluginAuth {
     }
 
     public static function save_config_options(Pieform $form, $values) {
+
+        if ($form->get_submitvalue() === 'createnewkey') {
+            global $SESSION;
+            error_log("auth/saml: Creating new certificate");
+            self::create_certificates(3650, true);
+            $SESSION->add_ok_msg(get_string('newkeycreated', 'auth.saml'));
+            // Using cancel here as a hack to get it to redirect so it shows the new keys
+            $form->reply(PIEFORM_CANCEL, array(
+                'location'    => get_config('wwwroot') . 'admin/extensions/pluginconfig.php?plugintype=auth&pluginname=saml'
+            ));
+        }
+        else if ($form->get_submitvalue() === 'deleteoldkey') {
+            global $SESSION;
+            error_log("auth/saml: Deleting old certificates");
+            $result = self::delete_old_certificates();
+            if ($result) {
+                $SESSION->add_ok_msg(get_string('oldkeydeleted', 'auth.saml'));
+            }
+            else {
+                $SESSION->add_error_msg(get_string('keyrollfailed', 'auth.saml'));
+            }
+            // Using cancel here as a hack to get it to redirect so it shows the new keys
+            $form->reply(PIEFORM_CANCEL, array(
+                'location'    => get_config('wwwroot') . 'admin/extensions/pluginconfig.php?plugintype=auth&pluginname=saml'
+            ));
+        }
+
         delete_records_select('auth_config', 'plugin = ? AND field NOT LIKE ?', array('saml', 'version'));
         $configs = array('spentityid', 'sigalgo');
         foreach ($configs as $config) {
@@ -649,9 +788,111 @@ class PluginAuthSaml extends PluginAuth {
         }
 
         // generate new certificates
-        error_log("auth/saml: Creating new certificates");
-        self::create_certificates();
+        error_log("auth/saml: Creating new certificate based on form values");
+        self::create_certificates(3650);
+    }
 
+    public static function idptable($list, $preferred = array(), $institutions = array(), $showdelete = false) {
+        if (empty($list)) {
+            return array(0, '');
+        }
+        $idps = array();
+        $lang = current_language();
+        $lang = explode('.', $lang);
+        $lang = strtolower(array_shift($lang));
+        $haslogos = $hasinstitutions = $hasdelete = false;
+        foreach ($list as $entityid => $value) {
+            $candelete = false;
+            $desc = $name = $entityid;
+            if (isset($value['description'][$lang])) {
+                $desc = $value['description'][$lang];
+            }
+            if (isset($value['name'][$lang])) {
+                $name = $value['name'][$lang];
+            }
+            $idplogo = array();
+            if (isset($value['UIInfo']) && isset($value['UIInfo']['Logo'])) {
+                $haslogos = true;
+                // Fetch logo from provider if given
+                $logos = $value['UIInfo']['Logo'];
+                foreach ($logos as $logo) {
+                    if (isset($logo['lang']) && $logo['lang'] == $lang) {
+                        $idplogo = $logo;
+                        break;
+                    }
+                }
+                // None matching the lang wanted so use the first one
+                if (empty($idplogo)) {
+                    $idplogo = $logos[0];
+                }
+            }
+            $insts = array();
+            if (!empty($institutions) && !empty($institutions[$entityid])) {
+                $hasinstitutions = true;
+                $insts = $institutions[$entityid];
+            }
+            else if ($showdelete) {
+                $hasdelete = true;
+                $candelete = true;
+            }
+
+            $idps[]= array('idpentityid' => $entityid, 'name' => $name, 'description' => $desc, 'logo' => $idplogo, 'institutions' => $insts, 'delete' => $candelete);
+        }
+
+        usort($idps, function($a, $b) {
+            return $a['name'] > $b['name'];
+        });
+        $idps = array(
+                      'count'   => count($idps),
+                      'limit'   => count($idps),
+                      'offset'  => 1,
+                      'data'    => $idps,
+                      );
+
+        $cols = array(
+            'logo' => array(
+                'name' => get_string('logo', 'auth.saml'),
+                'template' => 'auth:saml:idplogo.tpl',
+                'class' => 'short',
+                'sort' => false
+            ),
+            'idpentityid' => array(
+                'name' => get_string('idpentityid', 'auth.saml'),
+                'template' => 'auth:saml:idpentityid.tpl',
+                'class' => 'col-sm-3',
+                'sort' => false
+            ),
+            'description' => array(
+                'name' => get_string('idpprovider','auth.saml'),
+                'sort' => false
+            ),
+            'institutions' => array(
+                'name' => get_string('institutions', 'auth.saml'),
+                'template' => 'auth:saml:idpinstitutions.tpl',
+                'sort' => false
+            ),
+            'delete' => array(
+                'template' => 'auth:saml:idpdelete.tpl',
+                'sort' => false
+            ),
+        );
+        if ($haslogos === false) {
+            unset($cols['logo']);
+        }
+        if ($hasinstitutions === false) {
+            unset($cols['institutions']);
+        }
+        if ($hasdelete === false) {
+            unset($cols['delete']);
+        }
+
+        $smarty = smarty_core();
+        $smarty->assign('results', $idps);
+        $smarty->assign('cols', $cols);
+        $smarty->assign('pagedescriptionhtml', get_string('selectidp', 'auth.saml'));
+        $html = $smarty->fetch('auth:saml:idptable.tpl');
+
+        return array($cols, $html);
     }
 
     public static function has_instance_config() {
@@ -662,24 +903,38 @@ class PluginAuthSaml extends PluginAuth {
         if (!self::is_simplesamlphp_installed()) {
             return false;
         }
+        $ishandler = false;
 
-        if (get_config('ssphpsessionhandler') == 'memcached' && self::is_memcache_configured()) {
-            return true;
+        switch (get_config('ssphpsessionhandler')) {
+            case 'memcache':
+                //make people use memcached, not memcache
+                throw new ConfigSanityException(get_string('memcacheusememcached', 'error'));
+                break;
+            case 'memcached':
+                if (is_memcache_configured()) {
+                    $ishandler = true;
+                    break;
+                }
+            case 'redis':
+                if (is_redis_configured()) {
+                    $ishandler = true;
+                    break;
+                }
+            case 'sql':
+                if (is_sql_configured()) {
+                    $ishandler = true;
+                    break;
+                }
+            default:
+                // Check Redis
+                $ishandler = is_redis_configured();
+                // And check Memcache if no Redis
+                $ishandler = $ishandler ? $ishandler : is_memcache_configured();
+                // And check Sql if no Memcache
+                $ishandler = $ishandler ? $ishandler : is_sql_configured();
         }
 
-        if (get_config('ssphpsessionhandler') == 'redis' && self::is_redis_configured()) {
-            return true;
-        }
-
-        if (empty(get_config('ssphpsessionhandler'))) {
-            // Check Redis
-            $ishandler = self::is_redis_configured();
-            // And check Memcache if no Redis
-            $ishandler = $ishandler ? $ishandler : self::is_memcache_configured();
-            return $ishandler;
-        }
-
-        return false;
+        return $ishandler;
     }
 
     public static function is_simplesamlphp_installed() {
@@ -699,84 +954,7 @@ class PluginAuthSaml extends PluginAuth {
         require_once(get_config('docroot') . 'auth/saml/extlib/simplesamlphp/vendor/autoload.php');
         require_once(get_config('docroot') . 'auth/saml/extlib/_autoload.php');
 
-        SimpleSAML_Configuration::init(get_config('docroot') . 'auth/saml/config');
-    }
-
-    public static function is_memcache_configured() {
-        $is_configured = false;
-
-        if (extension_loaded('memcache')) {
-            foreach (self::get_memcache_servers() as $server) {
-                $memcache = new Memcache;
-
-                if (!empty($server['hostname']) && !empty($server['port'])) {
-                    if ($memcache->connect($server['hostname'], $server['port'])) {
-                        $is_configured = true;
-                        break;
-                    }
-                }
-            }
-        }
-        return $is_configured;
-    }
-
-    public static function get_memcache_servers() {
-        $memcache_servers = array();
-
-        $servers = get_config('memcacheservers');
-
-        if (empty($servers)) {
-            $servers = 'localhost';
-        }
-
-        $servers = explode(',', $servers);
-
-        foreach ($servers as $server) {
-            $url = parse_url($server);
-            $host = !empty($url['host']) ? $url['host'] : $url['path'];
-            $port = !empty($url['port']) ? $url['port'] : 11211;
-
-            $memcache_servers[] = array('hostname' => $host, 'port' => $port);
-        }
-
-        return $memcache_servers;
-    }
-
-    public static function is_redis_configured() {
-        return (bool) PluginAuthSaml::get_redis_master();
-    }
-
-    public static function get_redis_master() {
-        $master = null;
-        if (extension_loaded('redis')) {
-            foreach (self::get_redis_servers() as $server) {
-                if (!empty($server['server']) && !empty($server['mastergroup']) && !empty($server['prefix'])) {
-                    require_once(get_config('libroot') . 'redis/sentinel.php');
-                    $sentinel = new sentinel($server['server']);
-                    $master = $sentinel->get_master_addr($server['mastergroup']);
-                }
-            }
-        }
-        return $master;
-    }
-
-    public static function get_redis_config() {
-        $servers = PluginAuthSaml::get_redis_servers();
-        $master = PluginAuthSaml::get_redis_master();
-        return array('host' => $master->ip,
-                     'port' => (int)$master->port,
-                     'prefix' => $servers[0]['prefix']
-                    );
-    }
-
-    public static function get_redis_servers() {
-        $redissentinelservers = get_config('redissentinelservers');
-        $redismastergroup = get_config('redismastergroup');
-        $redisprefix = get_config('redisprefix');
-        $redis_servers[] = array('server' => $redissentinelservers,
-                                 'mastergroup' => $redismastergroup,
-                                 'prefix' => $redisprefix);
-        return $redis_servers;
+        SimpleSAML\Configuration::init(get_config('docroot') . 'auth/saml/config');
     }
 
     public static function get_idps($xml) {
@@ -792,13 +970,21 @@ class PluginAuthSaml extends PluginAuth {
         return array($entityid, $idps);
     }
 
+    public static function get_raw_disco_list() {
+        if (class_exists('PluginAuthSaml_IdPDisco')) {
+            PluginAuthSaml::init_simplesamlphp();
+            $discoHandler = new PluginAuthSaml_IdPDisco(array('saml20-idp-remote', 'shib13-idp-remote'), 'saml');
+            return $discoHandler->getTheIdPs();
+        }
+        return array('list' => 0);
+    }
+
     public static function get_disco_list($lang = null, $entityidps = array()) {
         if (empty($lang)) {
             $lang = current_language();
         }
-        PluginAuthSaml::init_simplesamlphp();
-        $discoHandler = new PluginAuthSaml_IdPDisco(array('saml20-idp-remote', 'shib13-idp-remote'), 'saml');
-        $disco = $discoHandler->getTheIdPs();
+
+        $disco = self::get_raw_disco_list();
         if (count($disco['list']) > 0) {
             $lang = explode('.', $lang);
             $lang = strtolower(array_shift($lang));
@@ -812,16 +998,18 @@ class PluginAuthSaml extends PluginAuth {
     }
 
     public static function get_instance_config_options($institution, $instance = 0) {
-        if (!class_exists('SimpleSAML_XHTML_IdPDisco')) {
-            global $SESSION;
-            $SESSION->add_error_msg(get_string('errorssphpsetup', 'auth.saml'));
-            redirect(get_config('wwwroot') . 'admin/users/institutions.php?i=' . $institution);
+        if (!class_exists('SimpleSAML\XHTML\IdPDisco')) {
+            return array(
+                'error' => get_string('errorssphpsetup', 'auth.saml')
+            );
         }
 
         if ($instance > 0) {
             $default = get_record('auth_instance', 'id', $instance);
             if ($default == false) {
-                throw new SystemException('Could not find data for auth instance ' . $instance);
+                return array(
+                    'error' => get_string('nodataforinstance1', 'auth', $instance)
+                );
             }
             $current_config = get_records_menu('auth_instance_config', 'instance', $instance, '', 'field, value');
 
@@ -885,8 +1073,8 @@ class PluginAuthSaml extends PluginAuth {
         $entityidps = array('new' => get_string('newidpentity', 'auth.saml')) + $entityidps;
 
         $idpselectjs = <<< EOF
-<script type="application/javascript">
-jQuery('document').ready(function($) {
+<script>
+jQuery(function($) {
 
     function update_idp_label(idp) {
         var idplabel = $('label[for="auth_config_institutionidp"]').html();
@@ -963,7 +1151,6 @@ EOF;
             ),
             'metarefresh_metadata_url' => array(
                 'type'  => 'text',
-                'size' => 100,
                 'title' => get_string('metarefresh_metadata_url', 'auth.saml'),
                 'rules' => array(
                     'required' => false,
@@ -1075,6 +1262,9 @@ EOF;
                 'defaultvalue' => self::$default_config['authloginmsg'],
                 'help'         => true,
                 'class'        => 'under-label-help',
+                'rules'       => array(
+                    'maxlength' => 1000000
+                )
             ),
         );
 
@@ -1202,7 +1392,7 @@ EOF;
                         JOIN {auth_instance} ai ON (ai.authname = 'saml' AND ai.id = aic.instance)
                         WHERE aic.field = 'institutionidpentityid' AND aic.value = ? AND aic.instance != ?",
                         array($values['institutionidpentityid'], $values['instance']));
-                    if ($duplicates[0]->instances > 0) {
+                    if ($duplicates && is_array($duplicates) && $duplicates[0]->instances > 0) {
                         $SESSION->add_ok_msg(get_string('idpentityupdatedduplicates', 'auth.saml', $duplicates[0]->instances));
                     }
                     else {
@@ -1275,7 +1465,7 @@ EOF;
         }
         $elements = array(
             'loginsaml' => array(
-                'value' => '<div class="login-externallink"><a class="btn btn-primary btn-xs" href="' . $url . '">' . get_string('login', 'auth.saml') . '</a></div>'
+                'value' => '<div class="login-externallink"><a class="btn btn-primary btn-sm" href="' . $url . '">' . get_string('login', 'auth.saml') . '</a></div>'
             )
         );
         return $elements;
@@ -1294,11 +1484,13 @@ function auth_saml_openssl_x509_fingerprint($cert, $hash) {
    $bin = base64_decode($cert);
    return hash($hash, $bin);
 }
-
+$discofileexists = false;
 if (file_exists(get_config('docroot') . 'auth/saml/extlib/simplesamlphp/lib/SimpleSAML/XHTML/IdPDisco.php')) {
     require_once(get_config('docroot') . 'auth/saml/extlib/simplesamlphp/lib/SimpleSAML/XHTML/IdPDisco.php');
-
-    class PluginAuthSaml_IdPDisco extends SimpleSAML_XHTML_IdPDisco
+    $discofileexists = true;
+}
+if ($discofileexists && class_exists('SimpleSAML\XHTML\IdPDisco')) {
+    class PluginAuthSaml_IdPDisco extends SimpleSAML\XHTML\IdPDisco
     {
 
         /**
@@ -1315,8 +1507,8 @@ if (file_exists(get_config('docroot') . 'auth/saml/extlib/simplesamlphp/lib/Simp
             assert('is_string($instance)');
 
             // initialize standard classes
-            $this->config = SimpleSAML_Configuration::getInstance();
-            $this->metadata = SimpleSAML_Metadata_MetaDataStorageHandler::getMetadataHandler();
+            $this->config = SimpleSAML\Configuration::getInstance();
+            $this->metadata = SimpleSAML\Metadata\MetaDataStorageHandler::getMetadataHandler();
             $this->instance = $instance;
             $this->metadataSets = $metadataSets;
             $this->isPassive = false;
@@ -1330,7 +1522,10 @@ if (file_exists(get_config('docroot') . 'auth/saml/extlib/simplesamlphp/lib/Simp
         }
     }
 }
-
+else if ($discofileexists) {
+    global $SESSION;
+    $SESSION->add_msg_once(get_string('errorupdatelib', 'auth.saml'), 'error', false);
+}
 
 /*
  * Provides any mahara specific wrappers for the metarefresh plugin from simplesamlphp that is used to refresh IDP metadata
@@ -1349,12 +1544,14 @@ class Metarefresh {
     /*
      * Return all configured metadataurls for idps if any found
      */
-    public static function get_metadata_urls() {
+    public static function get_metadata_urls($viajson=false) {
         $finalarr = array();
         $sites = get_records_menu('auth_instance_config', 'field', 'institutionidpentityid', '', 'instance, value');
         $urls = get_records_array('auth_instance_config', 'field', 'metarefresh_metadata_url', '', 'field, value, instance');
         if ( ( !$sites || count($sites) <= 0 ) || ( !$urls || count($urls) <= 0 ) ) {
-            log_warn("Could not get any valid urls for metadata refresh url list", false, false);
+            if ($viajson === false) {
+                log_warn("Could not get any valid urls for metadata refresh url list", false, false);
+            }
             return array();//could not get any valid urls to fetch metadata from
         }
         foreach($urls as $url) {
@@ -1370,8 +1567,8 @@ class Metarefresh {
     /*
      * Given an IDP entity id, find the source url for it
      */
-    public static function get_metadata_url($idp) {
-        $sources = self::get_metadata_urls();
+    public static function get_metadata_url($idp, $viajson=false) {
+        $sources = self::get_metadata_urls($viajson);
         if (isset($sources[$idp])) {
             return $sources[$idp];
         }
@@ -1393,8 +1590,8 @@ class Metarefresh {
             //Include autoloader and setup config dir correctly
             PluginAuthSaml::init_simplesamlphp();
 
-            $config = SimpleSAML_Configuration::getInstance();
-            $mconfig = SimpleSAML_Configuration::getOptionalConfig('config-metarefresh.php');
+            $config = SimpleSAML\Configuration::getInstance();
+            $mconfig = SimpleSAML\Configuration::getOptionalConfig('config-metarefresh.php');
 
             $sets = $mconfig->getConfigList('sets', array());
 
@@ -1403,7 +1600,7 @@ class Metarefresh {
 
             foreach ($sets AS $setkey => $set) {
 
-                SimpleSAML_Logger::info('Mahara [metarefresh]: Executing set [' . $setkey . ']');
+                SimpleSAML\Logger::info('Mahara [metarefresh]: Executing set [' . $setkey . ']');
 
                 $expireAfter = $set->getInteger('expireAfter', NULL);
                 if ($expireAfter !== NULL) {
@@ -1417,12 +1614,12 @@ class Metarefresh {
                 $outputDir = $config->resolvePath($outputDir);
                 $outputFormat = $set->getValueValidate('outputFormat', array('flatfile', 'serialize'), 'flatfile');
 
-                $oldMetadataSrc = SimpleSAML_Metadata_MetaDataStorageSource::getSource(array(
+                $oldMetadataSrc = SimpleSAML\Metadata\MetaDataStorageSource::getSource(array(
                     'type' => $outputFormat,
                     'directory' => $outputDir,
                 ));
-
-                $metaloader = new sspmod_metarefresh_MetaLoader($expire, $stateFile, $oldMetadataSrc);
+                require_once(get_config('docroot') . 'auth/saml/extlib/simplesamlphp/modules/metarefresh/lib/MetaLoader.php');
+                $metaloader = new SimpleSAML\Module\metarefresh\MetaLoader($expire, $stateFile, $oldMetadataSrc);
 
                 # Get global blacklist, whitelist and caching info
                 $blacklist = $mconfig->getArray('blacklist', array());
@@ -1470,7 +1667,7 @@ class Metarefresh {
                         $source['conditionalGET'] = $conditionalGET;
                     }
 
-                    SimpleSAML_Logger::debug('cron [metarefresh]: In set [' . $setkey . '] loading source ['  . $source['src'] . ']');
+                    SimpleSAML\Logger::debug('cron [metarefresh]: In set [' . $setkey . '] loading source ['  . $source['src'] . ']');
                     $metaloader->loadSource($source);
                 }
 
@@ -1487,7 +1684,7 @@ class Metarefresh {
                 }
 
                 if ($set->hasValue('arp')) {
-                    $arpconfig = SimpleSAML_Configuration::loadFromArray($set->getValue('arp'));
+                    $arpconfig = SimpleSAML\Configuration::loadFromArray($set->getValue('arp'));
                     $metaloader->writeARPfile($arpconfig);
                 }
             }
@@ -1495,7 +1692,7 @@ class Metarefresh {
 
         }
         catch (Exception $e) {
-            SimpleSAML_Logger::info('Mahara [metarefresh]: Error during metadata refresh ' . $e->getMessage());
+            SimpleSAML\Logger::info('Mahara [metarefresh]: Error during metadata refresh ' . $e->getMessage());
             return false;//fetch failed
         }
     }

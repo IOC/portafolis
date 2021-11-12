@@ -215,9 +215,9 @@ class PluginExportLeap extends PluginExport {
             $this->smarty->assign('updated',     self::format_rfc3339_date(strtotime($collection->get('mtime'))));
             $this->smarty->assign('created',     self::format_rfc3339_date(strtotime($collection->get('ctime'))));
             $this->smarty->assign('summarytype', 'text');
-            $this->smarty->assign('summary',     $collection->get('description'));
+            $this->smarty->assign('summary',     clean_html($collection->get('description')));
             $this->smarty->assign('contenttype', 'text');
-            $this->smarty->assign('content',     $collection->get('description'));
+            $this->smarty->assign('content',     clean_html($collection->get('description')));
             $this->smarty->assign('leaptype',    'selection');
 
             $tags = $collection->get('tags');
@@ -269,25 +269,48 @@ class PluginExportLeap extends PluginExport {
             $this->smarty->assign('updated',     self::format_rfc3339_date(strtotime($view->get('mtime'))));
             $this->smarty->assign('created',     self::format_rfc3339_date(strtotime($view->get('ctime'))));
             $content = $config['description'];
+
             if ($newcontent = self::parse_xhtmlish_content($content)) {
                 $this->smarty->assign('summarytype', 'xhtml');
-                $this->smarty->assign('summary',     $newcontent);
-            } else {
+                $this->smarty->assign('summary',     clean_html($newcontent, true));
+            }
+            else {
                 $this->smarty->assign('summarytype', 'text');
-                $this->smarty->assign('summary',     $content);
+                $this->smarty->assign('summary',     clean_html($content));
             }
+
+            $instructions = $config['instructions'];
+            if ($newinstructions = self::parse_xhtmlish_content($instructions)) {
+                $this->smarty->assign('instructionstype', 'xhtml');
+                $this->smarty->assign('instructions',     clean_html($newinstructions, true));
+            }
+            else {
+                $this->smarty->assign('instructionstype', 'text');
+                $this->smarty->assign('instructions',     clean_html($instructions));
+            }
+
             $this->smarty->assign('contenttype', 'xhtml');
-            if ($viewcontent = self::parse_xhtmlish_content($view->build_rows(false, true), $view->get('id'))) {
-                $this->smarty->assign('content', $viewcontent);
+            if (!$view->uses_new_layout()) {
+                if ($viewcontent = self::parse_xhtmlish_content($view->build_rows(false, true), $view->get('id'))) {
+                    $this->smarty->assign('content', clean_html($viewcontent, true));
+                }
+                $this->smarty->assign('viewdata',    $config['rows']);
+                $layout = $view->get_layout();
+                $widths = '';
+                foreach ($layout->rows as $row){
+                  $widths .= $row['widths'] . '-';
+                }
+                $widths = substr($widths, 0, -1);
+                $this->smarty->assign('layout',      $widths);
             }
-            $this->smarty->assign('viewdata',    $config['rows']);
-            $layout = $view->get_layout();
-            $widths = '';
-            foreach ($layout->rows as $row){
-                $widths .= $row['widths'] . '-';
+            else {
+                if ($viewblocks = self::parse_xhtmlish_content($view->get_blocks(false, true), $view->get('id'))) {
+                    $this->smarty->assign('content', clean_html($viewblocks, true));
+                    $this->smarty->assign('blocks', $config['grid']);
+                }
+                $this->smarty->assign('newlayout', true);
             }
-            $widths = substr($widths, 0, -1);
-            $this->smarty->assign('layout',      $widths);
+
             $this->smarty->assign('type',        $config['type']);
             $ownerformat = ($config['ownerformat']) ? $config['ownerformat'] : FORMAT_NAME_DISPLAYNAME;
             $this->smarty->assign('ownerformat', $ownerformat);
@@ -322,6 +345,9 @@ class PluginExportLeap extends PluginExport {
             return;
         }
 
+        if (!isset($this->links)) {
+            $this->links = new stdClass();
+        }
         $viewlist = join(',', array_keys($this->views));
 
         // Views in collections
@@ -450,27 +476,49 @@ class PluginExportLeap extends PluginExport {
      * this limitation later.
      */
     private function rewrite_artefact_ids($config) {
-        foreach ($config['rows'] as &$row) {
-            foreach ($row['columns'] as &$column) {
+        $newlayout = isset($config['newlayout']) && $config['newlayout'];
+        if (!$newlayout) {
+            foreach ($config['rows'] as &$row) {
+              foreach ($row['columns'] as &$column) {
                 foreach ($column as &$blockinstance) {
-                    if (isset($blockinstance['config']['artefactid'])) {
-                        $id = json_decode($blockinstance['config']['artefactid']);
-                        if ($id[0] != null) {
-                            $blockinstance['config']['artefactid'] = json_encode(array('portfolio:artefact' . $id[0]));
-                        }
-                        else {
-                            $blockinstance['config']['artefactid'] = null;
-                        }
+                  if (isset($blockinstance['config']['artefactid'])) {
+                    $id = json_decode($blockinstance['config']['artefactid']);
+                    if ($id[0] != null) {
+                      $blockinstance['config']['artefactid'] = json_encode(array('portfolio:artefact' . $id[0]));
                     }
-                    else if (isset($blockinstance['config']['artefactids'])) {
-                        $ids = json_decode($blockinstance['config']['artefactids']);
-                        if ($ids[0]) {
-                            $blockinstance['config']['artefactids'] = json_encode(array(array_map(array($this, 'prepend_artefact_identifier'), $ids[0])));
-                        }
+                    else {
+                      $blockinstance['config']['artefactid'] = null;
                     }
+                  }
+                  else if (isset($blockinstance['config']['artefactids'])) {
+                    $ids = json_decode($blockinstance['config']['artefactids']);
+                    if ($ids[0]) {
+                      $blockinstance['config']['artefactids'] = json_encode(array(array_map(array($this, 'prepend_artefact_identifier'), $ids[0])));
+                    }
+                  }
                 }
-            } // cols
-        } //rows
+              } // cols
+            } //rows
+        }
+        else {
+            foreach ($config['grid'] as &$blockinstance) {
+              if (isset($blockinstance['config']['artefactid'])) {
+                $id = json_decode($blockinstance['config']['artefactid']);
+                if ($id[0] != null) {
+                  $blockinstance['config']['artefactid'] = json_encode(array('portfolio:artefact' . $id[0]));
+                }
+                else {
+                  $blockinstance['config']['artefactid'] = null;
+                }
+              }
+              else if (isset($blockinstance['config']['artefactids'])) {
+                $ids = json_decode($blockinstance['config']['artefactids']);
+                if ($ids[0]) {
+                  $blockinstance['config']['artefactids'] = json_encode(array(array_map(array($this, 'prepend_artefact_identifier'), $ids[0])));
+                }
+              }
+            }
+        }
         return $config;
     }
 
@@ -623,10 +671,23 @@ class PluginExportLeap extends PluginExport {
         $dom = new DomDocument();
         $topel = $dom->createElement('tmp');
         $tmp = new DomDocument();
-        if (strpos($content, '<') === false && strpos($content, '>') === false) {
-            libxml_after();
-            return false;
+
+        if (is_array($content)) {
+            $contenthtml = '';
+            foreach ($content as $block) {
+                if (strpos($block['content'], '<') === false && strpos($block['content'], '>') === false) {
+                    continue;
+                }
+                $contenthtml .= '<div id="block_' . $block['id'] . '"' .
+                ' positionx=' . $block['positionx'] .
+                ' positiony=' . $block['positiony'] .
+                ' width=' . $block['width'] .
+                ' height=' . $block['height'] . '>' .
+                $block['content'] . '</div>';
+            }
+            $content = $contenthtml;
         }
+
         if (@$tmp->loadXML('<div>' . $content . '</div>')) {
             $topel->setAttribute('type', 'xhtml');
             $content = $dom->importNode($tmp->documentElement, true);
@@ -738,10 +799,10 @@ class LeapExportElement {
         // try to coerce it to xhtml
         if ($this->get_content_type() != 'text' && $newcontent = PluginExportLeap::parse_xhtmlish_content($content)) {
             $this->smarty->assign('contenttype', 'xhtml');
-            $this->smarty->assign('content', $newcontent);
+            $this->smarty->assign('content', clean_html($newcontent, true));
         } else {
             $this->smarty->assign('contenttype', 'text');
-            $this->smarty->assign('content', $content);
+            $this->smarty->assign('content', clean_html($content));
         }
         $this->smarty->assign('leaptype', $this->get_leap_type());
         $this->smarty->assign('author', $this->get_entry_author());

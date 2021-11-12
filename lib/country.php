@@ -162,7 +162,7 @@ class Country {
         array(
             '2' => 'bo',
             '3' => 'bol',
-            'match' => "^Bolivia\$",
+            'match' => "^Bolivia (Plurinational State of)\$",
         ),
         array(
             '2' => 'bq',
@@ -409,7 +409,7 @@ class Country {
         array(
             '2' => 'gb',
             '3' => 'gbr',
-            'match' => "^United Kingdom\$",
+            'match' => "^United Kingdom of Great Britain and Northern Ireland\$",
         ),
         array(
             '2' => 'gd',
@@ -744,7 +744,7 @@ class Country {
         array(
             '2' => 'mk',
             '3' => 'mkd',
-            'match' => "^Macedonia, the Former Yugoslav Republic of\$",
+            'match' => "^North Macedonia\$",
         ),
         array(
             '2' => 'ml',
@@ -1019,7 +1019,7 @@ class Country {
         array(
             '2' => 'sh',
             '3' => 'shn',
-            'match' => "^Saint Helena\$",
+            'match' => "^Saint Helena, Ascension and Tristan da Cunha\$",
         ),
         array(
             '2' => 'si',
@@ -1189,7 +1189,7 @@ class Country {
         array(
             '2' => 'us',
             '3' => 'usa',
-            'match' => "^United States\$",
+            'match' => "^United States of America\$",
         ),
         array(
             '2' => 'uy',
@@ -1204,7 +1204,7 @@ class Country {
         array(
             '2' => 'va',
             '3' => 'vat',
-            'match' => "^Holy See (Vatican City State)\$",
+            'match' => "^Holy See\$",
         ),
         array(
             '2' => 'vc',
@@ -1214,7 +1214,7 @@ class Country {
         array(
             '2' => 've',
             '3' => 'ven',
-            'match' => "^Venezuela\$",
+            'match' => "^Venezuela (Bolivarian Republic of)\$",
         ),
         array(
             '2' => 'vg',
@@ -1229,7 +1229,7 @@ class Country {
         array(
             '2' => 'vn',
             '3' => 'vnm',
-            'match' => "^Vietnam\$",
+            'match' => "^Viet Nam\$",
         ),
         array(
             '2' => 'vu',
@@ -1250,6 +1250,7 @@ class Country {
             '2' => 'xk',
             '3' => 'xk',
             'match' => "^Kosovo\$",
+            'userassigned' => true,
         ),
         array(
             '2' => 'ye',

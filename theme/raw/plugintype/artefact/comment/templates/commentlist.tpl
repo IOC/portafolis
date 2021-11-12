@@ -1,16 +1,16 @@
 <!-- The "feedbacktable" class is used as an identifier by Javascript -->
 <div class="list-group list-group-lite">
 {foreach from=$data item=item}
-    <div id="comment{$item->id}" class="comment-item list-group-item {if $item->pubmessage}list-group-item-warning{elseif $item->deletedmessage}deleted {/if} {cycle name=rows values='r0,r1'} {if $item->indent} indent-{$item->indent}{/if} {if !$item->deletedmessage && $item->attachments}has-attachment{/if}">
+    <div id="comment{$item->id}" class="comment-item list-group-item {if $item->pubmessage}list-group-item-private{elseif $item->deletedmessage}deleted {/if} {cycle name=rows values='r0,r1'} {if $item->indent} indent-{$item->indent}{/if} {if !$item->deletedmessage && $item->attachments}has-attachment{/if}">
         <div class="usericon-heading">
-            <span class="user-icon pull-left" role="presentation" aria-hidden="true">
+            <span class="user-icon user-icon-30 float-left" role="presentation" aria-hidden="true">
                 {if $item->author && !$item->author->deleted}
-                    <img src="{profile_icon_url user=$item->author maxheight=40 maxwidth=40}" valign="middle" alt="{str tag=profileimagetext arg1=$item->author|display_default_name}"/>
+                    <img src="{profile_icon_url user=$item->author maxheight=30 maxwidth=30}" valign="middle" alt="{str tag=profileimagetext arg1=$item->author|display_default_name}"/>
                 {else}
-                    <img src="{profile_icon_url user=null maxheight=40 maxwidth=40}" valign="middle" alt="{str tag=profileimagetextanonymous}"/>
+                    <img src="{profile_icon_url user=null maxheight=30 maxwidth=30}" valign="middle" alt="{str tag=profileimagetextanonymous}"/>
                 {/if}
             </span>
-            <h5 class="pull-left list-group-item-heading">
+            <h5 class="float-left list-group-item-heading">
                 {if $item->author && !$item->author->deleted}
                 <a href="{$item->author->profileurl}">
                 <span>{$item->author|display_name}</span>
@@ -32,7 +32,9 @@
 
                 <span class="star-comment-rating">
                     {for i $item->ratingdata->min_rating $item->ratingdata->max_rating}
-                        <div class="star-rating star star-rating-applied star-rating-readonly {$star}-rating{if $i <= $item->ratingdata->value}-on{else}-off{/if}"><a {if $colour}style="color: {$colour}"{/if}>&nbsp;</a></div>
+                        <div class="star-rating star-rating-readonly">
+                            <a class="icon icon-{$star} {if $i <= $item->ratingdata->value}icon-solid{else}icon-regular{/if}" {if $colour}style="color: {$colour}"{/if}>&nbsp;</a>
+                        </div>
                     {/for}
                 </span>
                 {/if}
@@ -41,8 +43,8 @@
             <div class="btn-group btn-group-top comment-item-buttons">
                 {if !$onview}
                     {if $item->canedit}
-                    <a href="{$WWWROOT}artefact/comment/edit.php?id={$item->id}&amp;view={$viewid}" class="btn btn-default btn-group-item form-as-button pull-left">
-                        <span class="icon icon-pencil icon-lg" role="presentation" aria-hidden="true"></span>
+                    <a href="{$WWWROOT}artefact/comment/edit.php?id={$item->id}&amp;view={$viewid}" class="btn btn-secondary btn-group-item form-as-button float-left">
+                        <span class="icon icon-pencil-alt icon-lg" role="presentation" aria-hidden="true"></span>
                         <span class="sr-only">{str tag=edit}</span>
                     </a>
                     {/if}
@@ -51,7 +53,7 @@
                     {$item->deleteform|safe}
                 {/if}
                 {if $item->canreply}
-                <button class="btn btn-default pull-left commentreplyto btn-group-item js-reply" id="commentreplyto{$item->id}" title="{str tag=reply section=artefact.comment}" data-replyto="{$item->id}" data-canprivatereply="{$item->canprivatereply}" data-canpublicreply="{$item->canpublicreply}">
+                <button class="btn btn-secondary float-left commentreplyto btn-group-item js-reply" id="commentreplyto{$item->id}" title="{str tag=reply section=artefact.comment}" data-replyto="{$item->id}" data-canprivatereply="{$item->canprivatereply}" data-canpublicreply="{$item->canpublicreply}" {if $blockid}data-blockid="{$blockid}"{/if}>
                     <span class="icon icon-reply icon-lg" role="presentation" aria-hidden="true"></span>
                     <span class="sr-only">{str tag=reply section=artefact.comment}</span>
                 </button>
@@ -94,12 +96,12 @@
 
         {if !$item->deletedmessage && $item->attachments}
         <div class="comment-attachment">
-            <div class="panel panel-default has-attachment collapsible">
-                <h4 class="panel-heading">
+            <div class="card has-attachment collapsible">
+                <h4 class="card-header">
                     <a class="collapsible collapsed" aria-expanded="false" href="#attachments_{$item->id}" data-toggle="collapse">
                         <span class="icon left icon-paperclip" role="presentation" aria-hidden="true"></span>
                         <span class="text-small">{str tag=Attachments section=artefact.comment} ({$item->filescount})</span>
-                        <span class="icon icon-chevron-down pull-right collapse-indicator" role="presentation" aria-hidden="true"></span>
+                        <span class="icon icon-chevron-down float-right collapse-indicator" role="presentation" aria-hidden="true"></span>
                     </a>
                 </h4>
                 <div id="attachments_{$item->id}" class="collapse" aria-expanded="false">
@@ -116,7 +118,7 @@
                                     [{$a->attachsize}]
                                 </span>
                             </span>
-                            <span class="icon icon-download icon-lg pull-right text-watermark icon-action" role="presentation" aria-hidden="true"></span>
+                            <span class="icon icon-download icon-lg float-right text-watermark icon-action" role="presentation" aria-hidden="true"></span>
                         </li>
                         {/foreach}
                     {/strip}

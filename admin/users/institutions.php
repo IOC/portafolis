@@ -92,24 +92,37 @@ if ($institution || $add) {
         }
 
         function delete_submit(Pieform $form, $values) {
-            global $SESSION;
+            global $SESSION, $USER;
 
             $authinstanceids = get_column('auth_instance', 'id', 'institution', $values['i']);
             $collectionids = get_column('collection', 'id', 'institution', $values['i']);
             $viewids = get_column('view', 'id', 'institution', $values['i']);
             $artefactids = get_column('artefact', 'id', 'institution', $values['i']);
             $regdataids = get_column('institution_registration', 'id', 'institution', $values['i']);
+            $host = get_field('host', 'wwwroot', 'institution', $values['i']);
 
             db_begin();
+            require_once(get_config('libroot') . 'collection.php');
+            if ($submittedcolids = get_column('collection', 'id', 'submittedhost', $host)) {
+                foreach ($submittedcolids as $id) {
+                    $collection = new Collection($id);
+                    $collection->release($USER);
+                }
+            }
             if ($collectionids) {
-                require_once(get_config('libroot') . 'collection.php');
                 foreach ($collectionids as $collectionid) {
                     $collection = new Collection($collectionid);
                     $collection->delete();
                 }
             }
+            require_once(get_config('libroot') . 'view.php');
+            if ($submittedviewids = get_column('view', 'id', 'submittedhost', $host)) {
+                foreach ($submittedviewids as $id) {
+                    $view = new View($id);
+                    $view->release($USER);
+                }
+            }
             if ($viewids) {
-                require_once(get_config('libroot') . 'view.php');
                 foreach ($viewids as $viewid) {
                     $view = new View($viewid);
                     $view->delete();
@@ -172,6 +185,7 @@ if ($institution || $add) {
 
             execute_sql("UPDATE {group} SET institution = 'mahara' WHERE institution = ?", array($values['i']));
             delete_records('auth_instance', 'institution', $values['i']);
+
             delete_records('host', 'institution', $values['i']);
             delete_records('institution_locked_profile_field', 'name', $values['i']);
             delete_records('usr_institution_request', 'institution', $values['i']);
@@ -180,17 +194,20 @@ if ($institution || $add) {
             delete_records('institution_registration', 'institution', $values['i']);
             delete_records('site_content', 'institution', $values['i']);
             delete_records('institution_config', 'institution', $values['i']);
-            delete_records('usr_custom_layout', 'institution', $values['i']);
+            if (db_table_exists('usr_custom_layout')) {
+                delete_records('usr_custom_layout', 'institution', $values['i']);
+            }
             delete_records('usr_registration', 'institution', $values['i']);
-            $versions = get_records_assoc('site_content_version', 'institution', $values['i']);
-            foreach($versions as $version) {
-                delete_records('usr_agreement', 'sitecontentid', $version->id);
+            if ($versions = get_records_assoc('site_content_version', 'institution', $values['i'])) {
+                foreach($versions as $version) {
+                    delete_records('usr_agreement', 'sitecontentid', $version->id);
+                }
             }
             delete_records('site_content_version', 'institution', $values['i']);
             delete_records('oauth_server_registry', 'institution', $values['i']);
             delete_records('institution', 'name', $values['i']);
             db_commit();
-
+            clear_menu_cache();
             $SESSION->add_ok_msg(get_string('institutiondeletedsuccessfully', 'admin'));
             redirect('/admin/users/institutions.php');
         }
@@ -207,7 +224,7 @@ if ($institution || $add) {
                 ),
                 'submit' => array(
                     'type' => 'submitcancel',
-                    'class' => 'btn-default',
+                    'class' => 'btn-secondary',
                     'value' => array(get_string('yes'), get_string('no'))
                 )
             )
@@ -233,6 +250,7 @@ if ($institution || $add) {
         $data->commentthreaded = get_config_institution($institution, 'commentthreaded');
         $data->allowinstitutionsmartevidence = get_config_institution($institution, 'allowinstitutionsmartevidence');
         $data->reviewselfdeletion = get_config_institution($institution, 'reviewselfdeletion');
+        $data->showonlineusers = (is_isolated() && $data->showonlineusers == 2 ? 1 : $data->showonlineusers);
         $lockedprofilefields = (array) get_column('institution_locked_profile_field', 'profilefield', 'name', $institution);
 
         // TODO: Find a better way to work around Smarty's minimal looping logic
@@ -252,10 +270,9 @@ if ($institution || $add) {
             }
             $inuse = implode(',',$inuserecords);
         }
-        $authtypes = auth_get_available_auth_types($institution);
     }
     else {
-        $data = new StdClass;
+        $data = new stdClass();
         $data->displayname = '';
         $data->expiry = null;
         if (!get_config('usersuniquebyusername')) {
@@ -264,9 +281,10 @@ if ($institution || $add) {
         }
         $data->theme = 'sitedefault';
         $data->defaultmembershipperiod = null;
-        $data->showonlineusers = 2;
+        $data->showonlineusers = is_isolated() ? 1 : 2;
         $data->allowinstitutionpublicviews = get_config('allowpublicviews') ? 1 : 0;
         $data->allowinstitutionsmartevidence = 0;
+        $data->tags = 0;
         $data->licensemandatory = 0;
         $data->licensedefault = '';
         $data->dropdownmenu = get_config('dropdownmenu') ? 1 : 0;
@@ -274,8 +292,6 @@ if ($institution || $add) {
         $data->commentsortorder = 'earliest';
         $data->commentthreaded = false;
         $lockedprofilefields = array();
-
-        $authtypes = auth_get_available_auth_types();
     }
     $themeoptions = get_institution_themes($institution);
     $themeoptions['sitedefault'] = '- ' . get_string('sitedefault', 'admin') . ' (' . $themeoptions[get_config('theme')] . ') -';
@@ -283,8 +299,15 @@ if ($institution || $add) {
     if (validate_theme($data->theme, $institution, $add) === false) {
         $data->theme = 'sitedefault';
     }
-    $showonlineusersoptions = array('0' => get_string('none'), '1' => get_string('institutiononly', 'admin'), '2' => get_string('all', 'admin'));
-    $sitename = get_config('sitename');
+    $showonlineusersoptions = array('0' => get_string('none'),
+                                    '1' => get_string('institutiononly', 'admin'),
+                                    '2' => get_string('all', 'admin'));
+
+    $isolatedinstitutions = is_isolated();
+    if ($isolatedinstitutions) {
+        unset($showonlineusersoptions['2']);
+    }
+     $sitename = get_config('sitename');
 
     safe_require('artefact', 'internal');
     $elements = array(
@@ -343,12 +366,11 @@ if ($institution || $add) {
             'type'    => 'authlist',
             'title'   => get_string('authplugin', 'admin'),
             'options' => $authinstances,
-            'authtypes' => $authtypes,
             'instancearray' => $instancearray,
             'instancestring' => $instancestring,
             'institution' => $institution,
-            'help'   => true,
-            'ignore' => count($authtypes) == 0 || $institution == ''
+            'help'   => 'top',
+            'ignore' => ($add)
         );
     }
 
@@ -374,7 +396,7 @@ if ($institution || $add) {
             'title'        => get_string('registrationconfirm', 'admin'),
             'description'  => get_string('registrationconfirmdescription3', 'admin'),
             'disabled'     => get_config('requireregistrationconfirm') == true,
-            'defaultvalue' => $data->registerconfirm,
+            'defaultvalue' => ($isolatedinstitutions ? true : $data->registerconfirm),
         );
     }
 
@@ -430,7 +452,7 @@ if ($institution || $add) {
     // logo-xs
     $elements['logoxs'] = array(
         'type'        => 'file',
-        'title'       => get_string('Logosmall', 'admin'),
+        'title'       => get_string('Logomobile', 'admin'),
         'description' => get_string('logoxsdescription', 'admin'),
         'maxfilesize' => get_max_upload_size(false),
     );
@@ -438,12 +460,12 @@ if ($institution || $add) {
         $logoxsurl = get_config('wwwroot') . 'thumb.php?type=logobyid&id=' . $data->logoxs;
         $elements['logoxshtml'] = array(
             'type'        => 'html',
-            'value'       => '<img src="' . $logoxsurl . '" alt="' . get_string('Logosmall', 'admin') . '">',
+            'value'       => '<img src="' . $logoxsurl . '" alt="' . get_string('Logomobile', 'admin') . '">',
         );
         $elements['deletelogoxs'] = array(
             'type'        => 'switchbox',
-            'title'       => get_string('deletelogoxs', 'admin'),
-            'description' => get_string('deletelogoxsdescription2', 'admin'),
+            'title'       => get_string('deletelogoxsmobile', 'admin'),
+            'description' => get_string('deletelogoxsdescription3', 'admin'),
         );
     }
 
@@ -592,6 +614,12 @@ if ($institution || $add) {
         'disabled'     => is_plugin_active('framework', 'module') == false,
         'help'         => true,
     );
+    $elements['allowinstitutiontags'] = array(
+        'type'         => 'switchbox',
+        'title'        => get_string('allowinstitutiontags'),
+        'description'  => get_string('allowinstitutiontagsdescription'),
+        'defaultvalue' => $data->tags,
+    );
     $elements['reviewselfdeletion'] = array(
         'type'         => 'switchbox',
         'title'        => get_string('reviewsselfdeletion', 'admin'),
@@ -702,7 +730,7 @@ else {
                     'submit' => array(
                         'type'  => 'button',
                         'usebuttontag' => true,
-                        'class' => 'btn-primary input-group-btn',
+                        'class' => 'btn-primary input-group-append',
                         'value' => get_string('search'),
                     )
                 ),
@@ -828,8 +856,6 @@ function institution_submit(Pieform $form, $values) {
         $newinstitution = new Institution($institution);
         $newinstitution->displayname = $values['displayname'];
         $oldinstitution = get_record('institution', 'name', $institution);
-        // Clear out any cached menus for this institution
-        clear_menu_cache($institution);
     }
 
     $newinstitution->showonlineusers              = !isset($values['showonlineusers']) ? 2 : $values['showonlineusers'];
@@ -862,6 +888,11 @@ function institution_submit(Pieform $form, $values) {
     $newinstitution->commentthreaded       = (!empty($values['commentthreaded'])) ? 1 : 0;
 
     if ($newinstitution->theme == 'custom') {
+        // remove flag to add warning for configurable theme update if it exists.
+        if (get_config_institution($institution, 'customthemeupdate')) {
+            set_config_institution($institution, 'customthemeupdate', false);
+        }
+
         if (!empty($oldinstitution->style)) {
             $styleid = $oldinstitution->style;
             delete_records('style_property', 'style', $styleid);
@@ -945,6 +976,7 @@ function institution_submit(Pieform $form, $values) {
 
     $newinstitution->allowinstitutionpublicviews  = (isset($values['allowinstitutionpublicviews']) && $values['allowinstitutionpublicviews']) ? 1 : 0;
     $newinstitution->allowinstitutionsmartevidence  = (isset($values['allowinstitutionsmartevidence']) && $values['allowinstitutionsmartevidence']) ? 1 : 0;
+    $newinstitution->tags  = (isset($values['allowinstitutiontags']) && $values['allowinstitutiontags']) ? 1 : 0;
 
     // do not set 'reviewselfdeletion' if it has never been changed at institution level
     // and the value is the same as site setting 'defaultreviewselfdeletion'
@@ -969,7 +1001,7 @@ function institution_submit(Pieform $form, $values) {
                 // Should never happen:
                 throw new SystemException('Attempt to update AND delete an auth instance');
             }
-            $record = new StdClass;
+            $record = new stdClass();
             $record->priority = $priority;
             $record->id = $instanceid;
             update_record('auth_instance', $record,  array('id' => $instanceid));
@@ -1134,7 +1166,7 @@ function institution_submit(Pieform $form, $values) {
     delete_records('institution_locked_profile_field', 'name', $institution);
     foreach (ArtefactTypeProfile::get_all_fields() as $field => $type) {
         if ($values[$field]) {
-            $profilefield = new StdClass;
+            $profilefield = new stdClass();
             $profilefield->name         = $institution;
             $profilefield->profilefield = $field;
             insert_record('institution_locked_profile_field', $profilefield);
@@ -1164,7 +1196,8 @@ function institution_submit(Pieform $form, $values) {
         $SESSION->add_ok_msg($message);
         $nexturl = '/admin/users/institutions.php';
     }
-
+    // Clear out any cached menus for this institution
+    clear_menu_cache();
     redirect($nexturl);
 }
 
@@ -1229,7 +1262,7 @@ if ($institution && $institution != 'mahara') {
                     'submit' => array(
                         'type'        => 'button',
                         'usebuttontag' => true,
-                        'class'       => 'btn-default',
+                        'class'       => 'btn-secondary',
                         'value'       => '<span class="icon icon-lg text-danger icon-ban left" role="presentation" aria-hidden="true"></span>' . get_string('suspendinstitution','admin'),
                     ),
                 )
@@ -1251,20 +1284,12 @@ if ($institution && $institution != 'mahara') {
                     'submit' => array(
                         'type'        => 'button',
                         'usebuttontag' => true,
-                        'class'       => 'btn-default',
+                        'class'       => 'btn-secondary',
                         'value'       => '<span class="icon icon-lg text-success icon-check left" role="presentation" aria-hidden="true"></span>' . get_string('unsuspendinstitution','admin'),
-                        'description' => get_string('unsuspendinstitutiondescription','admin'),
                     ),
                 )
             );
             $suspendform  = pieform($suspendformdef);
-
-            // Create a second forms for unsuspension to go in the suspend message.
-            // This keeps the HTML IDs unique
-            $suspendformdef['name'] = 'institution_unsuspend_top';
-            $suspendformdef['renderer'] = 'oneline';
-            $suspendformdef['successcallback'] = 'institution_unsuspend_submit';
-            $suspendform_top = pieform($suspendformdef);
         }
     }
 }
@@ -1279,7 +1304,7 @@ jQuery(function($) {
     if ($("#institution_theme").val() === "custom") {
         $(".customtheme").removeClass("js-hidden");
     }
-    $("#institution_theme").change(function() {
+    $("#institution_theme").on("change", function() {
         if ($(this).val() === "custom") {
             $(".customtheme").removeClass("js-hidden");
         }
@@ -1290,9 +1315,8 @@ jQuery(function($) {
 });
 ';
 
-$smarty = smarty();
+$smarty = smarty(array('tinymce'));
 setpageicon($smarty, 'icon-university');
-
 
 $smarty->assign('INLINEJAVASCRIPT', $themeoptionsjs);
 $smarty->assign('institution_form', $institutionform);
@@ -1305,9 +1329,6 @@ if (isset($suspended)) {
     }
     if (isset($suspendform)) {
         $smarty->assign('suspendform', $suspendform);
-        if (isset($suspendform_top)) {
-            $smarty->assign('suspendform_top', $suspendform_top);
-        }
     }
 }
 

@@ -59,7 +59,7 @@
         }
 
         // Register the click events
-        this.find("span.ratingicon").click(function() {
+        this.find("span.ratingicon").on("click", function() {
             if (settings.readonly !== true) {
                 rating = $(this).attr('data-value')
                 $(this).parent().attr('data-rating',rating);
@@ -80,13 +80,8 @@
                     $(this).css('color',settings.coloroff);
                     if (settings.emptyglyph) {
                         if ($(this).hasClass(settings.glyph)) {
-                            // need to add the '-o' before the end for thumbs
-                            if (settings.glyph == 'icon-thumbs-up') {
-                                $(this).removeClass(settings.glyph).addClass('icon-thumbs-o-up');
-                            }
-                            else {
-                                $(this).removeClass(settings.glyph).addClass(settings.glyph + '-o');
-                            }
+                            // need to set any font type difference for the 'not selected' ratings
+                            $(this).addClass('icon-regular');
                         }
                     }
                 }

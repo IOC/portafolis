@@ -39,6 +39,12 @@ if ($viewid && $fileid) {
         $artefactok = EmbeddedImage::can_see_embedded_image($fileid, 'description', $resourceid);
     }
 
+    // Check if the artefact is embedded in the page instructions
+    $resourceid = param_integer('instructions', null);
+    if ($resourceid && $file instanceof ArtefactTypeImage) {
+        $artefactok = EmbeddedImage::can_see_embedded_image($fileid, 'instructions', $resourceid);
+    }
+
     if (!$artefactok && artefact_in_view($file, $viewid)) {
         $artefactok = true;
     }
@@ -63,30 +69,35 @@ if ($viewid && $fileid) {
         }
     }
 
+    // If the artefact exists in a previous version of the view we can display it
+    if (!$artefactok && artefact_in_view_version($file, $viewid)) {
+        $artefactok = true;
+    }
+
     // The user may be trying to download a file that's not in the page, but which has
     // been attached to a public comment on the page
     if ($commentid = param_integer('comment', null)) {
         if (!record_exists('artefact_attachment', 'artefact', $commentid, 'attachment', $fileid)) {
-            throw new AccessDeniedException('');
+            throw new AccessDeniedException();
         }
         safe_require('artefact', 'comment');
         $comment = new ArtefactTypeComment($commentid);
         if (!$comment->viewable_in($viewid)) {
-            throw new AccessDeniedException('');
+            throw new AccessDeniedException();
         }
     }
     else if ($artefactok == false && $isembedded && $file instanceof ArtefactTypeImage) {
         // Check if the image is embedded in some text somewhere.
         if (!check_is_embedded_image_visible($fileid, null, array('comment'))) {
-            throw new AccessDeniedException('');
+            throw new AccessDeniedException();
         }
     }
     else if ($artefactok == false) {
-        throw new AccessDeniedException('');
+        throw new AccessDeniedException();
     }
 
     if (!can_view_view($viewid)) {
-        throw new AccessDeniedException('');
+        throw new AccessDeniedException();
     }
 
     if (!($file instanceof ArtefactTypeFile)) {
@@ -134,8 +145,8 @@ else {
                     }
                 }
 
-                // Check for images sitting in visible forum posts
-                if (!$imagevisible && $postid && $file instanceof ArtefactTypeImage) {
+                // Check for artefacts sitting in visible forum posts
+                if (!$imagevisible && $postid && $file instanceof ArtefactType) {
                     safe_require('interaction', 'forum');
                     $imagevisible = PluginInteractionForum::can_see_attached_file($file, $postid);
                 }
@@ -145,7 +156,7 @@ else {
                     require_once('view.php');
                     $view = group_get_homepage_view($groupid);
                     if (!can_view_view($view->get('id'))) {
-                        throw new AccessDeniedException(get_string('accessdenied', 'error'));
+                        throw new AccessDeniedException();
                     }
                     $imagevisible = EmbeddedImage::can_see_embedded_image($fileid, 'group', $groupid);
                 }
@@ -155,7 +166,7 @@ else {
                 }
 
                 if (!$imagevisible) {
-                    throw new AccessDeniedException(get_string('accessdenied', 'error'));
+                    throw new AccessDeniedException();
                 }
             }
         }
@@ -185,7 +196,7 @@ function check_is_embedded_image_visible($fileid, $includeresourcetypes = null, 
     $isvisible = false;
     // Check for resource types a file may be embeded in.
     $resourcetypes = array(
-        'comment', 'annotation', 'annotationfeedback', 'blog', 'textbox', 'editnote', 'text', 'introtext', 'wallpost', 'staticpages'
+        'comment', 'annotation', 'annotationfeedback', 'assessment', 'peerinstruction', 'blog', 'textbox', 'editnote', 'text', 'introtext', 'wallpost', 'staticpages'
     );
     if (!empty($includeresourcetypes)) {
         if (!is_array($includeresourcetypes)) {

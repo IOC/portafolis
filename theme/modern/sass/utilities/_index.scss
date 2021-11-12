@@ -1,14 +1,12 @@
 @import "../typography/fonts";
 
-@import "../layout/panel/panel";
-@import "../layout/panel/panel-heading";
-@import "../layout/panel/panel-secondary";
+@import "../layout/card/card";
+@import "../layout/card/card-header";
+@import "../layout/card/card-secondary";
 
 @import "../form/form";
 
-@import "../components/arrow-bar";
-@import "../components/btn";
+@import "../components/loading-inner";
 @import "../components/user-icon";
 
 @import "../features/dashboard-widget";
-@import "../features/collection-navigation";

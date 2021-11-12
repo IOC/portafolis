@@ -1,8 +1,8 @@
 <div id="{{$id}}_wrapper" data-rating="{{$value}}"></div>
 {{if !$readonly}}<input type=hidden name="rating" id="{{$id}}">{{/if}}
 
-<script type="application/javascript">
-jQuery(document).ready(function() {
+<script>
+jQuery(function() {
     jQuery("#{{$id}}_wrapper").rating('create', {
         coloron:'{{$colouron}}',
         coloroff:'{{$colouroff}}',

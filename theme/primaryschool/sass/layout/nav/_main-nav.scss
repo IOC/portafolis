@@ -1,25 +1,12 @@
-/*
- * Primary navigation menu
- */
-.navbar-default {
-    border-left-color: #FFFFFF;
-    border-right-color: #FFFFFF;
-    border-bottom-color: #FFFFFF;
-}
-
-.navbar-main .navbar-nav > li > a {
-    border-color: transparent;
-}
-
 // User menu styles.
 // Note: Admin menu and user setting menu use styles inherited from Raw with
 // color values specified in Primary theme bootstrap-variable.scss
 
 // To change section color, simply change color value.
-$home-color: #0591ce;
-$content-color: #ca0238;
-$myportfolio-color: #f29907;
-$groups-color: #799323;
+$home-color: scale-color($theme-primary-color, $lightness: 10%);
+$content-color: $theme-accent-color; // red
+$myportfolio-color: $theme-accent-color-two; // orange
+$groups-color: $theme-secondary-color; // green
 
 // Menue section variable array
 // 1) Section name
@@ -28,10 +15,10 @@ $groups-color: #799323;
 // 4) Lighter shade (can be specified in hex,rgba value)
 // 5) Darker shade (can be specified in hex,rgba value)
 $menu-styles: (
-  ("home", $fa-var-tachometer, $home-color, lighten($home-color, 5%), darken($home-color, 5%)),
-  ("content", $fa-var-pencil-square, $content-color, lighten($content-color, 5%), darken($content-color, 5%)),
-  ("myportfolio", $fa-var-file, $myportfolio-color, lighten($myportfolio-color, 5%), darken($myportfolio-color, 5%)),
-  ("groups", $fa-var-users, $groups-color, lighten($groups-color, 5%), darken($groups-color, 5%))
+  ("home", $home-color, scale-color($home-color, $lightness: -2%), scale-color($home-color, $lightness: -5%)),
+  ("create", $content-color, scale-color($content-color, $lightness: -10%), scale-color($content-color, $lightness: -10%)),
+  ("engage", $myportfolio-color, scale-color($myportfolio-color, $lightness: -2%), scale-color($myportfolio-color, $lightness: -5%)),
+  ("manage", $groups-color, scale-color($groups-color, $lightness: -2%), scale-color($groups-color, $lightness: -5%))
 );
 
 .nav-main .navbar-nav {
@@ -42,8 +29,7 @@ $menu-styles: (
             color: #FFFFFF;
             border-color: transparent;
             &:before {
-                font-family: 'FontAwesome';
-                font-weight: normal;
+                @include fonttype(solid);
                 padding-right: 5px;
                 font-size: 19px;
                 color: #FFFFFF;
@@ -54,10 +40,8 @@ $menu-styles: (
             }
         }
         &.active > a {
+            color: #555;
             background-color: #FFFFFF;
-        }
-        .navbar-showchildren{
-            top: 7px;
         }
         .child-nav > li {
             a {
@@ -71,21 +55,18 @@ $menu-styles: (
     @each $section in $menu-styles {
         > .#{nth($section, 1)} {
             > a {
-                background-color: #{nth($section, 3)};
-                &:before {
-                    content: "#{nth($section, 2)}";
-                }
+                background-color: #{nth($section, 2)};
                 &:focus,
                 &:hover {
-                    background-color: #{nth($section, 4)};
+                    background-color: #{nth($section, 3)};
                 }
             }
             &.active > a {
                 &:before {
-                    color: #{nth($section, 3)};
+                    color: #{nth($section, 2)};
                     &:focus,
                     &:hover {
-                        background-color: #{nth($section, 4)};
+                        background-color: #{nth($section, 3)};
                         color: #FFFFFF;
                     }
                 }
@@ -96,22 +77,22 @@ $menu-styles: (
             }
             .navbar-showchildren,
             &.active .navbar-showchildren {
-                background-color: #{nth($section, 3)};
+                background-color: #{nth($section, 2)};
                 &:focus,
                 &:hover {
-                    background-color: #{nth($section, 5)};
+                    background-color: #{nth($section, 4)};
                 }
             }
             .child-nav li {
                 a {
-                    background-color: #{nth($section, 5)};
+                    background-color: #{nth($section, 4)};
                     &:focus,
                     &:hover {
-                        background-color: #{nth($section, 3)};
+                        background-color: #{nth($section, 2)};
                     }
                 }
                 &.active a {
-                    background-color: #{nth($section, 4)};
+                    background-color: #{nth($section, 3)};
                 }
             }
         }

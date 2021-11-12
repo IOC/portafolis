@@ -10,7 +10,8 @@
  */
 
 define('INTERNAL', 1);
-define('MENUITEM', 'groups/files');
+define('MENUITEM', 'engage/index');
+define('MENUITEM_SUBPAGE', 'files');
 define('SECTION_PLUGINTYPE', 'artefact');
 define('SECTION_PLUGINNAME', 'file');
 define('SECTION_PAGE', 'groupfiles');
@@ -40,13 +41,7 @@ $smarty = smarty(
     array(),
     array(),
     array(
-        'sideblocks' => array(
-            array(
-                'name'   => 'groupquota',
-                'weight' => -10,
-                'data'   => array(),
-            ),
-        ),
+        'sideblocks' => array(quota_sideblock(true))
     )
 );
 $smarty->assign('heading', $group->name);

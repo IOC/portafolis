@@ -1,10 +1,19 @@
 {include file='header.tpl'}
 <p class="lead">{str tag='pluginexplainaddremove'} {str tag='pluginexplainartefactblocktypes'}</p>
 
-<div class="panel-items js-masonry" data-masonry-options='{ "itemSelector": ".panel" }'>
+<div class="card-items js-masonry extensions" data-masonry-options='{ "itemSelector": ".card" }'>
 {foreach from=$plugins key='plugintype' item='plugins'}
-    <div class="panel panel-default">
-        <h2 class="panel-heading">{str tag='plugintype'}: {$plugintype}</h2>
+    <div class="card">
+        <h2 class="card-header">{str tag='plugintype'}: {$plugintype}
+        {if $plugins.configure}
+            <div class="btn-group btn-group-top">
+                <a class="btn btn-secondary float-left btn-group-item" title="{str tag='configfor'} {$plugintype}" href="plugintypeconfig.php?plugintype={$plugintype}">
+                    <span class="icon icon-cog icon-lg" role="presentation" aria-hidden="true"></span>
+                    <span class="accessible-hidden sr-only ">{str tag='configfor'} {$plugintype}</span>
+                </a>
+            </div>
+        {/if}
+        </h2>
         {assign var="installed" value=$plugins.installed}
         {assign var="notinstalled" value=$plugins.notinstalled}
 
@@ -40,7 +49,7 @@
                         {if $data.deprecated}{str tag=deprecated section=admin}{/if}
                         <div class="btn-group btn-group-top">
                         {if $data.config}
-                            <a class="btn btn-default pull-left btn-group-item" title="{str tag='configfor'} {$plugintype} {if $data.name}{$data.name}{else}{$plugin}{/if}" href="pluginconfig.php?plugintype={$plugintype}&amp;pluginname={$plugin}">
+                            <a class="btn btn-secondary float-left btn-group-item" title="{str tag='configfor'} {$plugintype} {if $data.name}{$data.name}{else}{$plugin}{/if}" href="pluginconfig.php?plugintype={$plugintype}&amp;pluginname={$plugin}">
                                  <span class="icon icon-cog icon-lg" role="presentation" aria-hidden="true"></span>
                                  <span class="accessible-hidden sr-only ">{str tag='configfor'} {$plugintype} {if $data.name}{$data.name}{else}{$plugin}{/if}</span>
                             </a>
@@ -58,7 +67,7 @@
                             <li>
                             {$type}
                             {if $config}
-                                <a class="btn btn-default btn-xs btn-group pull-right" title="{str tag='configfor'} {$plugintype} {if $data.name}{$data.name}{else}{$plugin}{/if}" href="pluginconfig.php?plugintype={$plugintype}&amp;pluginname={$plugin}&amp;type={$type}">
+                                <a class="btn btn-secondary btn-sm btn-group float-right" title="{str tag='configfor'} {$plugintype} {if $data.name}{$data.name}{else}{$plugin}{/if}" href="pluginconfig.php?plugintype={$plugintype}&amp;pluginname={$plugin}&amp;type={$type}">
                                     <span class="icon icon-cog icon-lg" role="presentation" aria-hidden="true"></span>
                                     <span class="accessible-hidden sr-only">{str tag='configfor'} {$plugintype} {if $data.name}{$data.name}{else}{$plugin}{/if}</span>
                                 </a>

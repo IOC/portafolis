@@ -149,8 +149,9 @@ jQuery(function($) {
     }
 
     function updateUnread(data, self) {
-        var inboxmenu = $('.header .inbox'),
+        var inboxmenu = $('#nav-inbox'),
             countnode,
+            countnodesr,
             notificationList = $('.notification-list');
 
         if (inboxmenu.length < 1) {
@@ -161,13 +162,17 @@ jQuery(function($) {
             if (countnode.length > 0) {
                 countnode.html(data.data.newunreadcount);
             }
+            countnodesr = inboxmenu.find('.unreadmessagecount-sr');
+            if (countnodesr.length > 0) {
+                countnodesr.html(data.data.newunreadcounttext);
+            }
         }
         if (data.data.html) {
             notificationList.html(data.data.html);
         }
         else if (self) {
-            $(self).removeClass('panel-primary js-panel-unread').addClass('panel-default');
-            $(self).find('.control').removeClass('control');
+            $(self).removeClass('text-weight-bold js-card-unread').addClass('card');
+            $(self).find('.unread').removeClass('unread'); // for inbox block
         }
         $('#selectall').attr('checked', false); // Need to uncheck bulk checkbox
     }
@@ -189,16 +194,16 @@ jQuery(function($) {
     function attachNotificationEvents() {
 
         // Add warning class to all selected notifications
-        $('.panel .control input').on('change', function() {
+        $('.card .control input').on('change', function() {
             if ($(this).prop('checked')) {
-                $(this).closest('.panel').addClass('panel-warning');
+                $(this).closest('.card').addClass('card-warning');
             }
             else {
-                $(this).closest('.panel').removeClass('panel-warning');
+                $(this).closest('.card').removeClass('card-warning');
             }
         });
 
-        $('.js-panel-unread').on('show.bs.collapse', function(e) {
+        $('.js-card-unread').on('show.bs.collapse', function(e) {
             markthisread(e, this, paginatorData);
         });
     }

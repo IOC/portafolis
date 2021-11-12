@@ -26,8 +26,14 @@ class PluginBlocktypeRecentForumPosts extends MaharaCoreBlocktype {
         return array('general' => 23000);
     }
 
-    private static function get_group(BlockInstance $instance) {
+    private static function get_group(BlockInstance $instance, $versioning=false) {
         static $groups = array();
+
+        if ($versioning) {
+            $configdata = $instance->get('configdata');
+            $groupid = $configdata['groupid'];
+            return get_record_select('group', 'id = ? AND deleted = 0', array($groupid), '*, ' . db_format_tsfield('ctime'));
+        }
 
         $block = $instance->get('id');
 
@@ -54,8 +60,8 @@ class PluginBlocktypeRecentForumPosts extends MaharaCoreBlocktype {
         return $groups[$block];
     }
 
-    public static function render_instance(BlockInstance $instance, $editing=false) {
-        if ($group = self::get_group($instance)) {
+    public static function render_instance(BlockInstance $instance, $editing=false, $versioning=false) {
+        if ($group = self::get_group($instance, $versioning)) {
 
             require_once('group.php');
             $role = group_user_access($group->id);
@@ -69,7 +75,7 @@ class PluginBlocktypeRecentForumPosts extends MaharaCoreBlocktype {
 
                 $foruminfo = get_records_sql_array('
                     SELECT
-                        p.id, p.subject, p.body, p.poster, p.topic, t.forum, pt.subject AS topicname,
+                        p.id, p.subject, p.body, p.poster, p.topic, pt.approved, t.forum, pt.subject AS topicname,
                         u.firstname, u.lastname, u.username, u.preferredname, u.email, u.profileicon, u.admin, u.staff, u.deleted, u.urlid
                     FROM
                         {interaction_forum_post} p
@@ -82,6 +88,7 @@ class PluginBlocktypeRecentForumPosts extends MaharaCoreBlocktype {
                         AND i.deleted = 0
                         AND t.deleted = 0
                         AND p.deleted = 0
+                        AND pt.approved = 1
                     ORDER BY
                         p.ctime DESC',
                     array($group->id), 0, $limit
@@ -97,6 +104,19 @@ class PluginBlocktypeRecentForumPosts extends MaharaCoreBlocktype {
                         foreach ($userfields as $uf) {
                             $f->author->$uf = $f->$uf;
                             unset($f->$uf);
+                        }
+                        $f->filecount = 0;
+                        if ($f->attachments = get_records_sql_array("
+                                 SELECT a.*, aff.size, aff.fileid, pa.post
+                                 FROM {artefact} a
+                                 JOIN {interaction_forum_post_attachment} pa ON pa.attachment = a.id
+                                 LEFT JOIN {artefact_file_files} aff ON aff.artefact = a.id
+                                 WHERE pa.post = ?", array($f->id))) {
+                            $f->filecount = count($f->attachments);
+                            safe_require('artefact', 'file');
+                            foreach ($f->attachments as $file) {
+                                $file->icon = call_static_method(generate_artefact_class_name($file->artefacttype), 'get_icon', array('id' => $file->id, 'post' => $f->id));
+                            }
                         }
                     }
                 }

@@ -83,6 +83,7 @@
                 <FIELD NAME="licensedefault" TYPE="char" LENGTH="255" NOTNULL="false"/>
                 <FIELD NAME="dropdownmenu" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
                 <FIELD NAME="skins" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1"/>
+                <FIELD NAME="tags" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
             </FIELDS>
             <KEYS>
                 <KEY NAME="primary" TYPE="primary" FIELDS="name" />
@@ -236,16 +237,6 @@
             <INDEXES>
                 <INDEX NAME="usrix" UNIQUE="false" FIELDS="usr"/>
             </INDEXES>
-        </TABLE>
-        <TABLE NAME="usr_tag">
-            <FIELDS>
-                <FIELD NAME="usr" TYPE="int" LENGTH="10" NOTNULL="true"/>
-                <FIELD NAME="tag" TYPE="char" LENGTH="128" NOTNULL="true"/>
-            </FIELDS>
-            <KEYS>
-                <KEY NAME="primary" TYPE="primary" FIELDS="usr,tag"/>
-                <KEY NAME="usrfk" TYPE="foreign" FIELDS="usr" REFTABLE="usr" REFFIELDS="id"/>
-            </KEYS>
         </TABLE>
         <TABLE NAME="auth_remote_user">
             <FIELDS>
@@ -554,16 +545,6 @@
                 <KEY NAME="primary" TYPE="primary" FIELDS="name" />
             </KEYS>
         </TABLE>
-        <TABLE NAME="artefact_tag">
-            <FIELDS>
-                <FIELD NAME="artefact" TYPE="int" LENGTH="10" NOTNULL="true" />
-                <FIELD NAME="tag" TYPE="char" LENGTH="128" NOTNULL="true" />
-            </FIELDS>
-            <KEYS>
-                <KEY NAME="primary" TYPE="primary" FIELDS="artefact,tag" />
-                <KEY NAME="artefactfk" TYPE="foreign" FIELDS="artefact" REFTABLE="artefact" REFFIELDS="id" />
-            </KEYS>
-        </TABLE>
         <TABLE NAME="artefact_access_usr">
             <FIELDS>
                 <FIELD NAME="usr" TYPE="int" LENGTH="10" NOTNULL="true" />
@@ -719,41 +700,6 @@
                 <KEY NAME="foreign" TYPE="foreign" FIELDS="usr" REFTABLE="usr" REFFIELDS="id" />
             </KEYS>
         </TABLE>
-        <TABLE NAME="view_layout_columns">
-            <FIELDS>
-                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-                <FIELD NAME="columns" TYPE="int" LENGTH="1" NOTNULL="true"/>
-                <FIELD NAME="widths" TYPE="char" LENGTH="255" NOTNULL="true"/>
-            </FIELDS>
-            <KEYS>
-                <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-                <KEY NAME="columnwidthuk" TYPE="unique" FIELDS="columns,widths"/>
-            </KEYS>
-        </TABLE>
-        <TABLE NAME="view_layout">
-            <FIELDS>
-                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-                <FIELD NAME="rows" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="1"/>
-                <FIELD NAME="iscustom" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
-                <FIELD NAME="layoutmenuorder" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
-            </FIELDS>
-            <KEYS>
-                <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-            </KEYS>
-        </TABLE>
-        <TABLE NAME="view_layout_rows_columns">
-            <FIELDS>
-                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
-                <FIELD NAME="viewlayout" TYPE="int" LENGTH="10" NOTNULL="true"/>
-                <FIELD NAME="row" TYPE="int" LENGTH="1" NOTNULL="true"/>
-                <FIELD NAME="columns" TYPE="int" LENGTH="10" NOTNULL="true"/>
-            </FIELDS>
-            <KEYS>
-                <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-                <KEY NAME="rowfk" TYPE="foreign" FIELDS="viewlayout" REFTABLE="view_layout" REFFIELDS="id"/>
-                <KEY NAME="columnsfk" TYPE="foreign" FIELDS="columns" REFTABLE="view_layout_columns" REFFIELDS="id"/>
-            </KEYS>
-        </TABLE>
         <TABLE NAME="view_type">
             <FIELDS>
                 <FIELD NAME="type" TYPE="char" LENGTH="50" NOTNULL="true" />
@@ -806,13 +752,16 @@
                 <FIELD NAME="locked" TYPE="int" LENGTH="1" DEFAULT="0" NOTNULL="true" />
                 <FIELD NAME="urlid" TYPE="char" LENGTH="100" NOTNULL="false" />
                 <FIELD NAME="anonymise" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" />
+                <FIELD NAME="lockblocks" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" />
+                <FIELD NAME="instructions" TYPE="text" NOTNULL="false" />
+                <FIELD NAME="instructionscollapsed" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" />
+                <FIELD NAME="accessibleview" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" />
             </FIELDS>
             <KEYS>
                 <KEY NAME="primary" TYPE="primary" FIELDS="id" />
                 <KEY NAME="ownerfk" TYPE="foreign" FIELDS="owner" REFTABLE="usr" REFFIELDS="id" />
                 <KEY NAME="submittedgroupfk" TYPE="foreign" FIELDS="submittedgroup" REFTABLE="group" REFFIELDS="id" />
                 <KEY NAME="submittedhostfk" TYPE="foreign" FIELDS="submittedhost" REFTABLE="host" REFFIELDS="wwwroot" />
-                <KEY NAME="layoutfk" TYPE="foreign" FIELDS="layout" REFTABLE="view_layout" REFFIELDS="id"/>
                 <KEY NAME="groupfk" TYPE="foreign" FIELDS="group" REFTABLE="group" REFFIELDS="id" />
                 <KEY NAME="institutionfk" TYPE="foreign" FIELDS="institution" REFTABLE="institution" REFFIELDS="name" />
                 <KEY NAME="typefk" TYPE="foreign" FIELDS="type" REFTABLE="view_type" REFFIELDS="type" />
@@ -820,22 +769,6 @@
             <INDEXES>
                 <INDEX NAME="urliduk" UNIQUE="true" FIELDS="urlid,owner,group,institution" />
             </INDEXES>
-        </TABLE>
-        <TABLE NAME="usr_custom_layout">
-            <FIELDS>
-                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
-                <FIELD NAME="usr" TYPE="int" LENGTH="10" NOTNULL="false"/>
-                <FIELD NAME="group" TYPE="int" LENGTH="10" NOTNULL="false"/>
-                <FIELD NAME="institution" TYPE="char" LENGTH="255" NOTNULL="false" />
-                <FIELD NAME="layout" TYPE="int" LENGTH="10" NOTNULL="true"/>
-            </FIELDS>
-            <KEYS>
-                <KEY NAME="primary" TYPE="primary" FIELDS="id" />
-                <KEY NAME="layoutfk" TYPE="foreign" FIELDS="layout" REFTABLE="view_layout" REFFIELDS="id"/>
-                <KEY NAME="usrfk" TYPE="foreign" FIELDS="usr" REFTABLE="usr" REFFIELDS="id"/>
-                <KEY NAME="groupfk" TYPE="foreign" FIELDS="group" REFTABLE="group" REFFIELDS="id" />
-                <KEY NAME="institutionfk" TYPE="foreign" FIELDS="institution" REFTABLE="institution" REFFIELDS="name" />
-            </KEYS>
         </TABLE>
         <TABLE NAME="view_rows_columns">
             <FIELDS>
@@ -847,16 +780,6 @@
             <KEYS>
                 <KEY NAME="primary" TYPE="primary" FIELDS="id" />
                 <KEY NAME="viewfk" TYPE="foreign" FIELDS="view" REFTABLE="view" REFFIELDS="id"/>
-            </KEYS>
-        </TABLE>
-        <TABLE NAME="view_tag">
-            <FIELDS>
-                <FIELD NAME="view" TYPE="int" LENGTH="10" NOTNULL="true" />
-                <FIELD NAME="tag" TYPE="char" LENGTH="128" NOTNULL="true" />
-            </FIELDS>
-            <KEYS>
-                <KEY NAME="primary" TYPE="primary" FIELDS="view,tag" />
-                <KEY NAME="viewfk" TYPE="foreign" FIELDS="view" REFTABLE="view" REFFIELDS="id" />
             </KEYS>
         </TABLE>
         <TABLE NAME="view_autocreate_grouptype">
@@ -877,15 +800,14 @@
                 <FIELD NAME="title" TYPE="char" LENGTH="255" NOTNULL="true" />
                 <FIELD NAME="configdata" TYPE="text" LENGTH="big" NOTNULL="false" />
                 <FIELD NAME="view" TYPE="int" LENGTH="10" NOTNULL="true" />
-                <FIELD NAME="row" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="1" />
-                <FIELD NAME="column" TYPE="int" LENGTH="2" NOTNULL="true" />
-                <FIELD NAME="order" TYPE="int" LENGTH="2" NOTNULL="true" />
+                <FIELD NAME="row" TYPE="int" LENGTH="2" DEFAULT="1" NOTNULL="false" />
+                <FIELD NAME="column" TYPE="int" LENGTH="2" NOTNULL="false" />
+                <FIELD NAME="order" TYPE="int" LENGTH="2" NOTNULL="false" />
             </FIELDS>
             <KEYS>
                 <KEY NAME="primary" TYPE="primary" FIELDS="id" />
                 <KEY NAME="blocktypefk" TYPE="foreign" FIELDS="blocktype" REFTABLE="blocktype_installed" REFFIELDS="name" />
                 <KEY NAME="viewfk" TYPE="foreign" FIELDS="view" REFTABLE="view" REFFIELDS="id" />
-                <KEY NAME="viewrowcolumnorderuk" TYPE="unique" FIELDS="view,row,column,order" />
             </KEYS>
         </TABLE>
         <TABLE NAME="view_artefact">
@@ -1132,14 +1054,19 @@
                 <KEY NAME="viewfk" TYPE="foreign" FIELDS="view" REFTABLE="view" REFFIELDS="id"  />
             </KEYS>
         </TABLE>
-        <TABLE NAME="collection_tag">
+        <TABLE NAME="existingcopy">
             <FIELDS>
-                <FIELD NAME="collection" TYPE="int" LENGTH="10" NOTNULL="true" />
-                <FIELD NAME="tag" TYPE="char" LENGTH="128" NOTNULL="true" />
+                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
+                <FIELD NAME="view" TYPE="int" LENGTH="10" NOTNULL="true" />
+                <FIELD NAME="collection" TYPE="int" LENGTH="10" NOTNULL="false" />
+                <FIELD NAME="usr" TYPE="int" LENGTH="10" NOTNULL="true" />
+                <FIELD NAME="ctime" TYPE="datetime" NOTNULL="true" />
             </FIELDS>
             <KEYS>
-                <KEY NAME="primary" TYPE="primary" FIELDS="collection,tag" />
+                <KEY NAME="primary" TYPE="primary" FIELDS="id" />
+                <KEY NAME="viewfk" TYPE="foreign" FIELDS="view" REFTABLE="view" REFFIELDS="id" />
                 <KEY NAME="collectionfk" TYPE="foreign" FIELDS="collection" REFTABLE="collection" REFFIELDS="id" />
+                <KEY NAME="usrfk" TYPE="foreign" FIELDS="usr" REFTABLE="usr" REFFIELDS="id" />
             </KEYS>
         </TABLE>
         <TABLE NAME="iframe_source_icon">
@@ -1213,7 +1140,7 @@
                 <FIELD NAME="type" TYPE="char" LENGTH="10" NOTNULL="true" DEFAULT="private" />
                 <FIELD NAME="viewskin" TYPE="text" LENGTH="big" NOTNULL="true" />
                 <FIELD NAME="bodybgimg" TYPE="int" LENGTH="10" NOTNULL="false" />
-                <FIELD NAME="viewbgimg" TYPE="int" LENGTH="10" NOTNULL="false" />
+                <FIELD NAME="headingbgimg" TYPE="int" LENGTH="10" NOTNULL="false" />
                 <FIELD NAME="ctime" TYPE="datetime" NOTNULL="false" />
                 <FIELD NAME="mtime" TYPE="datetime" NOTNULL="false" />
             </FIELDS>
@@ -1242,7 +1169,7 @@
                 <FIELD NAME="notice" TYPE="text" NOTNULL="false" />
                 <FIELD NAME="previewfont" TYPE="char" LENGTH="255" NOTNULL="true" />
                 <FIELD NAME="variants" TYPE="text" LENGTH="big" NOTNULL="true" />
-                <FIELD NAME="fonttype" TYPE="char" LENGTH="10" NOTNULL="true" DEFAULT="site" />
+                <FIELD NAME="fonttype" TYPE="char" LENGTH="30" NOTNULL="true" DEFAULT="site" />
                 <FIELD NAME="onlyheading" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" />
                 <FIELD NAME="fontstack" TYPE="text" NOTNULL="true" />
                 <FIELD NAME="genericfont" TYPE="char" LENGTH="10" NOTNULL="true" ENUM="true" ENUMVALUES="'cursive', 'fantasy', 'monospace', 'sans-serif', 'serif'" />
@@ -1275,12 +1202,18 @@
                 <FIELD NAME="reportedby" TYPE="int" LENGTH="10" NOTNULL="true" />
                 <FIELD NAME="report" TYPE="text" NOTNULL="true" />
                 <FIELD NAME="reportedtime" TYPE="datetime" NOTNULL="true" />
+                <FIELD NAME="reviewedby" TYPE="int" LENGTH="10" NOTNULL="false" />
+                <FIELD NAME="review" TYPE="text" NOTNULL="false" />
+                <FIELD NAME="reviewedtime" TYPE="datetime" NOTNULL="false" />
                 <FIELD NAME="resolvedby" TYPE="int" LENGTH="10" NOTNULL="false" />
                 <FIELD NAME="resolvedtime" TYPE="datetime" NOTNULL="false" />
+                <FIELD NAME="suspended" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" />
+                <FIELD NAME="status" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" />
             </FIELDS>
             <KEYS>
-            <KEY NAME="primary" TYPE="primary" FIELDS="id" />
+                <KEY NAME="primary" TYPE="primary" FIELDS="id" />
                 <KEY NAME="reporterfk" TYPE="foreign" FIELDS="reportedby" REFTABLE="usr" REFFIELDS="id" />
+                <KEY NAME="reviewerfk" TYPE="foreign" FIELDS="reviewedby" REFTABLE="usr" REFFIELDS="id" />
                 <KEY NAME="resolverfk" TYPE="foreign" FIELDS="resolvedby" REFTABLE="usr" REFFIELDS="id" />
             </KEYS>
             <INDEXES>
@@ -1412,7 +1345,7 @@
                 <KEY NAME="sitecontentfk" TYPE="foreign" FIELDS="sitecontentid" REFTABLE="site_content_version" REFFIELDS="id"/>
             </KEYS>
         </TABLE>
-	<TABLE NAME="usr_pendingdeletion">
+        <TABLE NAME="usr_pendingdeletion">
             <FIELDS>
                 <FIELD NAME="id" TYPE="int" LENGTH="10" SEQUENCE="true" NOTNULL="true" />
                 <FIELD NAME="usr" TYPE="int" LENGTH="10" NOTNULL="true" />
@@ -1422,6 +1355,60 @@
             <KEYS>
                 <KEY NAME="primary" TYPE="primary" FIELDS="id" />
                 <KEY NAME="usrfk" TYPE="foreign" FIELDS="usr" REFTABLE="usr" REFFIELDS="id"/>
+            </KEYS>
+        </TABLE>
+        <TABLE NAME="view_versioning">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
+                <FIELD NAME="view" TYPE="int" LENGTH="10" NOTNULL="true" />
+                <FIELD NAME="ctime" TYPE="datetime" NOTNULL="true"  />
+                <FIELD NAME="blockdata" TYPE="text" LENGTH="big" NOTNULL="false" />
+                <FIELD NAME="artefactids" TYPE="text" LENGTH="big" NOTNULL="false" />
+                <FIELD NAME="commentdata" TYPE="text" LENGTH="big" NOTNULL="false" />
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id" />
+                <KEY NAME="viewfk" TYPE="foreign" FIELDS="view" REFTABLE="view" REFFIELDS="id"/>
+            </KEYS>
+        </TABLE>
+        <TABLE NAME="tag">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
+                <FIELD NAME="tag" TYPE="char" LENGTH="255" NOTNULL="true" />
+                <FIELD NAME="resourcetype" TYPE="char" LENGTH="100" NOTNULL="true" />
+                <FIELD NAME="resourceid" TYPE="char" LENGTH="255" NOTNULL="true" />
+                <FIELD NAME="ownertype" TYPE="char" LENGTH="100" NOTNULL="true" />
+                <FIELD NAME="ownerid" TYPE="char" LENGTH="100" NOTNULL="false" />
+                <FIELD NAME="editedby" TYPE="int" LENGTH="10" NOTNULL="false" />
+                <FIELD NAME="ctime" TYPE="datetime" NOTNULL="true"  />
+                <FIELD NAME="mtime" TYPE="datetime" NOTNULL="false"  />
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id" />
+                <KEY NAME="taguk" TYPE="unique" FIELDS="tag,resourcetype,resourceid" />
+                <KEY NAME="editedbyfk" TYPE="foreign" FIELDS="editedby" REFTABLE="usr" REFFIELDS="id" />
+            </KEYS>
+        </TABLE>
+        <TABLE NAME="usr_access_roles">
+            <FIELDS>
+                <FIELD NAME="role" TYPE="char" LENGTH="255" NOTNULL="true" />
+                <FIELD NAME="see_block_content" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" />
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="role" />
+            </KEYS>
+        </TABLE>
+        <TABLE NAME="block_instance_dimension">
+            <FIELDS>
+                <FIELD NAME="block" TYPE="int" LENGTH="10" NOTNULL="true" />
+                <FIELD NAME="positionx" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="0" />
+                <FIELD NAME="positiony" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" />
+                <FIELD NAME="width" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="4" />
+                <FIELD NAME="height" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="4" />
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="block" />
+                <KEY NAME="blockfk" TYPE="foreign" FIELDS="block" REFTABLE="block_instance" REFFIELDS="id" />
             </KEYS>
         </TABLE>
     </TABLES>

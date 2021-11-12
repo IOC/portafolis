@@ -21,7 +21,8 @@ use Behat\Mink\Exception\ExpectationException as ExpectationException,
     Behat\Mink\Exception\ElementNotFoundException as ElementNotFoundException,
     Behat\Mink\Exception\DriverException as DriverException,
     WebDriver\Exception\NoSuchElement as NoSuchElement,
-    WebDriver\Exception\StaleElementReference as StaleElementReference;
+    WebDriver\Exception\StaleElementReference as StaleElementReference,
+    WebDriver\Exception\NoAlertOpenError;
 
 /**
  * Cross plugin steps definitions.
@@ -43,11 +44,11 @@ class BehatGeneral extends BehatBase {
         $this->visitPath("/");
         $this->wait_until_the_page_is_ready();
         $this->getSession()->getPage()->fillField(
-            "login_username",
+            "login_login_username",
             $username
         );
         $this->getSession()->getPage()->fillField(
-            "login_password",
+            "login_login_password",
             $password
         );
         $this->getSession()->getPage()->pressButton("Login");
@@ -250,6 +251,21 @@ class BehatGeneral extends BehatBase {
     }
 
     /**
+     * Assert the text is not in a popup window. This step does not work in all the browsers, consider it experimental.
+     * @Then /^I should not see a popup$/
+     * @return bool
+     */
+    public function i_should_not_see_a_popup() {
+        try {
+            $text = $this->getSession()->getDriver()->getWebDriverSession()->getAlert_text();
+            throw new Exception('Popup window found when none expected.');
+        }
+        catch (NoAlertOpenError $e) {
+            return true;
+        }
+    }
+
+    /**
      * Waits X seconds. Required after an action that requires data from an AJAX request.
      *
      * @Given /^I wait "(?P<seconds_number>\d+)" seconds$/
@@ -347,6 +363,35 @@ class BehatGeneral extends BehatBase {
     }
 
     /**
+     * Click on the link or button.
+     *
+     * @When /^I click on blocktype "(?P<blocktype>(?:[^"]|\\")*)"$/
+     * @param string $link_or_button we look for
+     */
+    public function i_click_on_blocktype($blocktype) {
+        $show_more_button = "Show more";
+        $property = "Content types";
+        // get the blocktypes container
+        $css_locator = get_property($property);
+
+        $found = false;
+        while (!$found) {
+            try {
+                //check if the blocktype is there
+                $node = $this->get_node_in_container('link_or_button', $blocktype, 'css_element', '#placeholderlist');
+                $this->ensure_node_is_visible($node);
+                $found = true;
+            }
+            catch(Exception $e) {
+                // do nothing, keep looking
+                $this->i_click_on($show_more_button);
+            }
+        }
+
+        $this->i_click_on_in_the($blocktype, $css_locator[0], $css_locator[1]);
+    }
+
+    /**
      * Click on the delete confirm link or button.
      *
      * @When /^I click on "(?P<link_or_button>(?:[^"]|\\")*)" delete button$/
@@ -425,6 +470,36 @@ class BehatGeneral extends BehatBase {
     }
 
     /**
+     * Check if the page contains the specified text within viewport
+     *
+     * @Then I should see :text in :element on the screen
+     */
+    public function i_see_in_viewport($text, $element) {
+        $textliteral = $this->escaper->escapeLiteral($text);
+        $exception = new ElementNotFoundException($this->getSession(), 'text', null, 'the element "' . $element . '"');
+        $xpath = "//" . $element . "[contains(normalize-space(.), " . $textliteral . ")]";
+        $node = $this->find('xpath', $xpath, $exception);
+        $this->ensure_node_is_visible($node);
+        // now that we know it exists on the page and is not a 'hidden' element
+        // we check if it is within the viewport
+        $textliteraljs = $this->escapeDoubleQuotes($textliteral);
+        $jscode = <<<EOF
+(function isScrolledIntoView() {
+    var elem = jQuery("$element:contains($textliteraljs)")[0];
+    var docViewTop = jQuery(window).scrollTop();
+    var docViewBottom = docViewTop + jQuery(window).height();
+    var elemTop = jQuery(elem).offset().top;
+    var elemBottom = elemTop + jQuery(elem).height();
+    return (docViewBottom >= elemTop && docViewTop <= elemBottom);
+})();
+EOF;
+        $result = $this->getSession()->evaluateScript("return $jscode");
+        if (!$result) {
+            throw new Exception("Element $element containing $text not within the viewport.");
+        }
+    }
+
+    /**
      * Checks the list/table row containing the specified text.
      *
      * @Then I should see :text in the :rowtext row
@@ -450,6 +525,29 @@ class BehatGeneral extends BehatBase {
         // Looking for the element DOM node inside the specified row.
         $elementnode = $this->find('named', array('content', $text));
         $this->ensure_node_is_visible($elementnode);
+    }
+
+    /**
+     * Checks the list/table row does not contain the specified text.
+     *
+     * @Then I should not see :text in the :rowtext row
+     * @param string $text we look for
+     * @param string $rowtext The list/table row text
+     * @throws ExpectationException
+     */
+
+    public function not_in_row($text, $rowtext) {
+        // The table row container.
+        try {
+            $this->i_find_in_row($text, $rowtext);
+            $exists = true;
+        }
+        catch(Exception $e) {
+            $exists = false;
+        }
+        if ($exists) {
+            throw new ExpectationException('"' . $args['text'] . '" text was found in the "' . $args['element'] . '" element', $context->getSession());
+        }
     }
 
     /**
@@ -503,110 +601,110 @@ class BehatGeneral extends BehatBase {
     }
 
     /**
-     * Click on the bottom right menu elipsis inside a list panel containing the specified text.
+     * Click on the bottom right menu elipsis inside a list card containing the specified text.
      *
-     * @When /^I click on "(?P<row_text_string>(?:[^"]|\\")*)" panel menu$/
+     * @When /^I click on "(?P<row_text_string>(?:[^"]|\\")*)" card menu$/
      * @param string $rowtext The list/table row text
      * @throws ElementNotFoundException
      */
-    public function i_click_on_in_panel($rowtext) {
+    public function i_click_on_in_card($rowtext) {
 
-        // The panel container.
+        // The card container.
         $rowtextliteral = $this->escaper->escapeLiteral($rowtext);
-        $exception = new ElementNotFoundException($this->getSession(), 'text', null, 'the panel containing the text "' . $rowtext . '"');
-        $xpath = "//div[contains(concat(' ', normalize-space(@class), ' '), concat(' ', 'panel', ' '))" .
+        $exception = new ElementNotFoundException($this->getSession(), 'text', null, 'the card containing the text "' . $rowtext . '"');
+        $xpath = "//div[contains(concat(' ', normalize-space(@class), ' '), concat(' ', 'card', ' '))" .
             " and contains(normalize-space(.), " . $rowtextliteral . ")]";
         $rownode = $this->find('xpath', $xpath, $exception);
 
-        // Click on the elipsis button for the panel
-        $jscode = "jQuery(\"div.panel h3:contains(" . $this->escapeDoubleQuotes($rowtextliteral) . ")\").siblings('.panel-footer').find('.page-controls .moremenu')[0].click();";
+        // Click on the elipsis button for the card
+        $jscode = "jQuery(\"div.card h3:contains(" . $this->escapeDoubleQuotes($rowtextliteral) . ")\").siblings('.card-footer').find('.page-controls .moremenu')[0].click();";
         $this->getSession()->executeScript($jscode);
     }
 
     /**
-     * Click on the bottom right collection menu inside a list panel containing the specified text.
+     * Click on the bottom right collection menu inside a list card containing the specified text.
      *
-     * @When /^I click on "(?P<row_text_string>(?:[^"]|\\")*)" panel collection$/
+     * @When /^I click on "(?P<row_text_string>(?:[^"]|\\")*)" card collection$/
      * @param string $rowtext The list/table row text
      * @throws ElementNotFoundException
      */
-    public function i_click_on_in_panel_collection_box($rowtext) {
+    public function i_click_on_in_card_collection_box($rowtext) {
 
-        // The panel container.
+        // The card container.
         $rowtextliteral = $this->escaper->escapeLiteral($rowtext);
-        $exception = new ElementNotFoundException($this->getSession(), 'text', null, 'the panel containing the text "' . $rowtext . '"');
-        $xpath = "//div[contains(concat(' ', normalize-space(@class), ' '), concat(' ', 'panel', ' '))" .
+        $exception = new ElementNotFoundException($this->getSession(), 'text', null, 'the card containing the text "' . $rowtext . '"');
+        $xpath = "//div[contains(concat(' ', normalize-space(@class), ' '), concat(' ', 'card', ' '))" .
             " and contains(normalize-space(.), " . $rowtextliteral . ")]";
         $rownode = $this->find('xpath', $xpath, $exception);
 
-        // Click on the collection box for the panel
-        $jscode = "jQuery(\"div.panel h3:contains(" . $this->escapeDoubleQuotes($rowtextliteral) . ")\").siblings('.panel-footer').find('.collection-list')[0].click();";
+        // Click on the collection box for the card
+        $jscode = "jQuery(\"div.card h3:contains(" . $this->escapeDoubleQuotes($rowtextliteral) . ")\").siblings('.card-footer').find('.collection-list')[0].click();";
         $this->getSession()->executeScript($jscode);
     }
 
     /**
-     * Click on the link or button inside a panel menu containing the specified text.
+     * Click on the link or button inside a card menu containing the specified text.
      *
-     * @When /^I click on "(?P<link_or_button>(?:[^"]|\\")*)" in "(?P<row_text_string>(?:[^"]|\\")*)" panel menu$/
+     * @When /^I click on "(?P<link_or_button>(?:[^"]|\\")*)" in "(?P<row_text_string>(?:[^"]|\\")*)" card menu$/
      * @param string $link_or_button we look for
-     * @param string $rowtext The panel menu text
+     * @param string $rowtext The card menu text
      * @throws ElementNotFoundException
      */
-    public function i_click_on_in_panel_menu($link_or_button, $rowtext) {
+    public function i_click_on_in_card_menu($link_or_button, $rowtext) {
 
-        // The panel container.
+        // The card container.
         $rowtextliteral = $this->escaper->escapeLiteral($rowtext);
-        $exception = new ElementNotFoundException($this->getSession(), 'text', null, 'the panel containing the text "' . $rowtext . '"');
-        $xpath = "//div[contains(concat(' ', normalize-space(@class), ' '), concat(' ', 'panel', ' '))" .
+        $exception = new ElementNotFoundException($this->getSession(), 'text', null, 'the card containing the text "' . $rowtext . '"');
+        $xpath = "//div[contains(concat(' ', normalize-space(@class), ' '), concat(' ', 'card', ' '))" .
             " and contains(normalize-space(.), " . $rowtextliteral . ")]";
         $rownode = $this->find('xpath', $xpath, $exception);
 
-        // Click on the elipsis button for the panel
-        $jscode = "jQuery(\"div.panel h3:contains(" . $this->escapeDoubleQuotes($rowtextliteral) . ")\").siblings('.panel-footer').find('.page-controls a:contains(" . $this->escapeDoubleQuotes($link_or_button) . ")')[0].click();";
+        // Click on the elipsis button for the card
+        $jscode = "jQuery(\"div.card h3:contains(" . $this->escapeDoubleQuotes($rowtextliteral) . ")\").siblings('.card-footer').find('.page-controls a:contains(" . $this->escapeDoubleQuotes($link_or_button) . ")')[0].click();";
         $this->getSession()->executeScript($jscode);
     }
 
     /**
-     * Click on the link or button inside a panel access menu containing the specified text.
+     * Click on the link or button inside a card access menu containing the specified text.
      *
-     * @When /^I click on "(?P<link_or_button>(?:[^"]|\\")*)" in "(?P<row_text_string>(?:[^"]|\\")*)" panel access menu$/
+     * @When /^I click on "(?P<link_or_button>(?:[^"]|\\")*)" in "(?P<row_text_string>(?:[^"]|\\")*)" card access menu$/
      * @param string $link_or_button we look for
-     * @param string $rowtext The panel menu text
+     * @param string $rowtext The card menu text
      * @throws ElementNotFoundException
      */
-    public function i_click_on_in_panel_access_menu($link_or_button, $rowtext) {
+    public function i_click_on_in_card_access_menu($link_or_button, $rowtext) {
 
-        // The panel container.
+        // The card container.
         $rowtextliteral = $this->escaper->escapeLiteral($rowtext);
-        $exception = new ElementNotFoundException($this->getSession(), 'text', null, 'the panel access containing the text "' . $rowtext . '"');
-        $xpath = "//div[contains(concat(' ', normalize-space(@class), ' '), concat(' ', 'panel', ' '))" .
+        $exception = new ElementNotFoundException($this->getSession(), 'text', null, 'the card access containing the text "' . $rowtext . '"');
+        $xpath = "//div[contains(concat(' ', normalize-space(@class), ' '), concat(' ', 'card', ' '))" .
             " and contains(normalize-space(.), " . $rowtextliteral . ")]";
         $rownode = $this->find('xpath', $xpath, $exception);
 
-        // Click on the elipsis button for the panel
-        $jscode = "jQuery(\"div.panel h3:contains(" . $this->escapeDoubleQuotes($rowtextliteral) . ")\").siblings('.panel-footer').find('.page-access a:contains(" . $this->escapeDoubleQuotes($link_or_button) . ")')[0].click();";
+        // Click on the elipsis button for the card
+        $jscode = "jQuery(\"div.card h3:contains(" . $this->escapeDoubleQuotes($rowtextliteral) . ")\").siblings('.card-footer').find('.page-access a:contains(" . $this->escapeDoubleQuotes($link_or_button) . ")')[0].click();";
         $this->getSession()->executeScript($jscode);
     }
 
     /**
-     * Click on the link or button inside a panel collection list containing the specified text.
+     * Click on the link or button inside a card collection list containing the specified text.
      *
-     * @When /^I click on "(?P<link_or_button>(?:[^"]|\\")*)" in "(?P<row_text_string>(?:[^"]|\\")*)" panel collection$/
+     * @When /^I click on "(?P<link_or_button>(?:[^"]|\\")*)" in "(?P<row_text_string>(?:[^"]|\\")*)" card collection$/
      * @param string $link_or_button we look for
-     * @param string $rowtext The panel menu text
+     * @param string $rowtext The card menu text
      * @throws ElementNotFoundException
      */
-    public function i_click_on_in_panel_collection_menu($link_or_button, $rowtext) {
+    public function i_click_on_in_card_collection_menu($link_or_button, $rowtext) {
 
-        // The panel container.
+        // The card container.
         $rowtextliteral = $this->escaper->escapeLiteral($rowtext);
-        $exception = new ElementNotFoundException($this->getSession(), 'text', null, 'the panel containing the text "' . $rowtext . '"');
-        $xpath = "//div[contains(concat(' ', normalize-space(@class), ' '), concat(' ', 'panel', ' '))" .
+        $exception = new ElementNotFoundException($this->getSession(), 'text', null, 'the card containing the text "' . $rowtext . '"');
+        $xpath = "//div[contains(concat(' ', normalize-space(@class), ' '), concat(' ', 'card', ' '))" .
             " and contains(normalize-space(.), " . $rowtextliteral . ")]";
         $rownode = $this->find('xpath', $xpath, $exception);
 
-        // Click on the elipsis button for the panel
-        $jscode = "jQuery(\"div.panel h3:contains(" . $this->escapeDoubleQuotes($rowtextliteral) . ")\").siblings('.panel-footer').find(\"a:contains(" . $this->escapeDoubleQuotes($link_or_button) . ")\")[0].click();";
+        // Click on the elipsis button for the card
+        $jscode = "jQuery(\"div.card h3:contains(" . $this->escapeDoubleQuotes($rowtextliteral) . ")\").siblings('.card-footer').find(\"a:contains(" . $this->escapeDoubleQuotes($link_or_button) . ")\")[0].click();";
         $this->getSession()->executeScript($jscode);
     }
 
@@ -637,23 +735,23 @@ class BehatGeneral extends BehatBase {
     }
 
     /**
-     * Click a panel header containing the specified text.
+     * Click a card header containing the specified text.
      *
-     * @When /^I click the panel "(?P<row_text_string>(?:[^"]|\\")*)"$/
-     * @param string $rowtext the panel heading text
+     * @When /^I click the card "(?P<row_text_string>(?:[^"]|\\")*)"$/
+     * @param string $rowtext the card heading text
      * @throws ElementNotFoundException
      */
-    public function i_click_panel($rowtext) {
+    public function i_click_card($rowtext) {
 
-        // The panel container.
+        // The card container.
         $rowtextliteral = $this->escaper->escapeLiteral($rowtext);
-        $exception = new ElementNotFoundException($this->getSession(), 'text', null, 'the panel containing the text "' . $rowtext . '"');
-        $xpath = "//div[contains(concat(' ', normalize-space(@class), ' '), concat(' ', 'panel', ' '))" .
+        $exception = new ElementNotFoundException($this->getSession(), 'text', null, 'the card containing the text "' . $rowtext . '"');
+        $xpath = "//div[contains(concat(' ', normalize-space(@class), ' '), concat(' ', 'card', ' '))" .
             " and contains(normalize-space(.), " . $rowtextliteral . ")]" .
             "//a[contains(concat(' ', normalize-space(@class), ' '), ' title-link ')]";
         $rownode = $this->find('xpath', $xpath, $exception);
 
-        $jscode = "jQuery(\"div.panel h3 a.title-link:contains(" . $this->escapeDoubleQuotes($rowtextliteral) . ")\")[0].click();";
+        $jscode = "jQuery(\"div.card h3 a.title-link:contains(" . $this->escapeDoubleQuotes($rowtextliteral) . ")\")[0].click();";
         $this->getSession()->executeScript($jscode);
     }
 
@@ -682,7 +780,7 @@ class BehatGeneral extends BehatBase {
 
         // For some reasons, the Mink function click() and check() do not work
         // Using jQuery as a workaround
-        $jscode = "jQuery(\".tablematrix tr:eq('" . $point[1] . "') td:eq('" . $point[0] . "') span\").click();";
+        $jscode = "jQuery(\".tablematrix tr:eq('" . $point[1] . "') td:eq('" . $point[0] . "') span\").trigger('click');";
         $this->getSession()->executeScript($jscode);
     }
 
@@ -865,26 +963,11 @@ class BehatGeneral extends BehatBase {
             throw new ExpectationException('"A property called "' . $property . '" was not found in the properties.php file. Check that file or try passing a css locator directly"',
             $this->getSession());
         }
+
         else {
+            $step_funct = $this->switch_action($step_funct);
             // switch covers steps in BehatGeneral that pass a css_locator
-            switch ($step_funct) {
-                case "click on":
-                    $funct = "i_click_on_in_the";
-                    break;
-                case "follow":
-                    $funct = "i_follow_in_the";
-                    break;
-                case "press":
-                    $funct = "i_press_in_the";
-                    break;
-                case "should see":
-                    $funct = "assert_element_contains_text";
-                    break;
-                case "should not see":
-                    $funct = "assert_element_not_contains_text";
-                    break;
-            }
-            $this->$funct($text, $css_locator[0], $css_locator[1]);
+            $this->$step_funct($text, $css_locator[0], $css_locator[1]);
         }
     }
 
@@ -1273,6 +1356,29 @@ class BehatGeneral extends BehatBase {
         $this->visitPath("/view/view.php?id={$view->id}");
     }
 
+    /**
+     * Visit a Mahara Profile Page with the specified owner
+     *
+     * @Given /^I go to the profile page of "([^"]*)"$/
+     */
+    public function i_go_to_profile_view($user) {
+        // Find the page's ID number
+        $views = get_records_sql_array("SELECT v.id FROM {view} v
+                                       JOIN {usr} u ON u.id = v.owner
+                                       WHERE (u.username = ? OR CONCAT(u.firstname, ' ', u.lastname) = ?)
+                                       AND v.type = ?", array($user, $user, 'profile'));
+        if (!$views) {
+            throw new Exception(sprintf('Invalid user name. No profile view found for "%s".', $user));
+        }
+        if (count($views) > 1) {
+            throw new Exception(sprintf('Invalid useer name. More than one profile view found for "%s".', $user));
+        }
+
+        $view = reset($views);
+
+        // success
+        $this->visitPath("/view/view.php?id={$view->id}");
+    }
 
     /**
      * Visit a Mahara group Page with the specified Group name
@@ -1407,7 +1513,7 @@ class BehatGeneral extends BehatBase {
  *
  */
     public function i_display_page() {
-        $this->getSession()->executeScript('jQuery("div.with-heading a:contains(\'Display page\')")[0].click();');
+        $this->getSession()->executeScript('jQuery("#displaypagebtn:contains(\'Display page\')")[0].click();');
     }
 
 /**
@@ -1518,6 +1624,32 @@ JS;
     }
 
 /**
+ * Scroll element into view and align top of element with the center of the visible area.
+ *
+ * @When I scroll to the center of id :id
+ *
+ */
+    public function i_scroll_into_view_center($id) {
+        $function = <<<JS
+          (function(){
+              var elem = document.getElementById("$id");
+              var elementRect = elem.getBoundingClientRect();
+              var absoluteElementTop = elementRect.top + window.pageYOffset;
+              var middle = absoluteElementTop - (window.innerHeight / 2);
+              window.scrollTo(0, middle);
+              return 1;
+          })()
+JS;
+        try {
+            $this->getSession()->wait(5000, $function);
+        }
+        catch(Exception $e) {
+            throw new \Exception("scrollIntoView failed");
+        }
+    }
+
+
+/**
  * Check if images exist in the block given its title
  *
  * @Then I should see images within the block :blocktitle
@@ -1526,7 +1658,7 @@ JS;
     public function i_should_see_images_block($blocktitle) {
         // Find the block.
         $blocktitleliteral = $this->escaper->escapeLiteral($blocktitle);
-        $xpath = "//div[contains(concat(' ', normalize-space(@class), ' '), ' column-content ')]" .
+        $xpath = "//div[contains(concat(' ', normalize-space(@class), ' '), ' grid-stack-item-content ')]" .
                      "/div[contains(@id,'blockinstance_')" .
                          " and contains(h3, " . $blocktitleliteral . ")]//img";
         // Wait until it finds the text inside the block title.
@@ -1559,6 +1691,23 @@ JS;
         );
     }
 
+    /**
+     * Check if image with title exists on the page
+     *
+     * @Then I should see image :imagetitle on the page
+     *
+     */
+    public function i_should_see_image_on_page($imagetitle) {
+        // Find the image.
+        $imagetitleliteral = $this->escaper->escapeLiteral($imagetitle);
+        $exception = new ElementNotFoundException($this->getSession(), 'image');
+        $xpath = "//img[contains(concat(' ', normalize-space(@alt), ' '), " . $imagetitleliteral . ")]";
+        $image = $this->find('xpath', $xpath, $exception);
+        if (!$image->isVisible()) {
+            throw new ExpectationException('The image with alt ' . $imagetitleliteral . ' was not visible', $this->getSession());
+        }
+    }
+
 /**
  * Check if text exist in the block given its title
  *
@@ -1569,7 +1718,7 @@ JS;
         // Find the block.
         $blocktitleliteral = $this->escaper->escapeLiteral($blocktitle);
         $textliteral = $this->escaper->escapeLiteral($text);
-        $xpath = "//div[contains(concat(' ', normalize-space(@class), ' '), ' column-content ')]" .
+        $xpath = "//div[contains(concat(' ', normalize-space(@class), ' '), ' grid-stack-item-content ')]" .
                      "/div[contains(@id,'blockinstance_')" .
                          " and contains(h3, " . $blocktitleliteral . ")]" .
                      "//div[contains(normalize-space(.), " . $textliteral . ")]";
@@ -1612,7 +1761,7 @@ JS;
     public function i_should_not_see_images_block($blocktitle) {
         // Find the block.
         $blocktitleliteral = $this->escaper->escapeLiteral($blocktitle);
-        $xpath = "//div[contains(concat(' ', normalize-space(@class), ' '), ' column-content ')]" .
+        $xpath = "//div[contains(concat(' ', normalize-space(@class), ' '), ' grid-stack-item-content ')]" .
                      "/div[contains(@id,'blockinstance_')" .
                          " and contains(h3, " . $blocktitleliteral . ")]" .
                          "[count(descendant::img) = 0]";
@@ -1656,7 +1805,7 @@ JS;
         // Find the block.
         $blocktitleliteral = $this->escaper->escapeLiteral($blocktitle);
         $textliteral = $this->escaper->escapeLiteral($text);
-        $xpath = "//div[contains(concat(' ', normalize-space(@class), ' '), ' column-content ')]" .
+        $xpath = "//div[contains(concat(' ', normalize-space(@class), ' '), ' grid-stack-item-content ')]" .
                      "/div[contains(@id,'blockinstance_')" .
                          " and contains(h3, " . $blocktitleliteral . ")]" .
                      "//div[count(descendant::*[contains(normalize-space(.), " . $textliteral . ")]) = 0]";
@@ -1778,6 +1927,102 @@ JS;
         $token = $tokens[0]->unsubscribetoken;
         // Go to the unsubscribe page
         $this->visitPath("/view/unsubscribe.php?a=watchlist&t={$token}");
+    }
+
+    /**
+    * Switch to assign the secondary function to be called by a
+    * generic primary function
+    *
+    */
+    private function switch_action($action) {
+        switch ($action) {
+            case "click on":
+                $funct = "i_click_on_in_the";
+                break;
+            case "follow":
+                $funct = "i_follow_in_the";
+                break;
+            case "press":
+                $funct = "i_press_in_the";
+                break;
+            case "should see":
+                $funct = "assert_element_contains_text";
+                break;
+            case "should not see":
+                $funct = "assert_element_not_contains_text";
+                break;
+        }
+        return $funct;
+    }
+
+    /**
+     * Allows interaction with comments in a list using text
+     * contained in the comment, as the id tags are dynamic.
+     *
+     * @Then /^I (?P<action>.*) "(?P<element>(?:[^"]|\\")*)" in the "(?P<text>(?:[^"]|\\")*)" comment$/
+     *
+     * @param string $action the first element of the step used to call
+     *              a secondary function.
+     * @param string $element part of the comment id to interact with
+     * @param string $text part of the comment text
+     */
+    public function i_interact_comment($action, $element, $text) {
+        $xpath = "//*[@id=\"feedbacktable\"]/*/div[contains(normalize-space(.), '$text')]";
+        $action = $this->switch_action($action);
+        $this->$action($element, $xpath, "xpath_element");
+    }
+
+    /**
+     * Allows interaction with blocktype reorder page in administration.
+     * Seen as we can't do a drag drop easily in behat we will just reorder them via db
+     * and reload the page
+     *
+     * @Then I move blocktype :moveblock to before :otherblock
+     * @param string $moveblock   The block to move
+     * @param string $otherblock  The block to move before
+     */
+    public function i_move_blocktype($moveblock, $otherblock) {
+        // Find the blocktypes.
+        $moveblockliteral = $this->escaper->escapeLiteral($moveblock);
+        $otherblockliteral = $this->escaper->escapeLiteral($otherblock);
+        if ($moveblockliteral == $otherblockliteral) {
+            throw new ExpectationException('The blocktype to move with title ' . $moveblockliteral . ' is the same as ' . $otherblockliteral, $this->getSession());
+        }
+        $blocks = array('move' => array('text' => $moveblockliteral),
+                        'over' => array('text' => $otherblockliteral),
+                       );
+        // Our blocklist form db
+        $blocklist = get_column_sql("SELECT b.name FROM {blocktype_installed} b
+                                  JOIN {blocktype_installed_category} bc ON bc.blocktype = b.name
+                                  WHERE b.active = 1 AND b.name != ? ORDER BY bc.sortorder", array('placeholder'));
+        foreach ($blocks as $k => $block) {
+            $xpath = "//div[contains(@id,'placeholderlist')]" .
+                     "/div/button/div[contains(normalize-space(.), " . $block['text'] . ")]";
+            // Check that we have the block
+            try {
+                $blockobj = $this->find('xpath', $xpath);
+            }
+            catch (ElementNotFoundException $e) {
+                throw new ExpectationException('The blocktype with title ' . $block . ' was not found', $this->getSession());
+            }
+            $blocks[$k]['type'] = $blockobj->getParent()->getAttribute('data-option');
+        }
+
+        if (($moveblock = array_search($blocks['move']['type'], $blocklist)) !== false) {
+            $mover = array_slice($blocklist, $moveblock, 1);
+            unset($blocklist[$moveblock]);
+            $blocklist = array_values($blocklist);
+            if (($otherblock = array_search($blocks['over']['type'], $blocklist)) === false) {
+                throw new ExpectationException('Can not find the blocktype in db for blocktype with title ' . $blocks['over']['text'], $this->getSession());
+            }
+            array_splice($blocklist, $otherblock, 0, $mover);
+            foreach ($blocklist as $k => $v) {
+                execute_sql("UPDATE {blocktype_installed_category} SET sortorder = ? WHERE blocktype = ?", array(($k + 1) * 1000, $v));
+            }
+        }
+        else {
+            throw new ExpectationException('Can not find the blocktype in db for blocktype with title ' . $blocks['move']['text'], $this->getSession());
+        }
     }
 
 }

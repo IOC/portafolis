@@ -47,25 +47,12 @@ class PluginArtefactResume extends PluginArtefact {
 
     public static function menu_items() {
         return array(
-            'content/resume' => array(
-                'path' => 'content/resume',
+            'create/resume' => array(
+                'path' => 'create/resume',
                 'title' => get_string('resume', 'artefact.resume'),
                 'url' => 'artefact/resume/index.php',
-                'weight' => 50,
+                'weight' => 60,
             ),
-        );
-    }
-
-    public static function get_artefact_type_content_types() {
-        return array(
-            'coverletter'   => array('text'),
-            'interest'      => array('text'),
-            'personalgoal'  => array('text'),
-            'academicgoal'  => array('text'),
-            'careergoal'    => array('text'),
-            'personalskill' => array('text'),
-            'academicskill' => array('text'),
-            'workskill'     => array('text'),
         );
     }
 
@@ -76,7 +63,7 @@ class PluginArtefactResume extends PluginArtefact {
             ),
             'index' => array(
                 'page'  => 'index',
-                'url'   => 'artefact/resume',
+                'url'   => 'artefact/resume/index.php',
                 'title' => get_string('introduction', 'artefact.resume'),
             ),
             'employment' => array(
@@ -108,8 +95,8 @@ class PluginArtefactResume extends PluginArtefact {
         if (!get_config('licensemetadata')) {
             unset($tabs['license']);
         }
-        if (defined('RESUME_SUBPAGE') && isset($tabs[RESUME_SUBPAGE])) {
-            $tabs[RESUME_SUBPAGE]['selected'] = true;
+        if (defined('MENUITEM_SUBPAGE') && isset($tabs[MENUITEM_SUBPAGE])) {
+            $tabs[MENUITEM_SUBPAGE]['selected'] = true;
         }
         return $tabs;
     }
@@ -188,7 +175,7 @@ class ArtefactTypeResume extends ArtefactType {
     }
 
     public static function format_child_data($artefact, $pluginname) {
-        $a = new StdClass;
+        $a = new stdClass();
         $a->id         = $artefact->id;
         $a->isartefact = true;
         $a->title      = '';
@@ -389,7 +376,7 @@ class ArtefactTypePersonalinformation extends ArtefactTypeResume {
 
         db_begin();
 
-        $data = new StdClass;
+        $data = new stdClass();
         $have_composites = false;
         foreach ($this->composites as $field => $value) {
             if ($field != 'artefact' && !empty($value)) {
@@ -892,6 +879,14 @@ abstract class ArtefactTypeResumeComposite extends ArtefactTypeResume implements
             $smarty->assign('artefactid', $options['artefactid']);
         }
 
+        if (!empty($options['editing'])) {
+            $smarty->assign('editing', $options['editing']);
+        }
+
+        if (!empty($options['blockid'])) {
+            $smarty->assign('blockid', $options['blockid']);
+        }
+
         if (!$data = get_records_sql_array($sql, array($owner, $type))) {
             $data = array();
         }
@@ -914,14 +909,24 @@ abstract class ArtefactTypeResumeComposite extends ArtefactTypeResume implements
                     ORDER BY a.title';
             $attachments = get_records_sql_array($sql, array($record->artefact, $record->id));
             if ($attachments) {
+                safe_require('artefact', 'comment');
                 foreach ($attachments as &$attachment) {
                     $f = artefact_instance_from_id($attachment->id);
                     $attachment->size = $f->describe_size();
                     $attachment->iconpath = $f->get_icon(array('id' => $attachment->id, 'viewid' => isset($options['viewid']) ? $options['viewid'] : 0));
                     $attachment->artefacttype = $f->get_artefact_type($attachment->id);
-                    $attachment->viewpath = get_config('wwwroot') . 'artefact/artefact.php?artefact=' . $attachment->id . '&view=' . (isset($options['viewid']) ? $options['viewid'] : 0);
                     $attachment->downloadpath = get_config('wwwroot') . 'artefact/file/download.php?file=' . $attachment->id;
                     $attachment->description = $f->description;
+                    $attachment->allowcomments = $f->get('allowcomments');
+                    if (!empty($options['showcommentcount'])) {
+                        $count = ArtefactTypeComment::count_comments(null, array($attachment->id));
+                        if ($count) {
+                            $attachment->commentcount = $count[$attachment->id]->comments;
+                        }
+                        else {
+                            $attachment->commentcount = 0;
+                        }
+                    }
                 }
             }
             $record->attachments = $attachments;
@@ -994,13 +999,13 @@ function compositeSaveCallback(form, data) {
     });
     // Also need to clear the innerHTML for textareas
     \$j('#' + form.id + ' textarea').each(function() {
-        document.getElementById(\$j(this).attr('id')).innerHTML = '';
+        tinyMCE.get(\$(this).attr('id')).setContent('');
     });
 
     \$j('#' + key + 'form').collapse('hide');
 
     tableRenderers[key].doupdate(null, { focusid: data['focusid'] });
-    \$j('#add' + key + 'button').focus();
+    \$j('#add' + key + 'button').trigger("focus");
     // Do a double check to make sure the formchange checker for the submitted form is actually reset
     tableRenderers[key].postupdatecallback = function(response) {
         var checkers = formchangemanager.formcheckers;
@@ -1076,7 +1081,7 @@ EOF;
                 var titleTD = jQuery('#composite-' + row.artefact + '-' + row.id);
                 var bodyNode = jQuery('#composite-body-' + row.artefact +  '-' + row.id);
                 if (bodyNode.length) {
-                    bodyNode.toggleClass('hidden');
+                    bodyNode.toggleClass('d-none');
                     return false;
                 }
                     var newNode = jQuery('<div>', {'id': 'composite-body-' + row.artefact + '-' + row.id}).append(
@@ -1118,7 +1123,7 @@ EOF;
             if (row._rownumber > 1) {
                 var up =
                     jQuery('<a>', {'href': '', 'class': 'moveup'}).append(
-                        jQuery('<span>',{'class': 'icon icon-long-arrow-up','role':'presentation'}),
+                        jQuery('<span>',{'class': 'icon icon-long-arrow-alt-up','role':'presentation'}),
                         jQuery('<span>',{'class': 'sr-only', 'text': {$upjsstr}})
                     );
                     up.on('click', function (e) {
@@ -1130,7 +1135,7 @@ EOF;
             if (!row._last) {
                 var down =
                     jQuery('<a>', {'href': '', 'class':'movedown'}).append(
-                      jQuery('<span>',{'class': 'icon icon-long-arrow-down','role':'presentation'}),
+                      jQuery('<span>',{'class': 'icon icon-long-arrow-alt-down','role':'presentation'}),
                       jQuery('<span>',{'class': 'sr-only', 'text': {$downjsstr}})
                     );
                     down.on('click', function (e) {
@@ -1150,13 +1155,13 @@ EOF;
         function (row, data) {
             var editlink =
                 jQuery('<a>', {'href': 'editcomposite.php?id=' + row.id + '&artefact=' + row.artefact,
-                               'title': {$editstr}, 'class': 'btn btn-default btn-xs'}).append(
-                                    jQuery('<span>',{'class': 'icon icon-pencil icon-lg', 'role':'presentation'}),
+                               'title': {$editstr}, 'class': 'btn btn-secondary btn-sm'}).append(
+                                    jQuery('<span>',{'class': 'icon icon-pencil-alt icon-lg', 'role':'presentation'}),
                                     jQuery('<span>',{'class': 'sr-only'}).append({$editjsstr})
                                );
             var dellink =
-                jQuery('<a>', {'href': '', 'title': {$delstr}, 'class': 'btn btn-default btn-xs'}).append(
-                    jQuery('<span>',{'class': 'icon icon-trash text-danger icon-lg','role':'presentation'}),
+                jQuery('<a>', {'href': '', 'title': {$delstr}, 'class': 'btn btn-secondary btn-sm'}).append(
+                    jQuery('<span>',{'class': 'icon icon-trash-alt text-danger icon-lg','role':'presentation'}),
                     jQuery('<span>',{'class': 'sr-only'}).append({$deljsstr})
                 );
                 dellink.on('click', function (e) {
@@ -1351,14 +1356,14 @@ EOF;
                 'type' => 'wysiwyg',
                 'rows' => 10,
                 'cols' => 50,
-                'rules' => array('maxlength' => 65536),
+                'rules' => array('maxlength' => 1000000),
                 'title' =>  get_string('positiondescription', 'artefact.resume'),
             ),
             'attachments' => array(
                 'type'         => 'files',
                 'title'        => get_string('attachfile', 'artefact.resume'),
                 'defaultvalue' => array(),
-                'maxfilesize'  => get_max_upload_size(false),
+                'maxfilesize'  => get_max_upload_size(true),
             ),
         );
     }
@@ -1427,7 +1432,7 @@ class ArtefactTypeEducationhistory extends ArtefactTypeResumeComposite {
                     self::get_tablerenderer_address_js_string()
                 ) . ",
                 function (row, data) {
-                    return jQuery('<td>', {'style':'text-align:center'}).append(row.clipcount);
+                    return jQuery('<span>', {'style':'text-align:center'}).append(row.clipcount);
                 },
         ";
     }
@@ -1521,20 +1526,14 @@ EOF;
                 'type' => 'wysiwyg',
                 'rows' => 10,
                 'cols' => 50,
-                'rules' => array('maxlength' => 65536),
+                'rules' => array('maxlength' => 1000000),
                 'title' => get_string('qualdescription', 'artefact.resume'),
             ),
             'attachments' => array(
                 'type'         => 'files',
                 'title'        => get_string('attachfile', 'artefact.resume'),
                 'defaultvalue' => array(),
-                'maxfilesize'  => get_max_upload_size(false),
-            ),
-            'attachments' => array(
-                'type'         => 'files',
-                'title'        => get_string('attachfile', 'artefact.resume'),
-                'defaultvalue' => array(),
-                'maxfilesize'  => get_max_upload_size(false),
+                'maxfilesize'  => get_max_upload_size(true),
             ),
         );
     }
@@ -1667,14 +1666,14 @@ class ArtefactTypeCertification extends ArtefactTypeResumeComposite {
                 'type' => 'wysiwyg',
                 'rows' => 10,
                 'cols' => 50,
-                'rules' => array('maxlength' => 65536),
+                'rules' => array('maxlength' => 1000000),
                 'title' => get_string('description'),
             ),
             'attachments' => array(
                 'type'         => 'files',
                 'title'        => get_string('attachfile', 'artefact.resume'),
                 'defaultvalue' => array(),
-                'maxfilesize'  => get_max_upload_size(false),
+                'maxfilesize'  => get_max_upload_size(true),
             ),
         );
     }
@@ -1803,14 +1802,14 @@ EOF;
                 'type' => 'wysiwyg',
                 'rows' => 10,
                 'cols' => 50,
-                'rules' => array('maxlength' => 65536),
+                'rules' => array('maxlength' => 1000000),
                 'title' => get_string('detailsofyourcontribution', 'artefact.resume'),
             ),
             'attachments' => array(
                 'type'         => 'files',
                 'title'        => get_string('attachfile', 'artefact.resume'),
                 'defaultvalue' => array(),
-                'maxfilesize'  => get_max_upload_size(false),
+                'maxfilesize'  => get_max_upload_size(true),
             ),
             'url' => array(
                 'type' => 'text',
@@ -1933,14 +1932,14 @@ class ArtefactTypeMembership extends ArtefactTypeResumeComposite {
                 'type' => 'wysiwyg',
                 'rows' => 10,
                 'cols' => 50,
-                'rules' => array('maxlength' => 65536),
+                'rules' => array('maxlength' => 1000000),
                 'title' => get_string('description', 'artefact.resume'),
             ),
             'attachments' => array(
                 'type'         => 'files',
                 'title'        => get_string('attachfile', 'artefact.resume'),
                 'defaultvalue' => array(),
-                'maxfilesize'  => get_max_upload_size(false),
+                'maxfilesize'  => get_max_upload_size(true),
             ),
         );
     }
@@ -2008,16 +2007,29 @@ class ArtefactTypeResumeGoalAndSkill extends ArtefactTypeResume {
         if (!empty($options['artefactid'])) {
             $smarty->assign('artefactid', $options['artefactid']);
         }
+        if (!empty($options['editing'])) {
+            $smarty->assign('editing', $options['editing']);
+        }
 
         $attachments = $this->get_attachments();
         if ($attachments) {
+            safe_require('artefact', 'comment');
             foreach ($attachments as &$attachment) {
                 $f = artefact_instance_from_id($attachment->id);
                 $attachment->size = $f->describe_size();
                 $attachment->iconpath = $f->get_icon(array('id' => $attachment->id, 'viewid' => isset($options['viewid']) ? $options['viewid'] : 0));
-                $attachment->viewpath = get_config('wwwroot') . 'artefact/artefact.php?artefact=' . $attachment->id . '&view=' . (isset($options['viewid']) ? $options['viewid'] : 0);
                 $attachment->downloadpath = get_config('wwwroot') . 'artefact/file/download.php?file=' . $attachment->id;
                 $attachment->description = $f->description;
+                $attachment->allowcomments = $f->get('allowcomments');
+                if (!empty($options['showcommentcount'])) {
+                    $count = ArtefactTypeComment::count_comments(null, array($attachment->id));
+                    if ($count) {
+                        $attachment->commentcount = $count[$attachment->id]->comments;
+                    }
+                    else {
+                        $attachment->commentcount = 0;
+                    }
+                }
             }
             $smarty->assign('attachments', $attachments);
             $smarty->assign('count', count($attachments));
@@ -2199,7 +2211,7 @@ function simple_resumefield_form($defaults, $goto, $options = array()) {
                     'rows'  => 100,
                     'cols'  => 365,
                     'defaultvalue' => $content,
-                    'rules' => array('maxlength' => 65536),
+                    'rules' => array('maxlength' => 1000000),
                 ),
                 $t . 'display' => array(
                     'type' => 'html',

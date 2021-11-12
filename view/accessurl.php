@@ -59,7 +59,9 @@ if (!$USER->can_edit_view($view)) {
 if ($group && !group_within_edit_window($group)) {
     throw new AccessDeniedException();
 }
-
+if ($view->get('template') == View::SITE_TEMPLATE) {
+    throw new AccessDeniedException();
+}
 
 $form = array(
     'name' => 'accessurl',
@@ -67,13 +69,18 @@ $form = array(
     'class' => 'form-simple stacked block-relative',
     'plugintype' => 'core',
     'pluginname' => 'view',
-    'presubmitcallback' => 'beforeFormStartProcessing',
+    'presubmitcallback' => 'formStartProcessing',
     'viewid' => $view->get('id'),
     'userview' => (int) $view->get('owner'),
     'elements' => array(
         'id' => array(
             'type' => 'hidden',
             'value' => $view->get('id'),
+        ),
+        'progress_meter_token' => array(
+            'type' => 'hidden',
+            'value' => 'copyviewexistingmembersprogress',
+            'readonly' => TRUE,
         ),
     )
 );
@@ -82,9 +89,9 @@ if ($view->get('type') == 'profile') {
     // Make sure all the user's institutions have access to profile view
     $view->add_owner_institution_access();
 
-    if (get_config('loggedinprofileviewaccess')) {
+    if (get_config('loggedinprofileviewaccess') && !is_isolated()) {
         // Force logged-in user access
-        $viewaccess = new stdClass;
+        $viewaccess = new stdClass();
         $viewaccess->accesstype = 'loggedin';
         $viewaccess->startdate = null;
         $viewaccess->stopdate = null;
@@ -98,7 +105,7 @@ $allowcomments = $view->get('allowcomments');
 
 $form['elements']['more'] = array(
     'type' => 'fieldset',
-    'class' => $view->get('type') == 'profile' ? ' hidden' : 'last with-heading',
+    'class' => $view->get('type') == 'profile' ? ' d-none' : 'last with-heading',
     'collapsible' => true,
     'collapsed' => true,
     'legend' => get_string('moreoptions', 'view'),
@@ -124,10 +131,24 @@ $form['elements']['more'] = array(
     ),
 );
 
+$admintutorids = group_get_member_ids($group, array('admin', 'tutor'));
+if ($group && in_array($USER->get('id'), $admintutorids, true)) {
+    $form['elements']['more']['elements'] = array_merge($form['elements']['more']['elements'], array('existinggroupmembercopy' => array(
+            'type'         => 'switchbox',
+            'title'        => get_string('existinggroupmembercopy', 'view'),
+            'description'  => get_string('existinggroupmembercopydesc1', 'view'),
+            'defaultvalue' => 0,
+    )));
+}
+$viewaccess = $view->get_access('%s');
+if (is_isolated() && !empty($viewaccess)) {
+    $viewaccess = filter_isolated_view_access($view, $viewaccess);
+}
+
 $form['elements']['accesslist'] = array(
     'type'          => 'viewacl',
     'allowcomments' => $allowcomments,
-    'defaultvalue'  => $view->get_access('%s'),
+    'defaultvalue'  => $viewaccess,
     'viewtype'      => $view->get('type'),
     'isformgroup' => false
 );
@@ -182,10 +203,10 @@ else {
 jQuery(function($) {
     function update_retainview() {
         if ($('#accessurl_template').prop('checked')) {
-            $('#accessurl_retainview_container').removeClass('hidden');
+            $('#accessurl_retainview_container').removeClass('d-none');
         }
         else {
-            $('#accessurl_retainview_container').addClass('hidden');
+            $('#accessurl_retainview_container').addClass('d-none');
             $('#accessurl_retainview').prop('checked',false);
             update_loggedin_access();
         }
@@ -199,7 +220,7 @@ EOF;
 }
 
 if (!$allowcomments) {
-    $form['elements']['more']['elements']['approvecomments']['class'] = 'hidden';
+    $form['elements']['more']['elements']['approvecomments']['class'] = 'd-none';
 }
 $allowcomments = json_encode((int) $allowcomments);
 
@@ -209,17 +230,17 @@ jQuery(function($) {
     function update_comment_options() {
         allowcomments = $('#accessurl_allowcomments').prop('checked');
         if (allowcomments) {
-            $('#accessurl_approvecomments').removeClass('hidden');
-            $('#accessurl_approvecomments_container').removeClass('hidden');
+            $('#accessurl_approvecomments').removeClass('d-none');
+            $('#accessurl_approvecomments_container').removeClass('d-none');
             $('#accesslisttable .commentcolumn').each(function () {
-                $(this).addClass('hidden');
+                $(this).addClass('d-none');
             });
         }
         else {
 
-            $('#accessurl_approvecomments_container').addClass('hidden');
+            $('#accessurl_approvecomments_container').addClass('d-none');
             $('#accesslisttable .commentcolumn').each(function () {
-                $(this).removeClass('hidden');
+                $(this).removeClass('d-none');
             });
         }
     }
@@ -331,7 +352,6 @@ function accessurl_validate(Pieform $form, $values) {
         'institution' => get_string('institution'),
     );
 
-    $loggedinaccess = false;
     if ($values['accesslist']) {
         $dateformat = get_string('strftimedatetimeshort');
         foreach ($values['accesslist'] as &$item) {
@@ -348,17 +368,13 @@ function accessurl_validate(Pieform $form, $values) {
                 break;
             }
 
-            if ($item['type'] == 'loggedin' && !$item['startdate'] && !$item['stopdate']) {
-                $loggedinaccess = true;
-            }
-
             $now = time();
-            if ($item['stopdate'] && $now > $item['stopdate']) {
+            if (!empty($item['stopdate']) && $item['stopdate'] && $now > $item['stopdate']) {
                 $SESSION->add_error_msg(get_string('newstopdatecannotbeinpast', 'view', $accesstypestrings[$item['type']]));
                 $form->set_error('accesslist', '');
                 break;
             }
-            if ($item['startdate'] && $item['stopdate'] && $item['startdate'] > $item['stopdate']) {
+            if (!empty($item['startdate']) && !empty($item['stopdate']) && $item['startdate'] && $item['stopdate'] && $item['startdate'] > $item['stopdate']) {
                 $SESSION->add_error_msg(get_string('newstartdatemustbebeforestopdate', 'view', $accesstypestrings[$item['type']]));
                 $form->set_error('accesslist', '');
                 break;
@@ -389,7 +405,7 @@ function accessurl_cancel_submit() {
 }
 
 function accessurl_submit(Pieform $form, $values) {
-    global $SESSION, $institution, $view;
+    global $SESSION, $institution, $view, $group, $collection;
 
     if ($values['accesslist']) {
         $dateformat = get_string('strftimedatetimeshort');
@@ -410,6 +426,33 @@ function accessurl_submit(Pieform $form, $values) {
         'approvecomments' => (int) ($values['allowcomments'] && $values['approvecomments']),
         'accesslist'      => $values['accesslist'],
     );
+
+    if ($group) {
+        $viewconfig['existinggroupmembercopy'] = !empty($values['existinggroupmembercopy']) ? $values['existinggroupmembercopy'] : 0;
+
+        // Add functionality here which copies the page into existing
+        // group members pages.
+        if ($viewconfig['existinggroupmembercopy']) {
+            $groupmembers = group_get_member_ids($group, array('member'));
+            $key = 0;
+            $total = count($groupmembers);
+            foreach ($groupmembers as $groupmember) {
+                if (!($key % 5)) {
+                    set_progress_info('copyviewexistingmembersprogress', $key, $total, get_string('copyforexistingmembersprogress', 'view'));
+                }
+                $key++;
+
+                $userobj = new User();
+                $userobj->find_by_id($groupmember);
+                if (!empty($collection)) {
+                    $userobj->copy_group_views_collections_to_existing_members(array($collection->get('id')), true);
+                }
+                else if (!empty($view->get('id'))) {
+                    $userobj->copy_group_views_collections_to_existing_members(array($view->get('id')));
+                }
+            }
+        }
+    }
 
     if ($institution) {
         if (isset($values['copynewuser'])) {
@@ -454,24 +497,23 @@ function accessurl_submit(Pieform $form, $values) {
         // Ensure the user's institutions are still added to the access list
         $view->add_owner_institution_access();
 
-        if (get_config('loggedinprofileviewaccess')) {
+        if (get_config('loggedinprofileviewaccess') && !is_isolated()) {
             // Force logged-in user access
-            $viewaccess = new stdClass;
+            $viewaccess = new stdClass();
             $viewaccess->accesstype = 'loggedin';
             $view->add_access($viewaccess);
         }
     }
-
+    set_progress_done('copyviewexistingmembersprogress');
     if ($view->get('owner')) {
-        redirect(get_config('wwwroot') . '/view/blocks.php?id=' . $view->get('id'));
+        redirect(get_config('wwwroot') . 'view/blocks.php?id=' . $view->get('id'));
     }
     if ($view->get('group')) {
-        redirect(get_config('wwwroot') . '/group/shareviews.php?group=' . $view->get('group'));
+        redirect(get_config('wwwroot') . 'group/shareviews.php?group=' . $view->get('group'));
     }
     if ($view->get('institution')) {
-        redirect(get_config('wwwroot') . '/view/institutionshare.php?institution=' . $view->get('institution'));
+        redirect(get_config('wwwroot') . 'view/institutionshare.php?institution=' . $view->get('institution'));
     }
-    $view->post_edit_redirect();
 }
 
 $form = pieform($form);
@@ -488,7 +530,7 @@ $newform = array(
         'submit' => array(
             'type'        => 'button',
             'usebuttontag' => true,
-            'class'       => 'btn-default',
+            'class'       => 'btn-secondary',
             'elementtitle' => get_string('generatesecreturl', 'view', hsc(isset($title) ? $title : '')),
             'value'       =>  '<span class="icon icon-plus icon-lg left" role="presentation" aria-hidden="true"></span> ' .get_string('newsecreturl', 'view'),
         ),
@@ -570,7 +612,7 @@ for ($i = 0; $i < count($records); $i++) {
             'name'             => 'deleteurl_' . $i,
             'successcallback'  => 'deleteurl_submit',
             'renderer'         => 'div',
-            'class'            => 'form-as-button btn-group form-inline pull-left',
+            'class'            => 'form-as-button btn-group form-inline float-left',
             'renderelementsonly' => true,
             'elements'         => array(
                 'token'  => array(
@@ -580,10 +622,10 @@ for ($i = 0; $i < count($records); $i++) {
                 'submit' => array(
                     'type'         => 'button',
                     'usebuttontag' => true,
-                    'class'        => 'btn-default btn-xs',
+                    'class'        => 'btn-secondary btn-sm',
                     'elementtitle' => get_string('delete'),
                     'confirm'      => get_string('reallydeletesecreturl', 'view'),
-                    'value'        => '<span class="icon icon-trash text-danger icon-lg" role="presentation" aria-hidden="true"></span><span class="sr-only">' . get_string('delete') . '</span>',
+                    'value'        => '<span class="icon icon-trash-alt text-danger icon-lg" role="presentation" aria-hidden="true"></span><span class="sr-only">' . get_string('delete') . '</span>',
                 ),
             ),
         )),
@@ -595,11 +637,11 @@ $count = count($records);
 if ($count) {
     $js .= <<<EOF
 jQuery(function($) {
-      $(document).ready(function() {
+      $(function() {
             for (i = 0; i < {$count}; i++) {
                 var element = document.getElementById("copytoclipboard-" + i);
                 try {
-                    var client = new Clipboard(element);
+                    var client = new ClipboardJS(element);
                     client.on("error", function(e) {
                         var element = document.getElementById("copytoclipboard-" + e.client.id);
                         $(element).hide();
@@ -730,7 +772,7 @@ $newform = $allownew ? pieform($newform) : null;
 
 $js .= <<<EOF
 jQuery(function($) {
-    $('.url-open-editform').click(function(e) {
+    $('.url-open-editform').on("click", function(e) {
         e.preventDefault();
         $('#' + this.id).addClass('collapse-indicator');
         $('#' + this.id).toggleClass('open');
@@ -766,4 +808,7 @@ $smarty->assign('allownew', $allownew);
 $smarty->assign('onprobation', $onprobation);
 $smarty->assign('newform', $newform);
 // end
+$returnto = $view->get_return_to_url_and_title();
+$smarty->assign('url', $returnto['url']);
+$smarty->assign('title', $returnto['title']);
 $smarty->display('view/accessurl.tpl');

@@ -23,13 +23,14 @@ safe_require('module', 'framework');
 $frameworkid  = param_integer('id', 0);
 $framework = new Framework($frameworkid);
 
+define('SUBSECTIONHEADING', $framework->get('name'));
 $plugintype = 'module';
 $pluginname = 'framework';
 $classname = 'Framework';
 
 $form = $framework->get_framework_config_options();
 if (!array_key_exists('class', $form)) {
-    $form['class'] = 'panel panel-body';
+    $form['class'] = 'card card-body';
 }
 
 $form['name'] = 'frameworkconfig';
@@ -52,8 +53,8 @@ $form['elements']['save'] = array(
     'type'  => 'submitcancel',
     'class' => 'btn-primary',
     'value' => array(
-          get_string('save'),
-          get_string('cancel')
+        get_string('save'),
+        get_string('cancel')
     ),
     'goto' => get_config('wwwroot') . 'module/framework/frameworks.php',
 );
@@ -61,11 +62,10 @@ $form['elements']['save'] = array(
 $form = pieform($form);
 
 $smarty = smarty();
+$smarty->assign('SUBPAGENAV', PluginModuleFramework::submenu_items('overview'));
 $smarty->assign('form', $form);
 $smarty->assign('plugintype', $plugintype);
 $smarty->assign('pluginname', $pluginname);
-$heading = get_string('pluginadmin', 'admin') . ': ' . $plugintype . ': ' . $pluginname;
-$smarty->assign('PAGEHEADING', $heading);
 $smarty->display('module:framework:frameworkmanager.tpl');
 
 
@@ -95,5 +95,4 @@ function frameworkconfig_submit(Pieform $form, $values) {
     else {
         $form->json_reply(PIEFORM_ERR, array('message' => get_string('settingssavefailed')));
     }
-
 }

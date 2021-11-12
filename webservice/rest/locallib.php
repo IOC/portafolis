@@ -309,6 +309,9 @@ class webservice_rest_server extends webservice_base_server {
         header('Expires: '. gmdate('D, d M Y H:i:s', 0) . ' GMT');
         header('Pragma: no-cache');
         header('Accept-Ranges: none');
+         // Allow CORS requests.
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Credentials: false');
     }
 
     /**
@@ -489,6 +492,8 @@ function webservice_download_file_content($url, $headers=null, $postdata=null, $
     // use POST if requested
     if (is_array($postdata)) {
         $postdata = format_postdata_for_curlcall($postdata);
+    }
+    if (!empty($postdata)) {
         $options[CURLOPT_POST] = true;
         $options[CURLOPT_POSTFIELDS] = $postdata;
     }
@@ -561,7 +566,7 @@ function webservice_download_file_content($url, $headers=null, $postdata=null, $
 
         }
         else {
-            $response = new stdClass();;
+            $response = new stdClass();
             $response->status        = (string)$info['http_code'];
             $response->headers       = $received->headers;
             $response->response_code = $received->headers[0];
@@ -619,7 +624,7 @@ function webservice_http_request($config, $quiet=false) {
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
     // curl_setopt($ch, CURLOPT_FAILONERROR, false);
 
-    $result = new StdClass();
+    $result = new stdClass();
     $result->data = curl_exec($ch);
     $result->info = curl_getinfo($ch);
     $result->error = curl_error($ch);

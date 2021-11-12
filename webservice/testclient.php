@@ -143,6 +143,17 @@ if (!empty($authtype)) {
                 $title = preg_replace('/_NUM_/', ' / ', $title);
                 $type = (trim($var['type']) == 'bool') ? 'switchbox' : 'text';
                 $type = (trim($var['type']) == 'file') ? 'file' : $type;
+                $rules = array();
+                // Because we add in fields before checking form we need to not check for required
+                // if selecting 'function name' for first time
+                if (isset($_GET['function']) && !empty($_GET['function'])) {
+                    if ($var['required'] === 1) {
+                        $rules['required'] = true;
+                    }
+                    if ($var['oneof']) {
+                        $rules['oneof'] = $var['oneof'];
+                    }
+                }
                 if ($title == 'institution') {
                     // Let see if we can fetch the exact allowed values
                     $elements[$name] = get_institution_selector();
@@ -155,6 +166,7 @@ if (!empty($authtype)) {
                                              'title'        => $title,
                                              'options'      => $options,
                                              'description'  => $var['desc'],
+                                             'rules' => $rules,
                                              );
                 }
                 else if ($title == 'auth') {
@@ -168,10 +180,11 @@ if (!empty($authtype)) {
                                              'title'        => $title,
                                              'options'      => $options,
                                              'description'  => $var['desc'],
+                                             'rules' => $rules,
                                              );
                 }
                 else if ($title == 'password') {
-                    $elements[$name] = array('title' => $title, 'type' => 'password', 'description' => $var['desc']);
+                    $elements[$name] = array('title' => $title, 'type' => 'password', 'description' => $var['desc'], 'rules' => $rules);
                 }
                 else if ($title == 'socialprofile' && get_record('blocktype_installed', 'active', 1, 'name', 'socialprofile')) {
                    $socialnetworkoptions = array('' => '');
@@ -188,18 +201,20 @@ if (!empty($authtype)) {
                                             'type'         => 'text',
                                             'title'        => $title . '_url',
                                             'description'  => $var['desc'],
+                                            'rules'        => $rules,
                                             );
                 }
                 else {
-                    $elements[$name] = array('title' => $title, 'type' => $type, 'description' => $var['desc']);
+                    $elements[$name] = array('title' => $title, 'type' => $type, 'description' => $var['desc'], 'rules' => $rules);
                 }
             }
         }
         if ($authtype == 'user') {
-            $username = param_alphanum('cancel_submit', null) ? '' : param_alphanum('wsusername', '');
-            $password = param_alphanum('cancel_submit', null) ? '' : param_alphanum('wspassword', '');
-            $elements['wsusername'] = array('title' => 'wsusername', 'type' => 'text', 'value' => $username, 'autocomplete' => 'off');
-            $elements['wspassword'] = array('title' => 'wspassword', 'type' => 'password', 'value' => $password, 'autocomplete' => 'off');
+            $username = param_alphanum('cancel_submit', null) ? '' : param_variable('wsusername', '');
+            $password = param_alphanum('cancel_submit', null) ? '' : param_variable('wspassword', '');
+            $rules = array('required' => true);
+            $elements['wsusername'] = array('title' => 'wsusername', 'type' => 'text', 'value' => $username, 'autocomplete' => 'off', 'rules' => $rules);
+            $elements['wspassword'] = array('title' => 'wspassword', 'type' => 'password', 'value' => $password, 'autocomplete' => 'off', 'rules' => $rules);
             if ($username) {
                 $params[]= 'wsusername=' . $username;
             }
@@ -208,8 +223,12 @@ if (!empty($authtype)) {
             }
         }
         else {
-            $wstoken = param_alphanum('cancel_submit', null) ? '' : param_alphanum('wstoken', '');
-            $elements['wstoken'] = array('title' => 'wstoken', 'type' => 'text', 'value' => $wstoken, 'autocomplete' => 'off');
+            $wstoken = param_alphanum('cancel_submit', null) ? '' : param_variable('wstoken', '');
+            $rules = array();
+            if (isset($_GET['function']) && !empty($_GET['function'])) {
+                $rules = array('required' => true);
+            }
+            $elements['wstoken'] = array('title' => 'wstoken', 'type' => 'text', 'value' => $wstoken, 'autocomplete' => 'off', 'rules' => $rules);
             if ($wstoken) {
                 $params[]= 'wstoken=' . $wstoken;
             }
@@ -236,7 +255,7 @@ else {
     $form = '';
 }
 $smarty = smarty();
-setpageicon($smarty, 'icon-puzzle-piece');
+setpageicon($smarty, 'icon-vial');
 
 safe_require('auth', 'webservice');
 
@@ -265,24 +284,26 @@ function testclient_get_interface($functionname) {
         $name = preg_replace('/\]\[/', '_', $name);
         $name = preg_replace('/[\]\[]/', '', $name);
         $desc = testclient_parameters_desc($fdesc, $name);
-        $vars[]= array('name' => $name, 'type' => $type, 'desc' => $desc);
+        $required = testclient_parameters_desc($fdesc, $name, 'required');
+        $oneof = testclient_parameters_desc($fdesc, $name, 'oneof');
+        $vars[]= array('name' => $name, 'type' => $type, 'desc' => $desc, 'required' => $required, 'oneof' => $oneof);
     }
     return $vars;
 }
 
-function testclient_parameters_desc($fdesc, $name) {
+function testclient_parameters_desc($fdesc, $name, $type='desc') {
     // Do we have any parameter_desc information?
     $name = explode('_NUM_', $name);
     if (!isset($fdesc->parameters_desc) && !isset($fdesc->parameters_desc->keys[$name[0]])) {
         return null;
     }
-    // Do we have any description information for the field?
+    // Do we have any information for the field we want?
     if (count($name) > 1 && isset($fdesc->parameters_desc->keys[$name[0]]->content->keys[$name[1]])) {
         if (count($name) == 2) {
-            $result = $fdesc->parameters_desc->keys[$name[0]]->content->keys[$name[1]]->desc;
+            $result = $fdesc->parameters_desc->keys[$name[0]]->content->keys[$name[1]]->$type;
         }
         else if (count($name) == 3) {
-            $result = $fdesc->parameters_desc->keys[$name[0]]->content->keys[$name[1]]->content->keys[$name[2]]->desc;
+            $result = $fdesc->parameters_desc->keys[$name[0]]->content->keys[$name[1]]->content->keys[$name[2]]->$type;
         }
         return $result;
     }
@@ -456,22 +477,22 @@ function testclient_submit(Pieform $form, $values) {
                 break;
 
             case 'soap':
-                // stop failed to load external entity error - nolonger needed as use curl to
-                // prefetch WSDL
-                libxml_disable_entity_loader(true);
                 require_once(get_config('docroot') . 'webservice/soap/lib.php');
                 //force SOAP synchronous mode
                 $client = new webservice_soap_client(get_config('wwwroot') . 'webservice/soap/server.php',
                                 ($values['authtype'] == 'token' ? array('wstoken' => $values['wstoken']) :
                                                      array('wsusername' => $values['wsusername'], 'wspassword' => $values['wspassword'])),
                                 array("features" => SOAP_WAIT_ONE_WAY_CALLS, 'stream_context' => webservice_create_context(get_config('wwwroot') . 'webservice/soap/server.php')));
-                $client->setWsdlCache(false);
                 break;
         }
 
         try {
             $results = $client->call($dbsf->functionname, $inputs);
-            $results = array('url' => $client->serverurl,
+            $url = $client->serverurl;
+            if ($client->serverurl instanceof mahara_url) {
+                $url = $client->serverurl->raw_out(false);
+            }
+            $results = array('url' => $url,
                              'results' => $results,
                              'inputs' => $inputs);
         } catch (Exception $e) {

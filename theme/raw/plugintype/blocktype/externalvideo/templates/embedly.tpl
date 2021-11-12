@@ -9,16 +9,16 @@
 {/if}
 
 {if $type == 'div'}
-    <div class="embedly-responsive" style="{$style1}"><iframe class="embedly-embed" frameborder="0" scrolling="no" allowfullscreen src="{$src}" width="{$width}" height="{$height}" style="{$style2}"></iframe></div>
+    <div class="embedly-responsive" style="{$style1}"><iframe class="embedly-embed" allowfullscreen="1" src="{$src}" width="{$width}" height="{$height}" style="{$style2}"></iframe></div>
 {/if}
 
 {if $type == 'iframe'}
-    <iframe class="embedly-embed" frameborder="0" scrolling="no" allowfullscreen src="{$src}" width="{$width}" height="{$height}"></iframe>
+    <iframe class="embedly-embed" allowfullscreen="1" src="{$src}" width="{$width}" height="{$height}"></iframe>
 {/if}
 
 </div>
 
-<script type="application/javascript">
+<script>
 
 function embedLoaded() {
 

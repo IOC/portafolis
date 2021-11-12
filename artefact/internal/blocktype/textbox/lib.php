@@ -29,17 +29,24 @@ class PluginBlocktypeTextbox extends MaharaCoreBlocktype {
         return true;
     }
 
-    public static function render_instance(BlockInstance $instance, $editing=false) {
-        $configdata = $instance->get('configdata');
+    public static function single_artefact_per_block() {
+        return true;
+    }
 
+    public static function render_instance(BlockInstance $instance, $editing=false, $versioning=false) {
+        $configdata = $instance->get('configdata');
         if (!empty($configdata['artefactid'])) {
             safe_require('artefact', 'file');
             safe_require('artefact', 'comment');
 
             $artefact = $instance->get_artefact_instance($configdata['artefactid']);
             $viewid = $instance->get('view');
-            $text = ArtefactTypeFolder::append_view_url($artefact->get('description'), $viewid);
-
+            if ($versioning) {
+                $text = $configdata['text'];
+            }
+            else {
+                $text = ArtefactTypeFolder::append_view_url($artefact->get('description'), $viewid);
+            }
             $smarty = smarty_core();
             $smarty->assign('text', $text);
 
@@ -50,7 +57,6 @@ class PluginBlocktypeTextbox extends MaharaCoreBlocktype {
                     $f = artefact_instance_from_id($attachment->id);
                     $attachment->size = $f->describe_size();
                     $attachment->iconpath = $f->get_icon(array('id' => $attachment->id, 'viewid' => isset($options['viewid']) ? $options['viewid'] : 0));
-                    $attachment->viewpath = get_config('wwwroot') . 'artefact/artefact.php?artefact=' . $attachment->id . '&view=' . (isset($viewid) ? $viewid : 0);
                     $attachment->downloadpath = get_config('wwwroot') . 'artefact/file/download.php?file=' . $attachment->id;
                     if (isset($viewid)) {
                         $attachment->downloadpath .= '&view=' . $viewid;
@@ -61,10 +67,13 @@ class PluginBlocktypeTextbox extends MaharaCoreBlocktype {
             $smarty->assign('attachments', $attachments);
             require_once(get_config('docroot') . 'lib/view.php');
             $view = new View($viewid);
-            list($commentcount, $comments) = ArtefactTypeComment::get_artefact_comments_for_view($artefact, $view, $instance->get('id'), true, $editing);
+            list($commentcount, $comments) = ArtefactTypeComment::get_artefact_comments_for_view($artefact, $view, $instance->get('id'), true, $editing, $versioning);
             $smarty->assign('commentcount', $commentcount);
             $smarty->assign('comments', $comments);
+            $smarty->assign('license', (int)get_config('licensemetadata'));
             $smarty->assign('blockid', $instance->get('id'));
+            $smarty->assign('artefactid', $artefact->get('id'));
+            $smarty->assign('editing', $editing);
             return $smarty->fetch('blocktype:textbox:content.tpl');
         }
 
@@ -95,7 +104,7 @@ class PluginBlocktypeTextbox extends MaharaCoreBlocktype {
         return array(
             'name'             => 'artefactid',
             'type'             => 'artefactchooser',
-            'class'            => 'hidden',
+            'class'            => 'd-none',
             'defaultvalue'     => $default,
             'blocktype'        => 'textbox',
             'limit'            => 5,
@@ -138,24 +147,35 @@ function updateTextContent(a) {
     jQuery('#instconf_licensorurl').prop('value', a.licensorurl);
     jQuery('#instconf_textreadonly_display').html(a.safedescription);
     jQuery('#instconf_licensereadonly_display').html(a.safelicense);
-    jQuery('#instconf_tags').prop('value', a.tags);
+    if (a.tags && a.tags.length > 0) {
+        for (var i = 0; i < a.tags.length; i++) {
+            // Set the value, creating a new option if necessary
+            if (!$('#instconf_tags').find("option[value='" + a.tags[i] + "']").length) {
+                // Create a DOM Option and pre-select by default
+                var newOption = new Option(a.tags[i], a.tags[i], true, true);
+                // Append it to the select
+                $('#instconf_tags').append(newOption);
+            }
+        }
+        $('#instconf_tags').val(a.tags).trigger('change');
+    }
     jQuery('#instconf_textreadonly_display').html(a.safedescription);
     jQuery('#instconf_tagsreadonly_display').html(a.safetags);
     jQuery('#instconf_makecopy').prop('checked', false);
     if (a.editable == 1) {
-        jQuery('#instconf_textreadonly_container').addClass('hidden');
-        jQuery('#instconf_readonlymsg_container').addClass('hidden');
-        jQuery('#instconf_licensereadonly_container').addClass('hidden');
-        jQuery('#instconf_tagsreadonly_container').addClass('hidden');
-        jQuery('#instconf_text_container').removeClass('hidden');
+        jQuery('#instconf_textreadonly_container').addClass('d-none');
+        jQuery('#instconf_readonlymsg_container').addClass('d-none');
+        jQuery('#instconf_licensereadonly_container').addClass('d-none');
+        jQuery('#instconf_tagsreadonly_container').addClass('d-none');
+        jQuery('#instconf_text_container').removeClass('d-none');
         if (jQuery('#instconf_license_container').length) {
             // only deal with these if the license metadata is enabled
-            jQuery('#instconf_license_container').removeClass('hidden');
-            jQuery('#instconf_license_description').removeClass('hidden');
-            jQuery('#instconf_license_advanced_fieldset').removeClass('hidden');
+            jQuery('#instconf_license_container').removeClass('d-none');
+            jQuery('#instconf_license_description').removeClass('d-none');
+            jQuery('#instconf_license_advanced_fieldset').removeClass('d-none');
         }
-        jQuery('#instconf_tags_container').removeClass('hidden');
-        jQuery('#instconf_tags_description').removeClass('hidden');
+        jQuery('#instconf_tags_container').removeClass('d-none');
+        jQuery('#instconf_tags_description').removeClass('d-none');
         var blockcountmsg = jQuery('#instconf_otherblocksmsg_container');
         if (blockcountmsg && jQuery('#textbox_blockcount')) {
             var otherblockcount = 0;
@@ -168,10 +188,10 @@ function updateTextContent(a) {
             }
             if (otherblockcount) {
                 jQuery('#textbox_blockcount').empty().append(otherblockcount);
-                jQuery(blockcountmsg).removeClass('hidden');
+                jQuery(blockcountmsg).removeClass('d-none');
             }
             else {
-                jQuery(blockcountmsg).addClass('hidden');
+                jQuery(blockcountmsg).addClass('d-none');
             }
         }
 
@@ -189,32 +209,51 @@ function updateTextContent(a) {
         }
     }
     else {
-        jQuery('#instconf_text_container').addClass('hidden');
-        jQuery('#instconf_otherblocksmsg_container').addClass('hidden');
+        jQuery('#instconf_text_container').addClass('d-none');
+        jQuery('#instconf_otherblocksmsg_container').addClass('d-none');
         if (jQuery('#instconf_license_container').length) {
             // only deal with these if the license metadata is enabled
-            jQuery('#instconf_license_container').addClass('hidden');
-            jQuery('#instconf_license_description').addClass('hidden');
-            jQuery('#instconf_license_advanced_fieldset').addClass('hidden');
+            jQuery('#instconf_license_container').addClass('d-none');
+            jQuery('#instconf_license_description').addClass('d-none');
+            jQuery('#instconf_license_advanced_fieldset').addClass('d-none');
         }
-        jQuery('#instconf_tags_container').addClass('hidden');
-        jQuery('#instconf_tags_description').addClass('hidden');
-        jQuery('#instconf_textreadonly_container').removeClass('hidden');
-        jQuery('#instconf_readonlymsg_container').removeClass('hidden');
-        jQuery('#instconf_licensereadonly_container').removeClass('hidden');
-        jQuery('#instconf_tagsreadonly_container').removeClass('hidden');
+        jQuery('#instconf_tags_container').addClass('d-none');
+        jQuery('#instconf_tags_description').addClass('d-none');
+        jQuery('#instconf_textreadonly_container').removeClass('d-none');
+        jQuery('#instconf_readonlymsg_container').removeClass('d-none');
+        jQuery('#instconf_licensereadonly_container').removeClass('d-none');
+        jQuery('#instconf_tagsreadonly_container').removeClass('d-none');
     }
+    jQuery('#instconf_edit_container').removeClass('d-none');
+    jQuery('#instconf_edit').trigger('change');
+    jQuery('#instconf_otherblocksmsg_container').removeClass('d-none');
+    jQuery('#artefactid_data input.radio').each(function() {
+        if (jQuery(this).prop('checked')) {
+            jQuery('#textbox_blockcount').html(jQuery(this).attr('data-count'));
+        }
+    });
 }
 jQuery('#chooseartefactlink').on('click', function(e) {
     e.preventDefault();
     // if the artefact chooser is hidden, use paginator p to populate it, then toggle its visibility
-    if (jQuery('#instconf_artefactid_container').hasClass('hidden')) {
+    if (jQuery('#instconf_artefactid_container').hasClass('d-none')) {
         var queryData = [];
         queryData.extradata = JSON.stringify(p.extraData);
         p.sendQuery(queryData, true);
     }
-    jQuery('#instconf_artefactid_container').toggleClass('hidden');
-    jQuery('#instconf_managenotes_container').toggleClass('hidden');
+    jQuery('#instconf_artefactid_container').toggleClass('d-none');
+    jQuery('#instconf_managenotes_container').toggleClass('d-none');
+});
+jQuery('#instconf #instconf_edit').on('change',function(){
+    if (jQuery(this).prop('checked')) {
+        jQuery('#instconf_textreadonly_container').addClass('d-none');
+        jQuery('#instconf_text_container').removeClass('d-none');
+    }
+    else {
+        jQuery('#instconf_textreadonly_container').removeClass('d-none');
+        jQuery('#instconf_text_container').addClass('d-none');
+        tinyMCE.activeEditor.getBody().innerHTML = jQuery('#instconf_textreadonly_display').html();
+    }
 });
 jQuery('#instconf a.copytextboxnote').each(function() {
     jQuery(this).on('click', function(e) {
@@ -224,28 +263,29 @@ jQuery('#instconf a.copytextboxnote').each(function() {
                 jQuery(this).prop('checked', false);
             }
         });
+        jQuery('#instconf_edit_container').addClass('d-none');
         jQuery('#instconf_makecopy').prop('checked', true);
-        jQuery('#instconf_textreadonly_container').addClass('hidden');
-        jQuery('#instconf_readonlymsg_container').addClass('hidden');
-        jQuery('#instconf_otherblocksmsg_container').addClass('hidden');
-        jQuery('#instconf_licensereadonly_container').addClass('hidden');
-        jQuery('#instconf_tagsreadonly_container').addClass('hidden');
-        jQuery('#instconf_text_container').removeClass('hidden');
+        jQuery('#instconf_textreadonly_container').addClass('d-none');
+        jQuery('#instconf_readonlymsg_container').addClass('d-none');
+        jQuery('#instconf_otherblocksmsg_container').addClass('d-none');
+        jQuery('#instconf_licensereadonly_container').addClass('d-none');
+        jQuery('#instconf_tagsreadonly_container').addClass('d-none');
+        jQuery('#instconf_text_container').removeClass('d-none');
         if (jQuery('#instconf_license_container').length) {
             // only deal with these if the license metadata is enabled
-            jQuery('#instconf_license_container').removeClass('hidden');
-            jQuery('#instconf_license_description').removeClass('hidden');
-            jQuery('#instconf_license_advanced_fieldset').removeClass('hidden');
+            jQuery('#instconf_license_container').removeClass('d-none');
+            jQuery('#instconf_license_description').removeClass('d-none');
+            jQuery('#instconf_license_advanced_fieldset').removeClass('d-none');
         }
-        jQuery('#instconf_tags_container').removeClass('hidden');
-        jQuery('#instconf_tags_description').removeClass('hidden');
+        jQuery('#instconf_tags_container').removeClass('d-none');
+        jQuery('#instconf_tags_description').removeClass('d-none');
     });
 });
 if (jQuery('#instconf_license').length) {
-    jQuery('#instconf_license').removeClass('hidden');
+    jQuery('#instconf_license').removeClass('d-none');
 }
 if (jQuery('#instconf_license_advanced_container').length) {
-    jQuery('#instconf_license_advanced_container div').first().removeClass('hidden');
+    jQuery('#instconf_license_advanced_container div').first().removeClass('d-none');
 }
 jQuery(function() {
     jQuery('#instconf_tags').on('change', function() {
@@ -347,7 +387,7 @@ EOF;
             // Add a message whenever this text appears in some other block
             'otherblocksmsg' => array(
                 'type' => 'html',
-                'class' => 'message info' . (($otherblockcount && !$readonly) ? '' : ' hidden'),
+                'class' => 'message info' . (($otherblockcount && !$readonly) ? '' : ' d-none'),
                 'value' => '<p class="alert alert-warning">' . $otherblocksmsg
                     . ' <a class="copytextboxnote nojs-hidden-inline" href="">' . get_string('makeacopy', 'blocktype.internal/textbox') . '</a></p>',
                 'help' => true,
@@ -355,40 +395,46 @@ EOF;
             // Add a message whenever this text cannot be edited here
             'readonlymsg' => array(
                 'type' => 'html',
-                'class' => 'message info' . ($readonly ? '' : ' hidden'),
+                'class' => 'message info' . ($readonly ? '' : ' d-none'),
                 'value' => '<p class="alert alert-warning">' . get_string('readonlymessage', 'blocktype.internal/textbox')
                     . ' <a class="copytextboxnote nojs-hidden-inline" href="">' . get_string('makeacopy', 'blocktype.internal/textbox') . '</a></p>',
                 'help' => true,
             ),
+            'edit' => array(
+                'type' => 'switchbox',
+                'class' => $otherblockcount > 0 ? '' : 'd-none',
+                'title' => get_string('editcontent', 'blocktype.internal/textbox'),
+                'defaultvalue' => 0,
+            ),
             'text' => array(
                 'type' => 'wysiwyg',
-                'class' => $readonly ? 'hidden' : '',
+                'class' => $readonly || $otherblockcount > 0 ? 'd-none' : '',
                 'title' => get_string('blockcontent', 'blocktype.internal/textbox'),
                 'width' => '100%',
                 'height' => $height . 'px',
                 'defaultvalue' => $text,
-                'rules' => array('maxlength' => 65536),
+                'rules' => array('maxlength' => 1000000),
             ),
             'textreadonly' => array(
                 'type' => 'html',
-                'class' => $readonly ? '' : 'hidden',
+                'class' => $readonly || $otherblockcount > 0 ? '' : 'd-none',
                 'title' => get_string('blockcontent', 'blocktype.internal/textbox'),
                 'value' => '<div id="instconf_textreadonly_display" class="well text-midtone">' . $text . '</div>',
             ),
             'makecopy' => array(
                 'type' => 'checkbox',
-                'class' => 'hidden',
+                'class' => 'd-none',
                 'defaultvalue' => false,
             ),
             'chooseartefact' => array(
                 'type'  => 'html',
-                'value' => '<a id="chooseartefactlink" href="#" class="btn btn-default">'
+                'value' => '<a id="chooseartefactlink" href="#" class="btn btn-secondary">'
                     . get_string('usecontentfromanothertextbox1', 'blocktype.internal/textbox') . '</a>',
             ),
             'managenotes' => array(
                 'type'  => 'html',
-                'class' => 'hidden text-right',
-                'value' => '<a href="' . $manageurl . '" class="pull-right">'
+                'class' => 'd-none text-right',
+                'value' => '<a href="' . $manageurl . '" class="float-right">'
                     . get_string('managealltextboxcontent1', 'blocktype.internal/textbox') . ' <span class="icon icon-arrow-right right" role="presentation"></span></a>',
             ),
             'artefactid' => self::artefactchooser_element(isset($artefactid) ? $artefactid : null),
@@ -396,7 +442,7 @@ EOF;
             'license_advanced' => license_form_el_advanced(isset($artefact) ? $artefact : null),
             'licensereadonly' => array(
                 'type' => 'html',
-                'class' => $readonly ? '' : 'hidden',
+                'class' => $readonly ? '' : 'd-none',
                 'title' => get_string('license'),
                 'value' => '<div id="instconf_licensereadonly_display">' . (isset($artefact) ? render_license($artefact) : get_string('licensenone1')) . '</div>',
             ),
@@ -407,14 +453,14 @@ EOF;
             ),
             'tags' => array(
                 'type' => 'tags',
-                'class' => $readonly ? 'hidden' : '',
+                'class' => $readonly ? 'd-none' : '',
                 'title' => get_string('tags'),
                 'description' => get_string('tagsdescprofile'),
                 'defaultvalue' => $tags,
             ),
             'tagsreadonly' => array(
                 'type' => 'html',
-                'class' => $readonly ? '' : 'hidden',
+                'class' => $readonly ? '' : 'd-none',
                 'title' => get_string('tags'),
                 'value' => '<div id="instconf_tagsreadonly_display">' . (is_array($tags) ? hsc(join(', ', $tags)) : '') . '</div>',
             ),
@@ -430,8 +476,8 @@ EOF;
             )
         );
         if ($readonly) {
-            $elements['license']['class'] = 'hidden';
-            $elements['license_advanced']['class'] = 'hidden';
+            $elements['license']['class'] = 'd-none';
+            $elements['license_advanced']['class'] = 'd-none';
         }
         return $elements;
     }
@@ -523,33 +569,7 @@ EOF;
         }
 
         // Add attachments, if there are any...
-        $old = $artefact->attachment_id_list();
-        $new = is_array($values['artefactids']) ? $values['artefactids'] : array();
-        // only allow the attaching of files that exist and are editable by user
-        foreach ($new as $key => $fileid) {
-            $file = artefact_instance_from_id($fileid);
-            if (!($file instanceof ArtefactTypeFile) || !$USER->can_publish_artefact($file)) {
-                unset($new[$key]);
-            }
-        }
-        if (!empty($new) || !empty($old)) {
-            foreach ($old as $o) {
-                if (!in_array($o, $new)) {
-                    try {
-                        $artefact->detach($o);
-                    }
-                    catch (ArtefactNotFoundException $e) {}
-                }
-            }
-            foreach ($new as $n) {
-                if (!in_array($n, $old)) {
-                    try {
-                        $artefact->attach($n);
-                    }
-                    catch (ArtefactNotFoundException $e) {}
-                }
-            }
-        }
+        update_attachments($artefact, $values['artefactids'], null, null, true);
 
         $values['artefactid'] = $artefact->get('id');
         $instance->save_artefact_instance($artefact);
@@ -562,6 +582,7 @@ EOF;
         unset($values['chooseartefact']);
         unset($values['managenotes']);
         unset($values['allowcomments']);
+        unset($values['tags']); // We save the tags against the artefact so don't need to save again against the block
 
         // Pass back a list of any other blocks that need to be rendered
         // due to this change.

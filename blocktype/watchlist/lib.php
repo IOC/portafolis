@@ -18,6 +18,10 @@ class PluginBlocktypeWatchlist extends MaharaCoreBlocktype {
         return true;
     }
 
+    public static function single_artefact_per_block() {
+        return false;
+    }
+
     public static function get_title() {
         return get_string('title', 'blocktype.watchlist');
     }
@@ -34,7 +38,7 @@ class PluginBlocktypeWatchlist extends MaharaCoreBlocktype {
         return array('dashboard');
     }
 
-    public static function render_instance(BlockInstance $instance, $editing=false) {
+    public static function render_instance(BlockInstance $instance, $editing=false, $versioning=false) {
 
         $smarty = smarty_core();
         $views = self::fetch_items($instance, 0, $editing);
@@ -102,7 +106,7 @@ class PluginBlocktypeWatchlist extends MaharaCoreBlocktype {
                     false  // $groupbycollection
                 );
 
-                $options = new StdClass();
+                $options = new stdClass();
                 $options->period = $period;
                 $options->orderby = $orderby;
                 if ($results->count > 0) {
@@ -190,7 +194,7 @@ class PluginBlocktypeWatchlist extends MaharaCoreBlocktype {
         $configdata = $instance->get('configdata');
         $classes = 'first last';
         if (!isset($configdata) || (isset($configdata['mode']) && $configdata['mode'] == 'watchlist')) {
-            $classes .= ' hidden';
+            $classes .= ' d-none';
         }
 
         return array(
@@ -272,7 +276,7 @@ class PluginBlocktypeWatchlist extends MaharaCoreBlocktype {
      * Watchlist only makes sense for personal views
      */
     public static function allowed_in_view(View $view) {
-        return $view->get('owner') != null;
+        return in_array($view->get('type'), self::get_viewtypes());
     }
 
     public static function should_ajaxify() {

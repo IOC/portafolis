@@ -10,7 +10,7 @@
                 {$blog.title|str_shorten_text:80:true}
                 {if $blog.description}</a>{/if}
                 </h3>
-                <div id="{$blog.id}_desc" class="detail hidden">{$blog.description|clean_html|safe}</div>
+                <div id="{$blog.id}_desc" class="detail d-none">{$blog.description|clean_html|safe}</div>
                 {if $blog.tags}
                 <div class="tags">
                     <strong>{str tag=tags}:</strong> {list_tags owner=0 tags=$blog.tags}
@@ -33,7 +33,7 @@
                 </div>
                 {/if}
             </div>
-            <div class="col-md4">
+            <div class="col-md-4">
             {foreach from=$displaydecisions key=opt item=displayopt}
                 {if !$blog.disabled[$opt]}
                 <label for="decision_{$blog.id}_{$opt}">
@@ -66,7 +66,7 @@
                                 ({str tag=draft section=artefact.blog})
                             {/if}
                         </span>
-                        <div id="{$post.id}_desc" class="detail hidden text-small">
+                        <div id="{$post.id}_desc" class="detail d-none text-small">
                             {$post.description|clean_html|safe}
                         </div>
                         <p id="postdetails_{$post.id}" class="postdetails text-small">
@@ -74,7 +74,7 @@
                         </p>
                         {if $post.files}
                         <div class="attachments">
-                            <span class="icon left icon-paperclip" role="presentation" aria-hidden="true"></span>
+                            <span class="icon left icon-paperclip icon-sm" role="presentation" aria-hidden="true"></span>
                             <span class="text-small">{str tag=attachedfiles section=artefact.blog}</span>
                             <span class="metadata">({$post.files|count})</span>
                         </div>
@@ -111,17 +111,17 @@
     </div>
     {/foreach}
 </div>
-<script type="application/javascript">
+<script>
     jQuery(function() {
-        jQuery("a.blogtitle").click(function(e) {
+        jQuery("a.blogtitle").on("click", function(e) {
             e.preventDefault();
-            jQuery("#" + this.id + "_desc").toggleClass("hidden");
+            jQuery("#" + this.id + "_desc").toggleClass("d-none");
         });
-        jQuery("a.posttitle").click(function(e) {
+        jQuery("a.posttitle").on("click", function(e) {
             e.preventDefault();
-            jQuery("#" + this.id + "_desc").toggleClass("hidden");
+            jQuery("#" + this.id + "_desc").toggleClass("d-none");
         });
-        jQuery("input.blogdecision").change(function(e) {
+        jQuery("input.blogdecision").on("change", function(e) {
             e.preventDefault();
             if (this.value == '1') {
             // The import decision for the blog is IGNORE

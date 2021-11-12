@@ -4,7 +4,8 @@
 
     tr {
         &.standard {
-            background: darken($table-bg-accent, 2%) !important;
+            background: scale-color($table-accent-bg, $lightness: -2%) !important;
+
             cursor: pointer;
         }
     }
@@ -40,11 +41,11 @@
                 }
                 &.dot {
                     font-size: 0.8em;
-                    color: lighten($gray-light, 15%);
+                    color: scale-color($gray-300, $lightness: 28%);
                 }
                 &.dot.disabled {
                     font-size: 1em;
-                    color: lighten($gray-light, 15%);
+                    color: scale-color($gray-300, $lightness: 28%);
                     cursor: $cursor-disabled;
                     // Override dot icon with minus icon
                     &:before {
@@ -75,9 +76,15 @@
         left: auto;
         top: auto;
         .popover-title {
-            font-size: 14px;
+            font-size: 0.875rem;
+            margin: 0;
+            padding: 8px 14px;
+            background-color: scale-color($table-accent-bg, $lightness: -2%);
+            border-bottom: 1px solid scale-color($gray-100, $lightness: -3.78);
+            border-radius: $border-radius $border-radius 0 0;
         }
         .popover-content {
+            padding: 8px 14px;
             ol,
             ul {
                 padding-left: 15px;
@@ -97,7 +104,7 @@
             position: relative;
 
             &:hover .dot {
-                color: $gray-light;
+                color: $gray-300;
             }
 
             &:hover:before,
@@ -121,13 +128,19 @@
             }
         }
     }
-    span.matrixindent {
+    .matrixindent {
         display: inline-block;
-        width: 5px;
     }
+    $matrix-slug: matrixlevel !default
+    @for $i from 1 through 5 {
+        .#{$matrix-slug}#{$i} .matrixindent {
+            padding-left: 5px * $i
+        }
+    }
+
 }
 .assessment {
-    color: $gray-dark;
+    color: $gray-700;
 
     .assessmentfeedback {
         &.begun {
@@ -169,7 +182,8 @@ div.statusheader{
 }
 
 div.statusheader,
-th.statusheader {
+th.statusheader,
+div.toolbarhtml {
     .icon {
         font-size: 1.2em;
         &.begun {
@@ -186,20 +200,29 @@ th.statusheader {
         }
         &.dot {
             font-size: 0.8em;
-            color: lighten($gray-light, 15%);
+            color: scale-color($gray-300, $lightness: 28%);
+        }
+        &.dot.disabled {
+            font-size: 1em;
+            color: scale-color($gray-300, $lightness: 28%);
+            cursor: $cursor-disabled;
+            // Override dot icon with minus icon
+            &:before {
+                content: "\f068";
+            }
         }
     }
 }
 
 th.smartevidencedash, td.smartevidencedash {
-    padding: 0px !important;
+    padding: 0 !important;
     vertical-align: middle !important;
 }
 
 .statusheader,
 .completedcount {
   // Pick the screen size you want it might be $screen-md-min.
-  @media (min-width: $screen-sm-min) {
+  @include media-breakpoint-up(md) {
     // addjust pixel value
     max-width: 14px;
   }
@@ -207,14 +230,14 @@ th.smartevidencedash, td.smartevidencedash {
 .smartevidencedash {
   // Pick the screen size you want it might be $screen-md-min.
   // might not need media query because you might want to force the dash cell to be all the same.
-  @media (min-width: $screen-sm-min) {
+  @include media-breakpoint-up(md) {
     // addjust pixel value
     max-width: 3px;
   }
 }
 
 div.pseudolabel {
-    @media (min-width: $screen-sm-min) {
+    @include media-breakpoint-up(md) {
         min-width: 265px !important;
     }
 }

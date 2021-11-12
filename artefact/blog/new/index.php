@@ -80,7 +80,7 @@ $form = array(
             'title'       => get_string('blogdesc', 'artefact.blog'),
             'description' => get_string('blogdescdesc', 'artefact.blog'),
             'rules' => array(
-                'maxlength'   => 65536,
+                'maxlength'   => 1000000,
                 'required'    => false
             ),
         ),
@@ -89,6 +89,7 @@ $form = array(
             'title'       => get_string('tags'),
             'description' => get_string('tagsdescprofile'),
             'help'        => true,
+            'institution' => $institutionname,
         ),
         'license' => license_form_el_basic(null),
         'licensing_advanced' => license_form_el_advanced(null),
@@ -120,15 +121,13 @@ exit;
 function newblog_submit(Pieform $form, $values) {
     global $USER;
 
-    $data = $form->get_element('institution');
-    $group = $form->get_element('group');
-    if ($data['value'] != false) {
+    if ($institution = $form->get_element_option('institution', 'value')) {
         ArtefactTypeBlog::new_blog(null, $values);
-        redirect('/artefact/blog/index.php?institution=' . $data['value']);
+        redirect('/artefact/blog/index.php?institution=' . $institution);
     }
-    else if ($group['value'] != false) {
+    else if ($group = $form->get_element_option('group', 'value')) {
         ArtefactTypeBlog::new_blog(null, $values);
-        redirect('/artefact/blog/index.php?group=' . $group['value']);
+        redirect('/artefact/blog/index.php?group=' . $group);
     }
     else {
         ArtefactTypeBlog::new_blog($USER, $values);
@@ -140,13 +139,11 @@ function newblog_submit(Pieform $form, $values) {
  * This function gets called to cancel a submission.
  */
 function newblog_cancel_submit(Pieform $form) {
-    $data = $form->get_element('institution');
-    $group = $form->get_element('group');
-    if ($data['value'] != false) {
-        redirect('/artefact/blog/index.php?institution=' . $data['value']);
+    if ($institution = $form->get_element_option('institution', 'value')) {
+        redirect('/artefact/blog/index.php?institution=' . $institution);
     }
-    if ($group['value'] != false) {
-        redirect('/artefact/blog/index.php?group=' . $group['value']);
+    if ($group = $form->get_element_option('group', 'value')) {
+        redirect('/artefact/blog/index.php?group=' . $group);
     }
     else {
         redirect('/artefact/blog/index.php');

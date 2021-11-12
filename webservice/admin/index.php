@@ -14,8 +14,6 @@ define('ADMIN', 1);
 require(dirname(dirname(dirname(__FILE__))) . '/init.php');
 define('MENUITEM', 'webservices/config');
 
-$path = get_config('docroot') . 'lib/zend';
-set_include_path($path . PATH_SEPARATOR . get_include_path());
 require_once(get_config('docroot').'webservice/lib.php');
 require_once(get_config('docroot') . 'api/xmlrpc/lib.php');
 define('TITLE', get_string('webservices_title', 'auth.webservice'));
@@ -78,16 +76,16 @@ $inlinejs = <<<JS
         }
 
         // saving the form when switching the protocols
-        $('#webservice_provider_protocols_soap_enabled').change(function() {
+        $('#webservice_provider_protocols_soap_enabled').on('change', function() {
             save_protos_switch('soap');
         });
-        $('#webservice_provider_protocols_xmlrpc_enabled').change(function() {
+        $('#webservice_provider_protocols_xmlrpc_enabled').on('change', function() {
             save_protos_switch('xmlrpc');
         });
-        $('#webservice_provider_protocols_rest_enabled').change(function() {
+        $('#webservice_provider_protocols_rest_enabled').on('change', function() {
             save_protos_switch('rest');
         });
-        $('#webservice_provider_protocols_oauth_enabled').change(function() {
+        $('#webservice_provider_protocols_oauth_enabled').on('change', function() {
             save_protos_switch('oauth');
         });
 
@@ -130,7 +128,7 @@ $inlinejs = <<<JS
 JS;
 
 $smarty = smarty();
-setpageicon($smarty, 'icon-puzzle-piece');
+setpageicon($smarty, 'icon-project-diagram');
 
 $smarty->assign('form', $form);
 $smarty->assign('opened', param_alphanumext('open', ''));
@@ -494,8 +492,8 @@ function webservice_provider_protocols_submit(Pieform $form, $values) {
 function webservice_function_groups_form() {
     global $THEME;
 
-    $editicon = 'icon icon-pencil left';
-    $deleteicon = 'icon icon-trash left text-danger';
+    $editicon = 'icon icon-pencil-alt left';
+    $deleteicon = 'icon icon-trash-alt left text-danger';
 
     $form = array(
         'name'            => 'webservices_function_groups',
@@ -606,7 +604,7 @@ function webservice_function_groups_form() {
                 'value'        => pieform(array(
                     'name'            => 'webservices_function_groups_edit_' . $service->id,
                     'renderer'        => 'div',
-                    'class'  => 'form-as-button pull-left',
+                    'class'  => 'btn-group-first' . (!$iscustomservice ? ' btn-group-last webservices' : ''),
                     'successcallback' => 'webservice_function_groups_submit',
                     'jsform'          => false,
                     'action'          => get_config('wwwroot') . 'webservice/admin/index.php',
@@ -615,7 +613,7 @@ function webservice_function_groups_form() {
                         'action'     => array('type' => 'hidden', 'value' => 'edit'),
                         'submit'     => array(
                             'type'  => 'button',
-                            'class' => 'btn-default btn-sm' . ($iscustomservice ? ' first' : ''),
+                            'class' => 'btn-secondary btn-sm' . ($iscustomservice ? ' first' : ''),
                             'usebuttontag' => true,
                             'value'   => '<span class="'.$editicon.'"></span>' . get_string('edit', 'mahara'),
                             'elementtitle' => get_string('edit'),
@@ -627,7 +625,7 @@ function webservice_function_groups_form() {
                         pieform(array(
                             'name'            => 'webservices_function_groups_delete_' . $service->id,
                             'renderer'        => 'div',
-                            'class'  => 'form-as-button pull-left',
+                            'class'  => 'btn-group-last',
                             'successcallback' => 'webservice_function_groups_submit',
                             'jsform'          => false,
                             'action'          => get_config('wwwroot') . 'webservice/admin/index.php',
@@ -637,7 +635,7 @@ function webservice_function_groups_form() {
                                 'submit'     => array(
                                     'type'  => 'button',
                                     'usebuttontag' => true,
-                                    'class' => 'btn-default btn-sm last',
+                                    'class' => 'btn-secondary btn-sm last',
                                     'value'   => '<span class="'.$deleteicon.'"></span>' . get_string('delete', 'mahara'),
                                     'elementtitle' => get_string('delete'),
                                 ),
@@ -731,8 +729,8 @@ function webservice_function_groups_submit(Pieform $form, $values) {
 function webservice_tokens_form() {
     global $THEME, $USER;
 
-    $editicon = 'icon icon-pencil left';
-    $deleteicon = 'icon icon-trash left text-danger';
+    $editicon = 'icon icon-pencil-alt left';
+    $deleteicon = 'icon icon-trash-alt left text-danger';
 
     $form = array(
         'name'            => 'webservices_tokens',
@@ -855,7 +853,7 @@ function webservice_tokens_form() {
                     'renderer'        => 'div',
                     'elementclasses'  => false,
                     'successcallback' => 'webservice_token_submit',
-                    'class'           => 'form-as-button pull-left',
+                    'class'           => 'btn-group-first',
                     'jsform'          => false,
                     'elements' => array(
                         'token'      => array('type' => 'hidden', 'value' => $token->tokenid),
@@ -863,7 +861,7 @@ function webservice_tokens_form() {
                         'submit'     => array(
                             'type'  => 'button',
                             'usebuttontag' => true,
-                            'class' => 'btn-default btn-sm first',
+                            'class' => 'btn-secondary btn-sm first',
                             'value'   => '<span class="'.$editicon.'"></span>' . get_string('edit'),
                             'elementtitle' => get_string('editspecific', 'mahara', $token->tokenid),
                         ),
@@ -874,7 +872,7 @@ function webservice_tokens_form() {
                     'renderer'        => 'div',
                     'elementclasses'  => false,
                     'successcallback' => 'webservice_token_submit',
-                    'class'           => 'form-as-button pull-left',
+                    'class'           => 'btn-group-last',
                     'jsform'          => false,
                     'elements' => array(
                         'token'      => array('type' => 'hidden', 'value' => $token->tokenid),
@@ -882,7 +880,7 @@ function webservice_tokens_form() {
                         'submit'     => array(
                             'type'  => 'button',
                             'usebuttontag' => true,
-                            'class' => 'btn-default btn-sm last',
+                            'class' => 'btn-secondary btn-sm last',
                             'value'   => '<span class="'.$deleteicon.'"></span>' . get_string('delete'),
                             'elementtitle' => get_string('deletespecific', 'mahara', $token->tokenid),
                         ),
@@ -1004,8 +1002,8 @@ function webservice_token_submit(Pieform $form, $values) {
 function webservice_users_form() {
     global $THEME, $USER;
 
-    $editicon = 'icon icon-pencil left';
-    $deleteicon = 'icon icon-trash left text-danger';
+    $editicon = 'icon icon-pencil-alt left';
+    $deleteicon = 'icon icon-trash-alt left text-danger';
 
     $form = array(
         'name'            => 'webservices_users',
@@ -1117,7 +1115,7 @@ function webservice_users_form() {
                     'renderer'        => 'div',
                     'elementclasses'  => false,
                     'successcallback' => 'webservice_users_submit',
-                    'class'           => 'form-as-button pull-left',
+                    'class'           => 'btn-group-first',
                     'jsform'          => false,
                     'elements' => array(
                         'suid'       => array('type' => 'hidden', 'value' => $user->id),
@@ -1125,7 +1123,7 @@ function webservice_users_form() {
                         'submit'     => array(
                             'type'  => 'button',
                             'usebuttontag' => true,
-                            'class' => 'btn-default btn-sm first',
+                            'class' => 'btn-secondary btn-sm first',
                             'value'   => '<span class="'. $editicon.'" role="presentation" aria-hidden="true"></span>' . get_string('edit'),
                             'elementtitle' => get_string('editspecific', 'mahara', $user->username),
                         ),
@@ -1136,7 +1134,7 @@ function webservice_users_form() {
                     'renderer'        => 'div',
                     'elementclasses'  => false,
                     'successcallback' => 'webservice_users_submit',
-                    'class'           => 'form-as-button pull-left',
+                    'class'           => 'btn-group-last',
                     'jsform'          => false,
                     'elements' => array(
                         'suid'       => array('type' => 'hidden', 'value' => $user->id),
@@ -1144,7 +1142,7 @@ function webservice_users_form() {
                         'submit'     => array(
                             'type'  => 'button',
                             'usebuttontag' => true,
-                            'class' => 'btn-default btn-sm last',
+                            'class' => 'btn-secondary btn-sm last',
                             'value'   => '<span class="'.$deleteicon.'" role="presentation" aria-hidden="true"></span>' . get_string('delete'),
                             'elementtitle' => get_string('deletespecific', 'mahara', $user->username),
                         ),

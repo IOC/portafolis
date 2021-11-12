@@ -11,7 +11,8 @@
 
 define('INTERNAL', 1);
 define('PUBLIC', 1);
-define('MENUITEM', 'groups/info');
+define('MENUITEM', 'engage/index');
+define('MENUITEM_SUBPAGE', 'info');
 require(dirname(dirname(__FILE__)) . '/init.php');
 require_once('group.php');
 require_once('searchlib.php');
@@ -35,7 +36,7 @@ if (!is_logged_in() && !$group->public) {
 if ($usetemplate = param_integer('usetemplate', null)) {
     // If a form has been submitted, build it now and pieforms will
     // call the submit function straight away
-    pieform(create_view_form(null, null, $usetemplate));
+    pieform(create_view_form(null, null, $usetemplate, param_integer('copycollection', null)));
 }
 
 define('TITLE', $group->name);
@@ -44,7 +45,6 @@ $group->role = group_user_access($group->id);
 
 // logged in user can do stuff
 if ($USER->is_logged_in()) {
-    $afterjoin = param_variable('next', 'view');
     if ($group->role) {
         if ($group->role == 'admin') {
             $group->membershiptype = 'admin';
@@ -57,10 +57,11 @@ if ($USER->is_logged_in()) {
     }
     else if ($invite = get_record('group_member_invite', 'group', $group->id, 'member', $USER->get('id'))) {
         $group->membershiptype = 'invite';
-        $group->invite = group_get_accept_form('invite', $group->id, $afterjoin);
+        $group->invite = group_get_accept_form('invite', $group->id);
     }
-    else if ($group->jointype == 'open') {
-        $group->groupjoin = group_get_join_form('joingroup', $group->id, $afterjoin);
+    // When 'isolatedinstitutions' is set, people cannot join public groups by themselves
+    else if ($group->jointype == 'open' && !is_isolated()) {
+        $group->groupjoin = group_get_join_form('joingroup', $group->id);
     }
     else if ($group->request
              and $request = get_record('group_member_request', 'group', $group->id, 'member', $USER->get('id'))) {
@@ -68,10 +69,46 @@ if ($USER->is_logged_in()) {
     }
 }
 
+// Check to see if we can invite anyone
+if ($group->invitefriends) {
+    $results = get_group_user_search_results($group->id, '', 0, 1, 'notinvited', null, $USER->get('id'), 'adminfirst',
+                                             (((int) $group->hidemembers === GROUP_HIDE_TUTORS || (int) $group->hidemembersfrommembers === GROUP_HIDE_TUTORS) ? true : false)
+    );
+    if (empty($results['count'])) {
+        $group->invitefriends = 0;
+    }
+}
+
 $editwindow = group_format_editwindow($group);
 
 $view = group_get_homepage_view($group->id);
-$viewcontent = $view->build_rows(); // Build content before initialising smarty in case pieform elements define headers.
+if ($newlayout = $view->uses_new_layout()) {
+    $layoutjs = array('js/lodash/lodash.js', 'js/gridstack/gridstack.js', 'js/gridlayout.js');
+    $blocks = $view->get_blocks();
+    $blocks = json_encode($blocks);
+    $blocksjs =   <<<EOF
+    $(function () {
+        var options = {
+            verticalMargin: 5,
+            cellHeight: 10,
+            disableDrag : true,
+            disableResize: true,
+        };
+        var grid = $('.grid-stack');
+        grid.gridstack(options);
+        grid = $('.grid-stack').data('gridstack');
+
+        // should add the blocks one by one
+        var blocks = {$blocks};
+        loadGrid(grid, blocks);
+    });
+EOF;
+}
+else {
+    $viewcontent = $view->build_rows(); // Build content before initialising smarty in case pieform elements define headers.
+    $layoutjs= array();
+    $blocksjs = "$(function () {jQuery(document).trigger('blocksloaded');});";
+}
 
 $headers = array();
 if ($group->public) {
@@ -80,9 +117,19 @@ if ($group->public) {
 }
 
 $javascript = array('paginator');
+$javascript = array_merge($javascript, $layoutjs);
 $blocktype_js = $view->get_all_blocktype_javascript();
 $javascript = array_merge($javascript, $blocktype_js['jsfiles']);
-$inlinejs = "jQuery( function() {\n" . join("\n", $blocktype_js['initjs']) . "\n});";
+$inlinejs = <<<JS
+jQuery(function($) {
+JS;
+$inlinejs .= join("\n", $blocktype_js['initjs']) . "\n";
+$inlinejs .= <<<JS
+    // Disable the modal_links for images etc... when page loads
+    $('a[class*=modal_link], a[class*=inner-link]').addClass('no-modal');
+    $('a[class*=modal_link], a[class*=inner-link]').css('cursor', 'default');
+});
+JS;
 
 $headers = array_merge($headers, $view->get_all_blocktype_css());
 
@@ -107,13 +154,15 @@ $smarty = smarty(
     )
 );
 
-$smarty->assign('INLINEJAVASCRIPT', $inlinejs);
+$smarty->assign('INLINEJAVASCRIPT', $blocksjs . $inlinejs);
 $smarty->assign('viewid', $view->get('id'));
-$smarty->assign('viewcontent', $viewcontent);
+$smarty->assign('newlayout', $newlayout);
+if (!$newlayout) {
+    $smarty->assign('viewcontent', $viewcontent);
+}
 $smarty->assign('group', $group);
 $smarty->assign('editwindow', $editwindow);
 $smarty->assign('cancopy', group_can_create_groups());
-$smarty->assign('returnto', 'view');
 $smarty->assign('SUBPAGETOP', 'group/groupuserstatus.tpl');
 $smarty->assign('headingclass', 'page-header');
 $smarty->assign('lastupdatedstr', $view->lastchanged_message());

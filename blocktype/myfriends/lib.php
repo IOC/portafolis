@@ -27,11 +27,18 @@ class PluginBlocktypeMyfriends extends MaharaCoreBlocktype {
         return true;
     }
 
+    public static function single_artefact_per_block() {
+        return false;
+    }
+
     public static function get_categories() {
         return array('internal' => 31000);
     }
 
     public static function get_viewtypes() {
+        if (get_config('friendsnotallowed')) {
+            return array();
+        }
         return array('profile', 'dashboard');
     }
 
@@ -65,7 +72,7 @@ class PluginBlocktypeMyfriends extends MaharaCoreBlocktype {
         $friends['pagination_js'] = $pagination['javascript'];
     }
 
-    public static function render_instance(BlockInstance $instance, $editing=false) {
+    public static function render_instance(BlockInstance $instance, $editing=false, $versioning=false) {
         global $USER, $exporter;
 
         $userid = $instance->get_view()->get('owner');
@@ -86,7 +93,7 @@ class PluginBlocktypeMyfriends extends MaharaCoreBlocktype {
 
         $smarty = smarty_core();
         $smarty->assign('friends', $friends);
-        $smarty->assign('searchingforfriends', array('<a href="' . get_config('wwwroot') . 'user/find.php">', '</a>'));
+        $smarty->assign('searchingforfriends', array('<a href="' . get_config('wwwroot') . 'user/index.php">', '</a>'));
 
         // If the user has no friends, try and display something useful, such
         // as a 'request friendship' button
@@ -113,7 +120,7 @@ class PluginBlocktypeMyfriends extends MaharaCoreBlocktype {
                             'add' => array(
                                 'type' => 'button',
                                 'usebuttontag' => true,
-                                'class' => 'btn-default',
+                                'class' => 'btn-secondary',
                                 'value' => '<span class="icon icon-user-plus icon-lg left" role="presentation" aria-hidden="true"></span>' .get_string('addtomyfriends', 'group')
                             ),
                             'id' => array(
@@ -148,7 +155,7 @@ class PluginBlocktypeMyfriends extends MaharaCoreBlocktype {
      * Myfriends only makes sense for personal views
      */
     public static function allowed_in_view(View $view) {
-        return $view->get('owner') != null;
+        return in_array($view->get('type'), self::get_viewtypes());
     }
 
     public static function override_instance_title(BlockInstance $instance) {

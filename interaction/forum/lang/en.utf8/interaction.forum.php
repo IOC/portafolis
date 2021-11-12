@@ -15,12 +15,16 @@ $string['addpostsuccess'] = 'Added post successfully';
 $string['addtitle'] = 'Add forum';
 $string['addtopic'] = 'Add topic';
 $string['addtopicsuccess'] = 'Added topic successfully';
+$string['allowunsubscribe'] = 'Allow users to unsubscribe';
+$string['allowunsubscribedescription'] = 'Choose whether users are allowed to unsubscribe from forums and topics';
 $string['autosubscribeusers'] = 'Automatically subscribe users';
 $string['autosubscribeusersdescription'] = 'Choose whether group users will automatically be subscribed to this forum';
+$string['awaitingapproval'] = 'Awaiting approval';
 $string['Body'] = 'Message';
 $string['cantaddposttoforum'] = 'You are not allowed to post in this forum';
 $string['cantaddposttotopic'] = 'You are not allowed to post in this topic';
 $string['cantaddtopic'] = 'You are not allowed to add topics to this forum';
+$string['cantapproveposts'] = 'You are not allowed to approve posts on this forum';
 $string['cantdeletepost'] = 'You are not allowed to delete posts in this forum';
 $string['cantdeletethispost'] = 'You are not allowed to delete this post';
 $string['cantdeletetopic'] = 'You are not allowed to delete topics in this forum';
@@ -32,6 +36,7 @@ $string['cantfindtopic'] = 'Could not find topic with id %s';
 $string['cantmakenonobjectionable'] = 'You are not allowed to mark this post as not objectionable.';
 $string['cantviewforums'] = 'You are not allowed to view forums in this group';
 $string['cantviewtopic'] = 'You are not allowed to view topics in this forum';
+$string['cantunsubscribe'] = 'You are not allowed to unsubscribe from this forum';
 $string['chooseanaction'] = 'Choose an action';
 $string['clicksetsubject'] = 'Click to set a subject';
 $string['Closed'] = 'Closed';
@@ -51,6 +56,7 @@ $string['deletetopic'] = 'Delete topic';
 $string['deletetopicspecific'] = 'Delete topic "%s"';
 $string['deletetopicsuccess'] = 'Topic deleted successfully';
 $string['deletetopicsure'] = 'Are you sure you want to do this? It cannot be undone.';
+$string['discussiontopics'] = 'Discussion topics';
 $string['editpost'] = 'Edit post';
 
 $string['editpostsuccess'] = 'Post edited successfully';
@@ -68,6 +74,20 @@ $string['forumposthtmltemplate'] = "<div style=\"padding: 0.5em 0; border-bottom
 <p><a href=\"%s\">Reply to this post online</a></p>
 <p><a href=\"%s\">Unsubscribe from this %s</a></p>
 </div>";
+$string['forumposthtmlattachmenttemplate'] = "<div style=\"padding: 0.5em 0; border-bottom: 1px solid #999;\"><strong>Forum: %s (%s)</strong></div>
+
+<div style=\"margin: 1em 0;\">%s</div>
+
+<div style=\"font-size: smaller; border-top: 1px solid #999;\">
+<p>Attachments:</p>
+<ul>
+%s
+</ul>
+</div>
+<div style=\"font-size: smaller; border-top: 1px solid #999;\">
+<p><a href=\"%s\">Reply to this post online</a></p>
+<p><a href=\"%s\">Unsubscribe from this %s</a></p>
+</div>";
 $string['forumposttemplate'] = "Forum: %s (%s)
 ------------------------------------------------------------------------
 
@@ -78,6 +98,25 @@ To see and reply to the post online, follow this link:
 %s
 
 To unsubscribe from this %s, visit:
+%s";
+$string['forumpostattachmenttemplate'] = "Forum: %s (%s)
+------------------------------------------------------------------------
+
+%s
+
+------------------------------------------------------------------------
+Attachments:
+%s
+------------------------------------------------------------------------
+To see and reply to the post online, follow this link:
+%s
+
+To unsubscribe from this %s, visit:
+%s";
+$string['forumpostattachmentinternal'] = "
+%s
+
+Attachments:
 %s";
 $string['forumsettings'] = 'Forum settings';
 $string['forumsuccessfulsubscribe'] = 'Forum subscribed successfully';
@@ -95,6 +134,7 @@ $string['moderatorsdescription'] = 'Moderators can edit and delete topics and po
 $string['name'] = 'Forum';
 $string['nameplural'] = 'Forums';
 $string['newforum'] = 'New forum';
+$string['forumlower'] = 'forum';
 $string['newforumpostnotificationsubjectline'] = '%s';
 $string['newpost'] = 'New post: ';
 $string['newtopic'] = 'New topic';
@@ -102,6 +142,9 @@ $string['noforumpostsyet'] = 'There are no posts in this group yet';
 $string['noforums'] = 'There are no forums in this group';
 $string['notopics'] = 'There are no topics in this forum';
 $string['notifyadministrator'] = 'Notify administrator';
+$string['notifyauthor'] = 'Notify author';
+$string['rejectpost'] = 'Reject post';
+$string['reasonempty'] = ' Reason field cannot be empty';
 $string['objectionablepostdeletedsubject'] = 'Objectionable post in forum topic "%s" was deleted by %s.';
 $string['objectionablepostdeletedbody'] = '%s has looked at post by %s previously reported as objectionable and deleted it.
 
@@ -116,8 +159,10 @@ $string['Open'] = 'Open';
 $string['Order'] = 'Order';
 $string['orderdescription'] = 'Choose at which position this forum shall appear in the list of forums';
 $string['Post'] = 'Post';
-$string['postaftertimeout'] = 'You have submitted your change after timeout of %s minutes. Your change has not been applied.';
+$string['postaftertimeout'] = 'You have submitted your change after the timeout of %s minutes. Your change has not been applied.';
+$string['postapprovesuccessful'] = 'Post approved';
 $string['postbyuserwasdeleted'] = 'A post by %s was deleted';
+$string['postnotapprovederror'] = 'There was an error while trying to mark the post as approved';
 $string['postsbyuserweredeleted'] = '%s posts by %s were deleted';
 $string['postdelay'] = 'Post delay';
 $string['postdelaydescription'] = 'The minimum time (in minutes) that must pass before a new post can be mailed out to forum subscribers. The author of a post may make edits during this time.';
@@ -170,6 +215,7 @@ $string['topicunsubscribesuccess'] = 'Topics unsubscribed successfully';
 $string['topicupdatefailed'] = 'Topics update failed';
 $string['typenewpost'] = 'New forum post';
 $string['typereportpost'] = 'Objectionable content in forum';
+$string['typepostmoderation'] = 'Forum moderation';
 $string['Unsticky'] = 'Unsticky';
 $string['Unsubscribe'] = 'Unsubscribe';
 $string['unsubscribefromforum'] = 'Unsubscribe from forum';
@@ -187,7 +233,7 @@ $string['topicmovedsuccess'] = array(
 $string['today'] = 'Today';
 $string['yesterday'] = 'Yesterday';
 $string['strftimerecentrelative'] = '%%v, %%k:%%M';
-$string['strftimerecentfullrelative'] = '%%v, %%l:%%M %%p';
+$string['strftimerecentfullrelative'] = '%%v, %%k:%%M';
 
 $string['indentmode'] = 'Forum indent mode';
 $string['indentfullindent'] = 'Fully expand';
@@ -200,9 +246,15 @@ $string['maxindentdescription'] = 'Set the maximum indentation level for a topic
 $string['closetopics'] = 'Close new topics';
 $string['closetopicsdescription1'] = 'Close all new topics by default. Only moderators and group administrators can reply to closed topics.';
 
+$string['approvalofposts'] = 'Approval of posts';
+$string['moderatenewposts'] = 'Moderate new posts';
+$string['moderatenewpostsdescription1'] = 'New posts need to be approved by a forum moderator or administrator.';
+
 $string['activetopicsdescription'] = 'Recently updated topics in your groups.';
 
-$string['timeleftnotice'] = 'You have %s minutes left to finish editing.';
+$string['timeleftnotice1'] = 'You have <span class="num">%s</span> minutes left to finish editing.';
+$string['timeleftnoticeexpired'] = 'The edit time is over. Your changes will not be saved.';
+$string['timeleftnoticeexpiredmoderator'] = 'Your changes will now be saved with an edit notice.';
 
 $string['objectionablecontentpost'] = 'Objectionable content on forum topic "%s" reported by %s';
 $string['objectionablecontentposthtml'] = '<div style="padding: 0.5em 0; border-bottom: 1px solid #999;">Objectionable content on forum topic "%s" reported by %s
@@ -238,3 +290,72 @@ To see the post, follow this link:
 %s
 To see the reporter\'s profile, follow this link:
 %s';
+
+$string['postsandreplies'] = 'Posts and replies';
+$string['postneedapprovalsubject'] = 'New post needs moderation in forum "%s"';
+$string['postneedapprovalbody'] = '%s has posted in forum "%s" and is awaiting moderation.
+
+The post content is:
+%s';
+$string['postneedapprovalhtml'] = '<div style="padding: 0.5em 0; border-bottom: 1px solid #999;">A new post by "%s" in forum "%s" needs moderation.
+
+<div style="padding: 0.5em 0; border-bottom: 1px solid #999;">The post content is:
+<br>%s</div>
+
+<div style="margin: 1em 0;">%s</div>
+
+<div style="font-size: smaller; border-top: 1px solid #999;">
+<p>Posted by: <a href="%s">%s</a></p>
+</div>';
+$string['postneedapprovaltext'] = 'A new post by "%s" in forum "%s" needs moderation.
+%s
+------------------------------------------------------------------------
+
+The post content is:
+%s
+------------------------------------------------------------------------
+To go to the forum post follow this link:
+%s';
+$string['rejectedpostsubject'] = 'Forum post rejected on forum "%s"';
+$string['rejectedpostbody'] = '%s has looked at post by %s waiting for approval and deleted it.
+
+Rejection reason:
+%s
+
+The post content was:
+%s';
+$string['rejectedposthtml'] = '<div style="padding: 0.5em 0; border-bottom: 1px solid #999;">Forum post rejected on forum "%s"
+<br>%s</div>
+
+<div style="margin: 1em 0;">%s</div>
+
+<div style="padding: 0.5em 0; border-bottom: 1px solid #999;">The rejected post content is:
+<br>%s</div>
+
+<div style="margin: 1em 0;">%s</div>
+
+<div style="font-size: smaller; border-top: 1px solid #999;">
+<p>Rejection relates to: <a href="%s">%s</a></p>
+<p>Rejected by: <a href="%s">%s</a></p>
+</div>';
+$string['rejectedposttext'] = 'Forum post rejected on forum "%s" by "%s"
+%s
+------------------------------------------------------------------------
+
+%s
+
+------------------------------------------------------------------------
+
+The rejected post content is:
+%s
+------------------------------------------------------------------------
+
+%s
+
+-----------------------------------------------------------------------
+The post has been deleted, to go to the forum follow this link:
+%s
+To see the reporter\'s profile, follow this link:
+%s';
+$string['rejectpostsuccess'] = 'The post has been removed';
+$string['replies'] = 'Replies';

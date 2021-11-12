@@ -199,7 +199,7 @@ if (!empty($dbservices)) {
                                     'renderer'        => 'div',
                                     'elementclasses'  => false,
                                     'successcallback' => 'webservices_user_token_submit',
-                                    'class'           => 'form-as-button pull-left',
+                                    'class'           => 'form-as-button float-left',
                                     'jsform'          => false,
                                     'elements' => array(
                                         'service'    => array('type' => 'hidden', 'value' => $service->id),
@@ -207,8 +207,8 @@ if (!empty($dbservices)) {
                                         'submit'     => array(
                                                 'type'  => 'button',
                                                 'usebuttontag' => true,
-                                                'class' => 'btn-default btn-sm',
-                                                'value'   => '<span class="icon icon-refresh"></span> ' . get_string('gen', 'auth.webservice'),
+                                                'class' => 'btn-secondary btn-sm',
+                                                'value'   => '<span class="icon icon-sync-alt"></span> ' . get_string('gen', 'auth.webservice'),
                                                 'elementtitle' => get_string('gen', 'auth.webservice')
                                             ),
                                     ),
@@ -220,7 +220,7 @@ if (!empty($dbservices)) {
                                     'renderer'        => 'div',
                                     'elementclasses'  => false,
                                     'successcallback' => 'webservices_user_token_submit',
-                                    'class'           => 'form-as-button pull-left',
+                                    'class'           => 'form-as-button float-left',
                                     'jsform'          => false,
                                     'elements' => array(
                                         'token'    => array('type' => 'hidden', 'value' => $service->token),
@@ -228,8 +228,8 @@ if (!empty($dbservices)) {
                                         'submit'     => array(
                                                 'type'  => 'button',
                                                 'usebuttontag' => true,
-                                                'class' => 'btn-default btn-sm',
-                                                'value' => '<span class="icon icon-trash icon-lg text-danger left" role="presentation" aria-hidden="true"></span>' . get_string('delete'),
+                                                'class' => 'btn-secondary btn-sm',
+                                                'value' => '<span class="icon icon-trash-alt icon-lg text-danger left" role="presentation" aria-hidden="true"></span>' . get_string('delete'),
                                                 'elementtitle' => get_string('deletespecific', 'mahara', $service->id),
                                             ),
                                     ),
@@ -477,7 +477,7 @@ $pieform = pieform_instance($form);
 $form = $pieform->build(false);
 
 $smarty = smarty();
-setpageicon($smarty, 'icon-puzzle-piece');
+setpageicon($smarty, 'icon-project-diagram');
 safe_require('auth', 'webservice');
 
 $smarty->assign('form', $form);

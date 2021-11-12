@@ -10,7 +10,7 @@
  */
 
 define('INTERNAL', 1);
-define('MENUITEM', 'myportfolio/sharedviews');
+define('MENUITEM', 'share/sharedviews');
 
 require(dirname(dirname(__FILE__)) . '/init.php');
 require_once(get_config('libroot') . 'view.php');
@@ -120,7 +120,7 @@ $searchform = pieform(array(
                'submit' => array(
                     'type'  => 'button',
                     'usebuttontag' => true,
-                    'class' => 'btn-primary input-group-btn no-label button',
+                    'class' => 'btn-primary input-group-append no-label button',
                     'value' => get_string('search'),
                 )
             ),
@@ -158,6 +158,7 @@ $pagination = build_pagination(array(
 ));
 
 $smarty = smarty(array('paginator'));
+setpageicon($smarty, 'icon-share-alt-square');
 $smarty->assign('views', $data->data);
 $smarty->assign('searchform', $searchform);
 $smarty->assign('pagination', $pagination['html']);

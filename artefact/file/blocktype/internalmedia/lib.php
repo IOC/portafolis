@@ -26,6 +26,10 @@ class PluginBlocktypeInternalmedia extends MaharaCoreBlocktype {
         return get_string('title', 'blocktype.file/internalmedia');
     }
 
+    public static function single_artefact_per_block() {
+        return true;
+    }
+
     public static function get_description() {
         return get_string('description', 'blocktype.file/internalmedia');
     }
@@ -44,7 +48,7 @@ class PluginBlocktypeInternalmedia extends MaharaCoreBlocktype {
         }
     }
 
-    public static function render_instance(BlockInstance $instance, $editing=false) {
+    public static function render_instance(BlockInstance $instance, $editing=false, $versioning=false) {
         list($artefact, $width, $height) = self::get_mediaplayer_details($instance);
         if (!$artefact) {
             return '';
@@ -54,31 +58,24 @@ class PluginBlocktypeInternalmedia extends MaharaCoreBlocktype {
         if (!$playerclass) {
             return get_string('typeremoved', 'blocktype.file/internalmedia');
         }
-
-        $result = '<div class="mediaplayer-container panel-body flush"><div class="mediaplayer">';
-        $result .= call_static_method($playerclass, 'get_html', $artefact, $instance, $width, $height);
-
-        // File download link
-        $filesize = round($artefact->get('size') / 1000000, 2) . 'MB';
-        $url = self::get_download_link($artefact, $instance);
-        $result .= '<div class="media-download content-text">
-            <span class="icon icon-download left" role="presentation" aria-hidden="true">
-            </span><span class="sr-only">' . get_string('Download', 'artefact.internal') . '</span>
-            <a class="media-link text-small" href="' . $url . '">' . hsc($artefact->get('title')) . '</a>
-            <span class="text-midtone text-small"> [' . $filesize . '] </span>
-        </div>';
-
-        $result .= '</div></div>';
+        $smarty = smarty_core();
+        $smarty->assign('artefactid', $artefact->get('id'));
+        $smarty->assign('blockid', $instance->get('id'));
 
         require_once(get_config('docroot') . 'artefact/comment/lib.php');
         require_once(get_config('docroot') . 'lib/view.php');
         $view = new View($instance->get('view'));
-        list($commentcount, $comments) = ArtefactTypeComment::get_artefact_comments_for_view($artefact, $view, $instance->get('id'), true, $editing);
-
-        $smarty = smarty_core();
-
+        $smarty->assign('allowcomments', $artefact->get('allowcomments'));
+        if (!$artefact->get('allowcomments')) {
+            $smarty->assign('justdetails', true);
+        }
+        list($commentcount, $comments) = ArtefactTypeComment::get_artefact_comments_for_view($artefact, $view, $instance->get('id'), true, $editing, $versioning);
         $smarty->assign('commentcount', $commentcount);
         $smarty->assign('comments', $comments);
+        $result = '<div class="mediaplayer-container card-body flush"><div class="mediaplayer">';
+        $result .= call_static_method($playerclass, 'get_html', $artefact, $instance, $width, $height);
+        $result .= '</div></div>';
+
         $smarty->assign('html', $result);
         return $smarty->fetch('blocktype:internalmedia:internalmedia.tpl');
     }
@@ -165,7 +162,7 @@ class PluginBlocktypeInternalmedia extends MaharaCoreBlocktype {
                 'defaultvalue' => in_array($filetype, $currenttypes),
             );
         }
-        uasort($filetypes, create_function('$a, $b', 'return $a["title"] > $b["title"];'));
+        uasort($filetypes, function($a, $b) { return $a["title"] > $b["title"]; });
         $options = array_merge(
             array(
                 'description' => array(
@@ -263,6 +260,8 @@ class PluginBlocktypeInternalmedia extends MaharaCoreBlocktype {
             'ogv'       => 'html5video',
             'webm'      => 'html5video',
             '3gp'       => 'html5video',
+            'wav'       => 'html5audio',
+            'm4a'       => 'html5audio',
         );
     }
 
@@ -284,6 +283,7 @@ class PluginBlocktypeInternalmedia extends MaharaCoreBlocktype {
 
         $jsfile = call_static_method($playerclass, 'get_js_library');
         $jsblock = call_static_method($playerclass, 'get_js_initjs', $artefact, $instance, $width, $height);
+        $extrafilejs = call_static_method($playerclass, 'get_js_library_extra');
 
         $js = array();
         if ($jsfile) {
@@ -291,6 +291,9 @@ class PluginBlocktypeInternalmedia extends MaharaCoreBlocktype {
         }
         if ($jsblock) {
             $js['initjs'] = $jsblock;
+        }
+        if ($extrafilejs) {
+            $js['extrafilejs'] = $extrafilejs;
         }
         if ($js) {
             return array($js);
@@ -373,6 +376,15 @@ abstract class MaharaMediaPlayer {
      * @return array
      */
     public static function get_js_library() { return false; }
+
+    /**
+     * Returns extra JS library needed display a mediaplayer of this type.
+     * in case we need to include more than one js file, eg lang files
+     *
+     * @return array
+     */
+
+    public static function get_js_library_extra() { return false; }
 
     /**
      * Returns a JS snippet needed to initialize a mediaplayer of this type (or boolean false if none)
@@ -514,7 +526,7 @@ class MaharaMediaPlayer_html5audio extends MaharaMediaPlayer {
             height="'.self::VIDEOJS_CONTROL_HEIGHT.'"
         >
             <source src="' . $url . '" type="' . $mimetype . '"/>
-            ' . get_string('browsercannotplay1', 'blocktype.internalmedia') . '
+            ' . get_string('browsercannotplay1', 'blocktype.file/internalmedia') . '
         </audio>';
     }
 
@@ -568,12 +580,21 @@ class MaharaMediaPlayer_html5video extends MaharaMediaPlayer {
             height="' . $height . '"
         >
             <source src="' . $url . '" type="' . $mimetype . '"/>
-            ' . get_string('browsercannotplay1', 'blocktype.internalmedia') . '
+            ' . get_string('browsercannotplay1', 'blocktype.file/internalmedia') . '
         </video>';
     }
 
     public static function get_js_library() {
         return 'videojs/video.js';
+    }
+
+    public static function get_js_library_extra() {
+        global $USER;
+
+        $lang = get_user_language($USER->get('id'));
+        $lang = str_replace('.utf8', '', $lang);
+
+        return array("videojs/lang/$lang.js");
     }
 
     public static function get_js_initjs(ArtefactType $artefact, BlockInstance $block, $width, $height) {

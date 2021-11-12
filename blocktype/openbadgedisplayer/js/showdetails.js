@@ -31,7 +31,7 @@
             if (!url) {
                 return '-';
             }
-            return jQuery('<a/>').attr({ href: url, title: url }).text(shorten(url));
+            return jQuery('<a></a>').attr({ href: url, title: url }).text(shorten(url));
         }
 
         function buildBadgeContent(assertion) {
@@ -62,7 +62,7 @@
 '    <div class="modal-content">' +
 '      <div class="modal-body"></div>' +
 '      <div class="modal-footer">' +
-'        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>' +
+'        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>' +
 '      </div>' +
 '    </div>' +
 '  </div>' +

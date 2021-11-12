@@ -6,7 +6,7 @@
         </ul>
 
         {if $groupviews.pagination}
-        <div id="groupviews_page_container" class="hidden pagination-container">
+        <div id="groupviews_page_container" class="d-none pagination-container">
             {$groupviews.pagination|safe}
         </div>
         {/if}
@@ -15,16 +15,15 @@
         <script>
             jQuery(function($) {literal}{{/literal}
                 {$groupviews.pagination_js|safe}
-                $('#groupviews_page_container').removeClass('hidden');
+                $('#groupviews_page_container').removeClass('d-none');
             {literal}}{/literal});
         </script>
         {/if}
     {else}
-        <div class="panel-body">
+        <div class="card-body">
             <span class="lead text-small">{str tag=nogroupviewsyet section=view}</span>
         </div>
     {/if}
-    <hr />
 {/if}
 
 {if $sharedviews}
@@ -37,7 +36,7 @@
         </ul>
 
         {if $sharedviews.pagination}
-            <div id="sharedviews_page_container" class="hidden pagination-container">
+            <div id="sharedviews_page_container" class="d-none pagination-container">
                 {$sharedviews.pagination|safe}
             </div>
         {/if}
@@ -46,16 +45,15 @@
         <script>
             jQuery(function($) {literal}{{/literal}
                 {$sharedviews.pagination_js|safe}
-                $('#sharedviews_page_container').removeClass('hidden');
+                $('#sharedviews_page_container').removeClass('d-none');
             {literal}}{/literal});
         </script>
         {/if}
     {else}
-        <div class="panel-body">
+        <div class="card-body">
             <span class="lead text-small">{str tag=nosharedviewsyet section=view}</span>
         </div>
     {/if}
-    <hr />
 {/if}
 
 
@@ -69,7 +67,7 @@
         </ul>
 
         {if $sharedcollections.pagination}
-            <div id="sharedcollections_page_container" class="hidden pagination-container">
+            <div id="sharedcollections_page_container" class="d-none pagination-container">
             {$sharedcollections.pagination|safe}
             </div>
         {/if}
@@ -78,16 +76,15 @@
         <script>
             jQuery(function($) {literal}{{/literal}
                 {$sharedcollections.pagination_js|safe}
-                $('#sharedcollections_page_container').removeClass('hidden');
+                $('#sharedcollections_page_container').removeClass('d-none');
             {literal}}{/literal});
         </script>
         {/if}
     {else}
-        <div class="panel-body">
+        <div class="card-body">
             <span class="lead text-small">{str tag=nosharedcollectionsyet section=collection}</span>
         </div>
     {/if}
-    <hr />
 {/if}
 
 {if $allsubmitted}
@@ -99,7 +96,7 @@
             {$allsubmitted.tablerows|safe}
         </ul>
         {if $allsubmitted.pagination}
-            <div id="allsubmitted_page_container" class="hidden pagination-container">
+            <div id="allsubmitted_page_container" class="d-none pagination-container">
                 {$allsubmitted.pagination|safe}
             </div>
         {/if}
@@ -107,16 +104,15 @@
         <script>
             jQuery(function($) {literal}{{/literal}
                 {$allsubmitted.pagination_js|safe}
-                $('#allsubmitted_page_container').removeClass('hidden');
+                $('#allsubmitted_page_container').removeClass('d-none');
             {literal}}{/literal});
         </script>
         {/if}
     {else}
-        <div class="panel-body">
+        <div class="card-body">
             <span class="lead text-small">{str tag=nosubmittedviewscollectionsyet section=view}</span>
         </div>
     {/if}
-    <hr />
 {/if}
 {if $nosubmissions}
     <h4 class="title list-group-item-heading">
@@ -126,7 +122,7 @@
         {$nosubmissions.tablerows|safe}
     </ul>
     {if $nosubmissions.pagination}
-        <div id="nosubmissions_page_container" class="hidden pagination-container">
+        <div id="nosubmissions_page_container" class="d-none pagination-container">
             {$nosubmissions.pagination|safe}
         </div>
     {/if}
@@ -134,11 +130,10 @@
     <script>
         jQuery(function($) {literal}{{/literal}
             {$nosubmissions.pagination_js|safe}
-            $('#nosubmissions_page_container').removeClass('hidden');
+            $('#nosubmissions_page_container').removeClass('d-none');
         {literal}}{/literal});
     </script>
     {/if}
-    <hr />
 {/if}
 
 {if $mysubmitted || $group_view_submission_form}

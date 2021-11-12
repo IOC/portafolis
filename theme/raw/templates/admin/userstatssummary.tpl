@@ -9,9 +9,9 @@
 </div>
 {if $data}
     <h4>{str tag="usersbyinstitution" section="statistics"}</h4>
-    <div class="panel-body">
+    <div class="card-body">
         <canvas class="graphcanvas" id="sitestatsusersgraph"></canvas>
-        <script type="application/javascript">
+        <script>
         {literal}
         jQuery(function() {
             fetch_graph_data({

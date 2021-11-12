@@ -10,6 +10,7 @@
  */
 define('INTERNAL', 1);
 define('PUBLIC', 1);
+define('MENUITEM', 'userdashboard');
 // Technically these are lies, but we set them like this to hook in the right
 // plugin stylesheet. This file should be provided by artefact/internal anyway.
 define('SECTION_PLUGINTYPE', 'artefact');
@@ -22,7 +23,7 @@ require_once('group.php');
 require_once(get_config('libroot') . 'view.php');
 
 if (param_variable('acceptfriend_submit', null)) {
-    acceptfriend_form(param_integer('id'));
+    acceptfriend_form(param_integer('id'), 'modal');
 }
 else if (param_variable('addfriend_submit', null)) {
     addfriend_form(param_integer('id'));
@@ -52,6 +53,8 @@ if ($userid == 0) {
     redirect();
 }
 
+isolatedinstitution_access($userid);
+
 // Get the user's details
 if (!isset($user)) {
     if (!$user = get_record('usr', 'id', $userid, 'deleted', 0)) {
@@ -67,7 +70,8 @@ if (!isset($user)) {
 $is_friend = is_friend($userid, $loggedinid);
 
 if ($loggedinid == $userid) {
-    $view = $USER->get_profile_view();
+    $userobj = clone $USER;
+    $view = $userobj->get_profile_view();
 }
 else {
     $userobj = new User();
@@ -87,19 +91,70 @@ $viewid = $view->get('id');
 $restrictedview = !can_view_view($viewid);
 // Logged-out users can't see any details, though
 if ($restrictedview && !$USER->is_logged_in()) {
-    throw new AccessDeniedException(get_string('accessdenied', 'error'));
+    throw new AccessDeniedException();
 }
-if (!$restrictedview) {
-    $viewcontent = $view->build_rows(); // Build content before initialising smarty in case pieform elements define headers.
+else if ($restrictedview && is_isolated()) {
+    // Check if isolated institutions are on and user being viewed is a site admin
+    // or both users are in no institution
+    $userinsts = $userobj->get('institutions');
+    $loggedininsts = $USER->get('institutions');
+    if ($userobj->get('admin') ||
+        (empty($userinsts) && empty($loggedininsts))) {
+        $restrictedview = false;
+    }
 }
 
-$javascript = array('paginator', 'lib/pieforms/static/core/pieforms.js');
+$blocksjs = '';
+$layoutjs = array();
+if (!$restrictedview) {
+    if ($newlayout = $view->uses_new_layout()) {
+        $layoutjs = array('js/lodash/lodash.js', 'js/gridstack/gridstack.js', 'js/gridlayout.js');
+        $blocks = $view->get_blocks();
+        $blocks = json_encode($blocks);
+        $blocksjs = <<<EOF
+            $(function () {
+                var options = {
+                    verticalMargin: 5,
+                    cellHeight: 10,
+                    disableDrag : true,
+                    disableResize: true,
+                };
+                var grid = $('.grid-stack');
+                grid.gridstack(options);
+                grid = $('.grid-stack').data('gridstack');
+
+                // should add the blocks one by one
+                var blocks = {$blocks};
+                loadGrid(grid, blocks);
+            });
+EOF;
+    }
+    else {
+        $layoutjs= array();
+        $viewcontent = $view->build_rows(); // Build content before initialising smarty in case pieform elements define headers.
+        $blocksjs = "$(function () {jQuery(document).trigger('blocksloaded');});";
+    }
+}
+
+$javascript = array('paginator',
+                    'lib/pieforms/static/core/pieforms.js',
+                  );
+$javascript = array_merge($javascript, $layoutjs);
 $blocktype_js = $view->get_all_blocktype_javascript();
 $javascript = array_merge($javascript, $blocktype_js['jsfiles']);
 if (is_plugin_active('externalvideo', 'blocktype')) {
     $javascript = array_merge($javascript, array((is_https() ? 'https:' : 'http:') . '//cdn.embedly.com/widgets/platform.js'));
 }
-$inlinejs = "jQuery( function() {\n" . join("\n", $blocktype_js['initjs']) . "\n});";
+$inlinejs = <<<JS
+jQuery(function($) {
+JS;
+$inlinejs .= join("\n", $blocktype_js['initjs']) . "\n";
+$inlinejs .= <<<JS
+    // Disable the modal_links for images etc... when page loads
+    $('a[class*=modal_link], a[class*=inner-link]').addClass('no-modal');
+    $('a[class*=modal_link], a[class*=inner-link]').css('cursor', 'default');
+});
+JS;
 
 // Set up theme
 $viewtheme = $view->get('theme');
@@ -108,13 +163,6 @@ if ($viewtheme && $THEME->basename != $viewtheme) {
 }
 $stylesheets = array();
 $stylesheets = array_merge($stylesheets, $view->get_all_blocktype_css());
-// include slimbox2 js and css files, if it is enabled...
-if (get_config_plugin('blocktype', 'gallery', 'useslimbox2')) {
-    $langdir = (get_string('thisdirection', 'langconfig') == 'rtl' ? '-rtl' : '');
-    $stylesheets = array_merge($stylesheets, array('<script type="application/javascript" src="' . append_version_number(get_config('wwwroot') . 'lib/slimbox2/js/slimbox2.js') . '"></script>',
-                     '<link rel="stylesheet" type="text/css" href="' . append_version_number(get_config('wwwroot') . 'lib/slimbox2/css/slimbox2' . $langdir . '.css') . '">'
-                     ));
-}
 
 $name = display_name($user);
 define('TITLE', $name);
@@ -204,7 +252,7 @@ if (!empty($loggedinid) && $loggedinid != $userid) {
                         'class' => 'input-group',
                         'elements'          => array(
                             'group' => array(
-                                'class'               => 'last hide-label input-sm',
+                                'class'               => 'last hide-label',
                                 'type'                => 'select',
                                 'title'               => get_string('inviteusertojoingroup', 'group'),
                                 'collapseifoneoption' => false,
@@ -215,7 +263,7 @@ if (!empty($loggedinid) && $loggedinid != $userid) {
                             'submit' => array(
                                 'type'  => 'button',
                                 'usebuttontag' => true,
-                                'class' => 'btn-sm btn-primary input-group-btn',
+                                'class' => 'btn-primary input-group-append',
                                 'value' => '<span class="icon icon-paper-plane left" role="presentation" aria-hidden="true"></span>' . get_string('sendinvitation', 'group'),
                             )
                         )
@@ -245,7 +293,7 @@ if (!empty($loggedinid) && $loggedinid != $userid) {
                         'class' => 'input-group',
                         'elements'  => array(
                             'group' => array(
-                                'class'   => 'last hide-label input-sm',
+                                'class'   => 'last hide-label',
                                 'type'    => 'select',
                                 'title'   => get_string('addusertogroup', 'group'),
                                 'collapseifoneoption' => false,
@@ -256,7 +304,7 @@ if (!empty($loggedinid) && $loggedinid != $userid) {
                             'submit' => array(
                                 'type'  => 'button',
                                 'usebuttontag' => true,
-                                'class' => 'btn-sm btn-primary input-group-btn',
+                                'class' => 'btn-primary input-group-append',
                                 'value' => '<span class="icon icon-plus left" role="presentation" aria-hidden="true"></span>' . get_string('add'),
                             )
                         )
@@ -282,7 +330,7 @@ if (!empty($loggedinid) && $loggedinid != $userid) {
         $relationship = 'none';
         $friendscontrol = get_account_preference($userid, 'friendscontrol');
         if ($friendscontrol == 'auto') {
-            $remoteusernewfriendform = addfriend_form($userid);
+            $remoteusernewfriendform = true;
         }
         $remoteuserfriendscontrol = $friendscontrol;
     }
@@ -331,10 +379,10 @@ if ($remoteusermessage) {
     $smarty->assign('message', $record->message);
 }
 if ($remoteuseracceptform) {
-    $smarty->assign('acceptform', acceptfriend_form($userid));
+    $smarty->assign('acceptform', acceptfriend_form($userid, 'modal'));
 }
 if ($remoteusernewfriendform) {
-    $smarty->assign('newfriendform', addfriend_form($userid));
+    $smarty->assign('newfriendform', addfriend_form($userid, 'pageactions'));
 }
 if ($remoteuserfriendscontrol) {
     $smarty->assign('friendscontrol', $friendscontrol);
@@ -345,8 +393,14 @@ if ($remoteuserrelationship) {
 
 $smarty->assign('loginas', $loginas);
 
-$smarty->assign('INLINEJAVASCRIPT', $inlinejs);
-
+$smarty->assign('INLINEJAVASCRIPT', $blocksjs . $inlinejs);
+if ($userobj->get('admin') || $userobj->get('staff')) {
+    $url = get_config('wwwroot') . 'institution/index.php?institution=mahara';
+    $link = get_string('institutionlink', 'mahara', $url, 'mahara');
+    // If user is both Admin and Staff, only say Site administrator and not both
+    $role = $userobj->get('admin') ? get_string('siteadmin', 'admin') : get_string('sitestaff', 'admin');
+    $smarty->assign('siterole', $role . ' ' . $link);
+}
 $smarty->assign('institutions', get_institution_string_for_user($userid));
 $smarty->assign('canmessage', $loggedinid != $userid && can_send_message($loggedinid, $userid));
 $smarty->assign('USERID', $userid);
@@ -360,9 +414,11 @@ if ($loggedinid && $loggedinid == $userid) {
     $smarty->assign('ownprofile', true);
 }
 $smarty->assign('pageheadinghtml', $view->display_title(false));
-
 if (!$restrictedview) {
-    $smarty->assign('viewcontent', $viewcontent);
+    $smarty->assign('newlayout', $newlayout);
+    if (!$newlayout) {
+        $smarty->assign('viewcontent', $viewcontent);
+    }
 }
 safe_require('module', 'multirecipientnotification');
 $smarty->assign('mrmoduleactive', PluginModuleMultirecipientnotification::is_active());

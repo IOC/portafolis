@@ -10,11 +10,11 @@
  */
 
 define('INTERNAL', true);
-define('MENUITEM', 'content/resume');
+define('MENUITEM', 'create/resume');
 define('SECTION_PLUGINTYPE', 'artefact');
 define('SECTION_PLUGINNAME', 'resume');
 define('SECTION_PAGE', 'index');
-define('RESUME_SUBPAGE', 'interests');
+define('MENUITEM_SUBPAGE', 'interests');
 
 require_once(dirname(dirname(dirname(__FILE__))) . '/init.php');
 define('TITLE', get_string('resume', 'artefact.resume'));
@@ -37,6 +37,7 @@ $form = pieform(simple_resumefield_form($defaults, 'artefact/resume/interests.ph
 
 
 $smarty = smarty(array('artefact/resume/js/simpleresumefield.js'));
+setpageicon($smarty, 'icon-regular icon-address-book');
 $smarty->assign('interestsform', $form);
 $smarty->assign('SUBPAGENAV', PluginArtefactResume::submenu_items());
 $smarty->display('artefact:resume:interests.tpl');

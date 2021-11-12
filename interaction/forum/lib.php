@@ -16,16 +16,21 @@ define('REPORT_OBJECTIONABLE', 1);
 define('MAKE_NOT_OBJECTIONABLE', 2);
 define('DELETE_OBJECTIONABLE_POST', 3);
 define('DELETE_OBJECTIONABLE_TOPIC', 4);
+define('POST_NEEDS_APPROVAL', 5);
+define('POST_REJECTED', 6);
 
 class PluginInteractionForum extends PluginInteraction {
 
     public static function instance_config_form($group, $instance=null) {
+        global $USER;
         if (isset($instance)) {
             $instanceconfig = get_records_assoc('interaction_forum_instance_config', 'forum', $instance->get('id'), '', 'field,value');
             $autosubscribe = isset($instanceconfig['autosubscribe']) ? $instanceconfig['autosubscribe']->value : false;
             $weight = isset($instanceconfig['weight']) ? $instanceconfig['weight']->value : null;
             $createtopicusers = isset($instanceconfig['createtopicusers']) ? $instanceconfig['createtopicusers']->value : null;
             $closetopics = !empty($instanceconfig['closetopics']);
+            $allowunsubscribe = isset($instanceconfig['allowunsubscribe']) ? $instanceconfig['allowunsubscribe']->value : null;
+            $moderateposts = (empty($instanceconfig['moderateposts']) ? 'none' : $instanceconfig['moderateposts']->value);
             $indentmode = isset($instanceconfig['indentmode']) ? $instanceconfig['indentmode']->value : null;
             $maxindent = isset($instanceconfig['maxindent']) ? $instanceconfig['maxindent']->value : null;
 
@@ -57,7 +62,73 @@ class PluginInteractionForum extends PluginInteraction {
             $existing = array();
         }
 
-        return array(
+        $fieldsetelements = array();
+        $fieldsetelements['autosubscribe'] = array(
+            'type'         => 'switchbox',
+            'title'        => get_string('autosubscribeusers', 'interaction.forum'),
+            'description'  => get_string('autosubscribeusersdescription', 'interaction.forum'),
+            'defaultvalue' => isset($autosubscribe) ? $autosubscribe : true,
+            'help'         => true,
+        );
+        if ($USER->get('admin') || $USER->get('staff') || $USER->is_institutional_admin() || $USER->is_institutional_staff()) {
+            $fieldsetelements['allowunsubscribe'] = array(
+                'type'         => 'switchbox',
+                'title'        => get_string('allowunsubscribe', 'interaction.forum'),
+                'description'  => get_string('allowunsubscribedescription', 'interaction.forum'),
+                'defaultvalue' => isset($allowunsubscribe) ? $allowunsubscribe : 1,
+                'help' => true,
+            );
+        }
+        $fieldsetelements['weight'] = array(
+            'type' => 'weight',
+            'title' => get_string('Order', 'interaction.forum'),
+            'description' => get_string('orderdescription', 'interaction.forum'),
+            'defaultvalue' => isset($weight) ? $weight : count($existing),
+            'rules' => array(
+                'required' => true,
+            ),
+            'existing' => $existing,
+            'ignore'   => (count($existing) == 0)
+        );
+        $fieldsetelements['moderator'] = array(
+            'type' => 'userlist',
+            'title' => get_string('Moderators', 'interaction.forum'),
+            'description' => get_string('moderatorsdescription', 'interaction.forum'),
+            'defaultvalue' => isset($moderators) ? $moderators : null,
+            'group' => $group->id,
+            'includeadmins' => false,
+            'lefttitle' => get_string('potentialmoderators', 'interaction.forum'),
+            'righttitle' => get_string('currentmoderators', 'interaction.forum')
+        );
+        $fieldsetelements['createtopicusers'] = array(
+            'type'         => 'select',
+            'title'        => get_string('whocancreatetopics', 'interaction.forum'),
+            'options'      => array('members'    => get_string('allgroupmembers', 'group'),
+                                    'moderators' => get_string('moderatorsandgroupadminsonly', 'interaction.forum')),
+            'description'  => get_string('createtopicusersdescription', 'interaction.forum'),
+            'defaultvalue' => (isset($createtopicusers) && $createtopicusers == 'moderators') ? 'moderators' : 'members',
+            'rules' => array(
+                'required' => true,
+            ),
+        );
+        $fieldsetelements['closetopics'] = array(
+            'type'         => 'switchbox',
+            'title'        => get_string('closetopics', 'interaction.forum'),
+            'description'  => get_string('closetopicsdescription1', 'interaction.forum'),
+            'defaultvalue' => !empty($closetopics),
+        );
+        $fieldsetelements['moderateposts'] = array(
+            'type'         => 'select',
+            'title'        => get_string('moderatenewposts', 'interaction.forum'),
+            'options'      => array('none'    => get_string('none'),
+                                    'posts'    => get_string('posts'),
+                                    'replies' => get_string('replies', 'interaction.forum'),
+                                    'postsandreplies' => get_string('postsandreplies', 'interaction.forum')),
+            'description'  => get_string('moderatenewpostsdescription1', 'interaction.forum'),
+            'defaultvalue' => empty($moderateposts) ? 'none' : $moderateposts,
+        );
+
+        $form = array(
             'indentmode' => array(
                 'type'         => 'select',
                 'title'        => get_string('indentmode', 'interaction.forum'),
@@ -76,7 +147,7 @@ class PluginInteractionForum extends PluginInteraction {
                 'title'        => get_string('maxindent', 'interaction.forum'),
                 'size'         => 2,
                 'defaultvalue' => isset($maxindent) ? $maxindent : 10,
-                'class'        => (isset($indentmode) && $indentmode == 'max_indent') ? '' : 'hidden',
+                'class'        => (isset($indentmode) && $indentmode == 'max_indent') ? '' : 'd-none',
                 'rules' => array(
                     'integer' => true,
                     'minvalue' => 1,
@@ -89,55 +160,13 @@ class PluginInteractionForum extends PluginInteraction {
                 'collapsible' => true,
                 'collapsed' => true,
                 'legend' => get_string('forumsettings', 'interaction.forum'),
-                'elements' => array(
-                    'autosubscribe' => array(
-                        'type'         => 'switchbox',
-                        'title'        => get_string('autosubscribeusers', 'interaction.forum'),
-                        'description'  => get_string('autosubscribeusersdescription', 'interaction.forum'),
-                        'defaultvalue' => isset($autosubscribe) ? $autosubscribe : true,
-                        'help'         => true,
-                    ),
-                    'weight' => array(
-                        'type' => 'weight',
-                        'title' => get_string('Order', 'interaction.forum'),
-                        'description' => get_string('orderdescription', 'interaction.forum'),
-                        'defaultvalue' => isset($weight) ? $weight : count($existing),
-                        'rules' => array(
-                            'required' => true,
-                        ),
-                        'existing' => $existing,
-                        'ignore'   => (count($existing) == 0)
-                    ),
-                    'moderator' => array(
-                        'type' => 'userlist',
-                        'title' => get_string('Moderators', 'interaction.forum'),
-                        'description' => get_string('moderatorsdescription', 'interaction.forum'),
-                        'defaultvalue' => isset($moderators) ? $moderators : null,
-                        'group' => $group->id,
-                        'includeadmins' => false,
-                        'lefttitle' => get_string('potentialmoderators', 'interaction.forum'),
-                        'righttitle' => get_string('currentmoderators', 'interaction.forum')
-                    ),
-                    'createtopicusers' => array(
-                        'type'         => 'select',
-                        'title'        => get_string('whocancreatetopics', 'interaction.forum'),
-                        'options'      => array('members'    => get_string('allgroupmembers', 'group'),
-                                                'moderators' => get_string('moderatorsandgroupadminsonly', 'interaction.forum')),
-                        'description'  => get_string('createtopicusersdescription', 'interaction.forum'),
-                        'defaultvalue' => (isset($createtopicusers) && $createtopicusers == 'moderators') ? 'moderators' : 'members',
-                        'rules' => array(
-                            'required' => true,
-                        ),
-                    ),
-                    'closetopics' => array(
-                        'type'         => 'switchbox',
-                        'title'        => get_string('closetopics', 'interaction.forum'),
-                        'description'  => get_string('closetopicsdescription1', 'interaction.forum'),
-                        'defaultvalue' => !empty($closetopics),
-                    ),
-                )
-            )
+                'elements' => $fieldsetelements,
+            ),
         );
+
+
+
+        return $form;
     }
 
     public static function instance_config_js() {
@@ -151,23 +180,46 @@ jQuery(function($) {
             return;
         }
         if (s.options[s.selectedIndex].val() == 'max_indent') {
-            m.removeClass('hidden');
-            t.removeClass('hidden');
+            m.removeClass('d-none');
+            t.removeClass('d-none');
         }
         else {
-          m.addClass('hidden');
-          t.addClass('hidden');
+          m.addClass('d-none');
+          t.addClass('d-none');
+        }
+    }
+
+    function update_autosubscribe(){
+        var source = $('#edit_interaction_allowunsubscribe');
+        var target = $('#edit_interaction_autosubscribe');
+        if (source.length) {
+            if (source.prop('checked')) {
+                target.prop('disabled', false);
+            }
+            else {
+                target.prop('checked', true);
+                target.prop('disabled', true);
+            }
         }
     }
 
     $('#edit_interaction_indentmode').on('change', update_maxindent);
+
+    $('#edit_interaction_allowunsubscribe').on('click', update_autosubscribe);
+    update_autosubscribe();
 });
 EOF;
     }
 
     public static function instance_config_save($instance, $values){
+        global $USER;
         db_begin();
 
+        // Need to set autosubscribe to "true" if allowsubscribe is set to "false" by the user
+        // since this disables allowunsubscribe switch and $values['autosubscribe'] gets here empty
+        if (isset($values['allowunsubscribe']) && !$values['allowunsubscribe']) {
+            $values['autosubscribe'] = 1;
+        }
         // Autosubscribe
         delete_records_sql(
             "DELETE FROM {interaction_forum_instance_config}
@@ -177,21 +229,17 @@ EOF;
         insert_record('interaction_forum_instance_config', (object)array(
             'forum' => $instance->get('id'),
             'field' => 'autosubscribe',
-            'value' => (bool)$values['autosubscribe'],
+            'value' => (bool)($values['autosubscribe']),
         ));
 
-        if ($values['justcreated'] && $values['autosubscribe']) {
+        if (($values['justcreated'] && $values['autosubscribe']) ||
+            ( isset($values['allowunsubscribe']) && !$values['allowunsubscribe'])) {
             // Subscribe all existing users in the group to the forums
             if ($userids = get_column('group_member', 'member', 'group', $instance->get('group'))) {
                 foreach ($userids as $userid) {
-                    insert_record(
-                        'interaction_forum_subscription_forum',
-                        (object)array(
-                            'forum' => $instance->get('id'),
-                            'user'  => $userid,
-                            'key'   => PluginInteractionForum::generate_unsubscribe_key(),
-                        )
-                    );
+                    if (!get_record('interaction_forum_subscription_forum', 'user', $userid, 'forum', $instance->get('id'))) {
+                        subscribe_user_to_forum($userid, $instance->get('id'));
+                    }
                 }
             }
         }
@@ -277,6 +325,37 @@ EOF;
             ));
         }
 
+        // Allow users to unsubscribe
+        if ($USER->get('admin') || $USER->get('staff') || $USER->is_institutional_admin() || $USER->is_institutional_staff()) {
+            if (isset($values['allowunsubscribe'])) {
+                ensure_record_exists('interaction_forum_instance_config',
+                    (object) array(
+                        'forum'=> $instance->get('id'),
+                        'field'=> 'allowunsubscribe'
+                    ),
+                    (object) array(
+                        'forum'=> $instance->get('id'),
+                        'field'=> 'allowunsubscribe',
+                        'value'=> $values['allowunsubscribe']
+                    )
+                );
+            }
+        }
+
+        // Moderate new posts
+        delete_records_sql(
+            "DELETE FROM {interaction_forum_instance_config}
+            WHERE field = 'moderateposts' AND forum = ?",
+            array($instance->get('id'))
+        );
+        if (!empty($values['moderateposts'])) {
+            insert_record('interaction_forum_instance_config', (object)array(
+                'forum' => $instance->get('id'),
+                'field' => 'moderateposts',
+                'value' => $values['moderateposts'],
+            ));
+        }
+
         //Indent mode
         delete_records_sql(
             "DELETE FROM {interaction_forum_instance_config}
@@ -334,6 +413,13 @@ EOF;
                 'allownonemethod' => 1,
                 'defaultmethod' => 'email',
             ),
+            (object)array(
+                'name' => 'postmoderation',
+                'admin' => 0,
+                'delay' => 0,
+                'allownonemethod' => 1,
+                'defaultmethod' => 'email',
+            ),
         );
     }
 
@@ -341,7 +427,7 @@ EOF;
         return array(
             (object)array(
                 'callfunction' => 'interaction_forum_new_post',
-                'minute'       => '*/30',
+                'minute'       => '3-59/30',
             ),
             (object)array(
                 'callfunction' => 'clean_forum_notifications',
@@ -378,11 +464,11 @@ EOF;
 
     public static function menu_items() {
         return array(
-            'groups/topics' => array(
-                'path' => 'groups/topics',
+            'engage/topics' => array(
+                'path' => 'engage/topics',
                 'url' => 'group/topics.php',
-                'title' => get_string('Topics', 'interaction.forum'),
-                'weight' => 70,
+                'title' => get_string('discussiontopics', 'interaction.forum'),
+                'weight' => 50,
             ),
         );
     }
@@ -428,18 +514,11 @@ EOF;
             LEFT JOIN {interaction_forum_instance_config} ific ON ific.forum = ii.id
             WHERE \"group\" = ? AND ific.field = 'autosubscribe' and ific.value = '1'",
             array($gm['group']))) {
-            db_begin();
             foreach ($forumids as $forumid) {
-                insert_record(
-                    'interaction_forum_subscription_forum',
-                    (object)array(
-                        'forum' => $forumid,
-                        'user'  => $gm['member'],
-                        'key'   => PluginInteractionForum::generate_unsubscribe_key(),
-                    )
-                );
+                // if the user was a member once and was subscribe to a topic
+                // from the forum, we also need to remove that subscription
+                subscribe_user_to_forum($gm['member'], $forumid);
             }
-            db_commit();
         }
     }
 
@@ -499,7 +578,7 @@ EOF;
             // elsewhere that allowed this to happen
             $forum->weight = $weights[$forum->id]->value;
         }
-        usort($forums, create_function('$a, $b', 'return $a->weight > $b->weight;'));
+        usort($forums, function($a, $b) { return $a->weight > $b->weight; });
         return $forums;
     }
 
@@ -522,9 +601,9 @@ EOF;
             $postswhere = 'ctime < ?';
             $delay = null;
         }
-        $posts = get_column_sql('SELECT id FROM {interaction_forum_post} WHERE sent = 0 AND deleted = 0 AND ' . $postswhere, $values);
+        $posts = get_column_sql('SELECT id FROM {interaction_forum_post} WHERE sent = 0 AND deleted = 0 AND approved = 1 AND ' . $postswhere, $values);
         if ($posts) {
-            set_field_select('interaction_forum_post', 'sent', 1, 'deleted = 0 AND sent = 0 AND ' . $postswhere, $values);
+            set_field_select('interaction_forum_post', 'sent', 1, 'deleted = 0 AND sent = 0 AND approved = 1 AND ' . $postswhere, $values);
             foreach ($posts as $postid) {
                 activity_occurred('newpost', array('postid' => $postid), 'interaction', 'forum', $delay);
             }
@@ -702,7 +781,7 @@ EOF;
         global $USER;
         require_once('group.php');
 
-        if (!$file instanceof ArtefactTypeImage) {
+        if (!$file instanceof ArtefactType) {
             return false;
         }
 
@@ -731,6 +810,11 @@ EOF;
         $poster->find_by_id($post->poster);
         if (!$poster->can_publish_artefact($file)) {
             return false;
+        }
+
+        // Check if the file is attached to a post via 'interaction_forum_post_attachment' table
+        if (get_field('interaction_forum_post_attachment', 'id', 'post', $postid, 'attachment', $file->get('id'))) {
+            return true;
         }
 
         // Load the post as an html fragment & make sure it has the image in it
@@ -830,6 +914,16 @@ class InteractionForumInstance extends InteractionInstance {
         }
 
         db_begin();
+        // Check to see if the group's forum is being used as a landing page url and if the changes affect it
+        if (get_config('homepageredirect') && !empty(get_config('homepageredirecturl'))) {
+            $landing = translate_landingpage_to_tags(array(get_config('homepageredirecturl')));
+            foreach ($landing as $land) {
+                if ($land->type == 'forum' && $land->typeid == $this->id) {
+                    set_config('homepageredirecturl', null);
+                    notify_landing_removed($land, true);
+                }
+            }
+        }
         // Delete embedded images in the forum description
         require_once('embeddedimage.php');
         EmbeddedImage::delete_embedded_images('forum', $this->id);
@@ -861,6 +955,41 @@ class InteractionForumInstance extends InteractionInstance {
         );
     }
 
+    public function attach($id, $attachmentid) {
+        if (record_exists('interaction_forum_post_attachment', 'post', $id, 'attachment', $attachmentid)) {
+            return;
+        }
+        if (!record_exists('artefact', 'id', $attachmentid)) {
+            throw new ArtefactNotFoundException(get_string('artefactnotfound', 'mahara', $attachmentid));
+        }
+        $data = new stdClass();
+        $data->post = $id;
+        $data->attachment = $attachmentid;
+        insert_record('interaction_forum_post_attachment', $data);
+    }
+
+    public function detach($id, $attachmentid=null) {
+        if (is_null($attachmentid)) {
+            delete_records('interaction_forum_post_attachment', 'post', $id);
+            return;
+        }
+        if (!record_exists('artefact', 'id', $attachmentid)) {
+            throw new ArtefactNotFoundException(get_string('artefactnotfound', 'mahara', $attachmentid));
+        }
+        delete_records('interaction_forum_post_attachment', 'post', $id, 'attachment', $attachmentid);
+    }
+
+    public static function attached_id_list($attachmentid) {
+        return get_column('interaction_forum_post_attachment', 'post', 'attachment', $attachmentid);
+    }
+
+    public static function attachment_id_list($post) {
+        if ($list = get_column('interaction_forum_post_attachment', 'attachment', 'post', $post)) {
+            return $list;
+        }
+         return array();
+    }
+
    /**
     * Check if forum instance contains reported content.
     *
@@ -881,6 +1010,7 @@ class ActivityTypeInteractionForumNewPost extends ActivityTypePlugin {
 
     protected $postid;
     protected $temp;
+    protected $attachments = array();
 
     public function __construct($data, $cron=false) {
         parent::__construct($data, $cron);
@@ -962,15 +1092,35 @@ class ActivityTypeInteractionForumNewPost extends ActivityTypePlugin {
         }
 
         $post->posttime = strftime(get_string('strftimedaydatetime'), $post->ctime);
+        // Check if the post has any attachments
+        $attachmentlist = '';
+        if ($postattachments = get_records_sql_array("
+                SELECT a.*, fpa.post FROM {artefact} a
+                JOIN {interaction_forum_post_attachment} fpa ON fpa.attachment = a.id
+                WHERE post = ?", array($this->postid))) {
+            foreach ($postattachments as $attach) {
+                $this->attachments[] = array('url' => get_config('wwwroot') . 'artefact/file/download.php?file='. $attach->id . '&amp;post=' . $attach->post, 'urltext' => hsc($attach->title));
+                $attachmentlist .= hsc($attach->title) . "\n";
+            }
+        }
+
         // Some messages are all html and when they're 'cleaned' with
         // strip_tags(str_shorten_html($post->body, 200, true)) for display,
         // they are left empty. Use html2text instead.
-        $this->message = str_shorten_text(trim(html2text($post->body)), 200, true); // For internal notifications.
 
+        // For internal notifications.
+        if ($attachmentlist) {
+            $this->message = get_string('forumpostattachmentinternal', 'interaction.forum',
+                                        str_shorten_text(trim(html2text($post->body)), 200, true),
+                                        $attachmentlist);
+        }
+        else {
+            $this->message = str_shorten_text(trim(html2text($post->body)), 200, true);
+        }
         $post->textbody = trim(html2text($post->body));
         $post->htmlbody = clean_html($post->body);
-        $this->url = 'interaction/forum/topic.php?id=' . $post->topicid . '&post=' . $this->postid;
 
+        $this->url = 'interaction/forum/topic.php?id=' . $post->topicid . '&post=' . $this->postid;
         $this->add_urltext(array(
             'key'     => 'Topic',
             'section' => 'interaction.forum'
@@ -994,28 +1144,64 @@ class ActivityTypeInteractionForumNewPost extends ActivityTypePlugin {
         $post = $this->temp->post;
         $unsubscribeid = $post->{$user->subscribetype . 'id'};
         $unsubscribelink = get_config('wwwroot') . 'interaction/forum/unsubscribe.php?' . $user->subscribetype . '=' . $unsubscribeid . '&key=' . $user->unsubscribekey;
-        return get_string_from_language($user->lang, 'forumposttemplate', 'interaction.forum',
-            $post->forumtitle,
-            $post->groupname,
-            $post->textbody,
-            get_config('wwwroot') . $this->url,
-            $user->subscribetype,
-            $unsubscribelink
-        );
+        if (!empty($this->attachments)) {
+            $attachments = '';
+            foreach ($this->attachments as $att) {
+                $attachments .= '- ' . $att['urltext'] .': ' . $att['url'] . "\n";
+            }
+            $message = get_string_from_language($user->lang, 'forumpostattachmenttemplate', 'interaction.forum',
+                $post->forumtitle,
+                $post->groupname,
+                $post->textbody,
+                $attachments,
+                get_config('wwwroot') . $this->url,
+                get_string_from_language($user->lang, $user->subscribetype . 'lower', 'interaction.forum'),
+                $unsubscribelink
+            );
+        }
+        else {
+            $message = get_string_from_language($user->lang, 'forumposttemplate', 'interaction.forum',
+                $post->forumtitle,
+                $post->groupname,
+                $post->textbody,
+                get_config('wwwroot') . $this->url,
+                get_string_from_language($user->lang, $user->subscribetype . 'lower', 'interaction.forum'),
+                $unsubscribelink
+            );
+        }
+        return $message;
     }
 
     public function get_htmlmessage($user) {
         $post = $this->temp->post;
         $unsubscribeid = $post->{$user->subscribetype . 'id'};
         $unsubscribelink = get_config('wwwroot') . 'interaction/forum/unsubscribe.php?' . $user->subscribetype . '=' . $unsubscribeid . '&key=' . $user->unsubscribekey;
-        return get_string_from_language($user->lang, 'forumposthtmltemplate', 'interaction.forum',
-            hsc($post->forumtitle),
-            hsc($post->groupname),
-            $post->htmlbody,
-            get_config('wwwroot') . $this->url,
-            $unsubscribelink,
-            $user->subscribetype
-        );
+        if (!empty($this->attachments)) {
+            $attachments = '';
+            foreach ($this->attachments as $att) {
+                $attachments .= '<li><a href="' . $att['url'] . '">' . $att['urltext'] . '</a></li>';
+            }
+            $message = get_string_from_language($user->lang, 'forumposthtmlattachmenttemplate', 'interaction.forum',
+                hsc($post->forumtitle),
+                hsc($post->groupname),
+                $post->htmlbody,
+                $attachments,
+                get_config('wwwroot') . $this->url,
+                $unsubscribelink,
+                get_string_from_language($user->lang, $user->subscribetype . 'lower', 'interaction.forum')
+            );
+        }
+        else {
+            $message = get_string_from_language($user->lang, 'forumposthtmltemplate', 'interaction.forum',
+                hsc($post->forumtitle),
+                hsc($post->groupname),
+                $post->htmlbody,
+                get_config('wwwroot') . $this->url,
+                $unsubscribelink,
+                get_string_from_language($user->lang, $user->subscribetype . 'lower', 'interaction.forum')
+            );
+        }
+        return $message;
     }
 
     public function get_plugintype(){
@@ -1186,6 +1372,157 @@ class ActivityTypeInteractionForumReportPost extends ActivityTypePlugin {
     }
 }
 
+class ActivityTypeInteractionForumPostmoderation extends ActivityTypePlugin {
+
+    protected $topicid;
+    protected $forumid;
+    protected $forumtitle;
+    protected $postbody;
+    protected $postedtime;
+    protected $poster;
+    protected $reason;
+    protected $event;
+
+    protected $url;
+
+    protected $temp;
+
+    public function __construct($data, $cron = false) {
+        parent::__construct($data, $cron);
+        global $USER;
+        $this->forumtitle = get_field('interaction_instance','title', 'id', $this->forumid);
+
+        $this->url = 'interaction/forum/view.php?id=' . $this->forumid;
+
+        if ($this->event === POST_REJECTED) {
+          // only notify the author of the post
+            $this->users = activity_get_users($this->get_id(), array($this->poster));
+            $this->temp = new stdClass();
+            $this->temp->rejecter = $USER->get('id');
+            $this->temp->rejectedtime = time();
+            $this->strings = (object) array(
+                'subject' => (object) array(
+                    'key' => 'rejectedpostsubject',
+                    'section' => 'interaction.forum',
+                    'args' => array($this->forumtitle),
+                ),
+                'message' => (object) array(
+                    'key' => 'rejectedpostbody',
+                    'section' => 'interaction.forum',
+                    'args' => array(display_default_name($this->temp->rejecter),
+                                    display_default_name($this->poster),
+                                    $this->reason,
+                                    trim(html2text($this->postbody))
+                              ),
+                ),
+            );
+        }
+        else if ($this->event === POST_NEEDS_APPROVAL) {
+
+            $groupid = get_field('interaction_instance', 'group', 'id', $this->forumid);
+
+            // Get forum moderators and admins.
+            $forumadminsandmoderators = activity_get_users(
+            $this->get_id(),
+            array_merge(get_forum_moderators($this->forumid),
+            group_get_admin_ids($groupid)));
+            // Populate users to notify list and get rid of duplicates.
+            foreach ($forumadminsandmoderators as $user) {
+                if (!isset($this->users[$user->id])) {
+                    $this->users[$user->id] = $user;
+                }
+            }
+            $this->strings = (object) array(
+                'subject' => (object) array(
+                    'key' => 'postneedapprovalsubject',
+                    'section' => 'interaction.forum',
+                    'args' => array($this->forumtitle),
+                ),
+                'message' => (object) array(
+                    'key' => 'postneedapprovalbody',
+                    'section' => 'interaction.forum',
+                    'args' => array(display_default_name($this->poster),
+                                    $this->forumtitle,
+                                    trim(html2text($this->postbody))
+                              ),
+                ),
+            );
+        }
+        else {
+            throw new SystemException();
+        }
+
+    }
+
+    public function get_emailmessage($user) {
+
+        if ($this->event === POST_REJECTED) {
+            $rejecterurl = profile_url($this->temp->rejecter);
+            $rejectedtime = strftime(get_string_from_language($user->lang, 'strftimedaydatetime'), $this->temp->rejectedtime);
+            $postedtime = strftime(get_string_from_language($user->lang, 'strftimedaydatetime'), $this->postedtime);
+            $return = get_string_from_language(
+                $user->lang, 'rejectedposttext', 'interaction.forum',
+                $this->forumtitle, display_default_name($this->temp->rejecter), $rejectedtime,
+                $this->reason, clean_html($this->postbody),
+                $postedtime, get_config('wwwroot') . $this->url, $rejecterurl
+            );
+        }
+        else if ($this->event === POST_NEEDS_APPROVAL) {
+            $postedtime = strftime(get_string_from_language($user->lang, 'strftimedaydatetime'), $this->postedtime);
+            $return = get_string_from_language(
+                $user->lang, 'postneedapprovaltext', 'interaction.forum',
+                display_default_name($this->poster), $this->forumtitle, $postedtime,
+                clean_html($this->postbody), get_config('wwwroot') . $this->url
+            );
+        }
+        else {
+            throw new SystemException();
+        }
+        return $return;
+    }
+
+    public function get_htmlmessage($user) {
+      if ($this->event === POST_REJECTED) {
+            $rejectername = hsc(display_default_name($this->temp->rejecter));
+            $rejecterurl = profile_url($this->temp->rejecter);
+            $rejectedtime = strftime(get_string_from_language($user->lang, 'strftimedaydatetime'), $this->temp->rejectedtime);
+            $postedtime = strftime(get_string_from_language($user->lang, 'strftimedaydatetime'), $this->postedtime);
+            $return = get_string_from_language(
+                $user->lang, 'rejectedposthtml', 'interaction.forum',
+                hsc($this->forumtitle), $rejectername, $rejectedtime,
+                $this->reason, clean_html($this->postbody),
+                $postedtime, get_config('wwwroot') . $this->url, $rejecterurl, $rejectername
+            );
+        }
+        else if ($this->event === POST_NEEDS_APPROVAL) {
+            $postedtime = strftime(get_string_from_language($user->lang, 'strftimedaydatetime'), $this->postedtime);
+            $return = get_string_from_language(
+                $user->lang, 'postneedapprovalhtml', 'interaction.forum',
+                display_default_name($this->poster), hsc($this->forumtitle),
+                clean_html($this->postbody), $postedtime,
+                get_config('wwwroot') . $this->url, display_default_name($this->poster)
+            );
+        }
+        else {
+            throw new SystemException();
+        }
+        return $return;
+    }
+
+    public function get_plugintype(){
+        return 'interaction';
+    }
+
+    public function get_pluginname(){
+        return 'forum';
+    }
+
+    public function get_required_parameters() {
+        return array('topicid', 'forumid', 'postbody',
+                      'postedtime', 'poster', 'reason', 'event');
+    }
+}
+
 // constants for forum membership types
 define('INTERACTION_FORUM_ADMIN', 1);
 define('INTERACTION_FORUM_MOD', 2);
@@ -1305,31 +1642,48 @@ function subscribe_forum_validate(Pieform $form, $values) {
     if (!is_logged_in()) {
         throw new AccessDeniedException();
     }
+
+    $allowunsubscribe = get_config_plugin_instance('interaction_forum', $values['forum'], 'allowunsubscribe');
+    if (isset($allowunsubscribe) &&  $allowunsubscribe == 0) {
+        throw new AccessDeniedException(get_string('cantunsubscribe', 'interaction.forum'));
+    }
+}
+
+/*
+ * Subscribes a user to a forum and unsubscribes from any topic inside the forum
+ *
+ * @param int $user the ID of the user
+ * @param int $forum the ID of the forum
+ */
+
+function subscribe_user_to_forum($user, $forum) {
+    db_begin();
+    insert_record(
+        'interaction_forum_subscription_forum',
+        (object)array(
+            'forum' => $forum,
+            'user'  => $user,
+            'key'   => PluginInteractionForum::generate_unsubscribe_key(),
+        )
+    );
+    delete_records_sql(
+        'DELETE FROM {interaction_forum_subscription_topic}
+        WHERE topic IN (
+            SELECT id
+            FROM {interaction_forum_topic}
+            WHERE forum = ?
+            AND "user" = ?
+        )',
+        array($forum, $user)
+    );
+    db_commit();
 }
 
 function subscribe_forum_submit(Pieform $form, $values) {
     global $USER, $SESSION;
+
     if ($values['type'] == 'subscribe') {
-        db_begin();
-        insert_record(
-            'interaction_forum_subscription_forum',
-            (object)array(
-                'forum' => $values['forum'],
-                'user'  => $USER->get('id'),
-                'key'   => PluginInteractionForum::generate_unsubscribe_key(),
-            )
-        );
-        delete_records_sql(
-            'DELETE FROM {interaction_forum_subscription_topic}
-            WHERE topic IN (
-                SELECT id
-                FROM {interaction_forum_topic}
-                WHERE forum = ?
-                AND "user" = ?
-            )',
-            array($values['forum'], $USER->get('id'))
-        );
-        db_commit();
+        subscribe_user_to_forum($USER->get('id'), $values['forum']);
         $SESSION->add_ok_msg(get_string('forumsuccessfulsubscribe', 'interaction.forum'));
     }
     else {

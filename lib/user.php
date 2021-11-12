@@ -13,6 +13,12 @@ defined('INTERNAL') || die();
 
 define('MAX_USERNAME_DISPLAY', 30);
 
+require 'phpmailer/src/PHPMailer.php';
+require 'phpmailer/src/Exception.php';
+require 'phpmailer/src/SMTP.php';
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception as phpmailerException;
+use PHPMailer\PHPMailer\SMTP;
 /**
  * loads up activity preferences for a given user
  *
@@ -86,7 +92,7 @@ function set_account_preference($userid, $field, $value) {
     }
     else {
         try {
-            $pref = new StdClass;
+            $pref = new stdClass();
             $pref->usr = $userid;
             $pref->field = $field;
             $pref->value = $value;
@@ -115,9 +121,10 @@ function change_language($userid, $oldlang, $newlang) {
         safe_require('artefact', 'file');
         ArtefactTypeFolder::change_language($userid, $oldlang, $newlang);
     }
-    set_field_select('artefact_tag', 'tag', get_string_from_language($newlang, 'profile'), 'WHERE tag = ? AND artefact IN (SELECT id FROM {artefact} WHERE "owner" = ?)', array(get_string_from_language($oldlang, 'profile'), $userid));
-    set_field_select('view_tag', 'tag', get_string_from_language($newlang, 'profile'), 'WHERE tag = ? AND "view" IN (SELECT id FROM {view} WHERE "owner" = ?)', array(get_string_from_language($oldlang, 'profile'), $userid));
-    set_field_select('collection_tag', 'tag', get_string_from_language($newlang, 'profile'), 'WHERE tag = ? AND "collection" IN (SELECT id FROM {collection} WHERE "owner" = ?)', array(get_string_from_language($oldlang, 'profile'), $userid));
+    $typecast = is_postgres() ? '::varchar' : '';
+    set_field_select('tag', 'tag', get_string_from_language($newlang, 'profile'), "WHERE tag = ? AND resourcetype = 'artefact' AND resourceid IN (SELECT id" . $typecast . " FROM {artefact} WHERE \"owner\" = ?)", array(get_string_from_language($oldlang, 'profile'), $userid));
+    set_field_select('tag', 'tag', get_string_from_language($newlang, 'profile'), "WHERE tag = ? AND resourcetype = 'view' AND resourceid IN (SELECT id" . $typecast . " FROM {view} WHERE \"owner\" = ?)", array(get_string_from_language($oldlang, 'profile'), $userid));
+    set_field_select('tag', 'tag', get_string_from_language($newlang, 'profile'), "WHERE tag = ? AND resourcetype = 'collection' AND resourceid IN (SELECT id" . $typecast . " FROM {collection} WHERE \"owner\" = ?)", array(get_string_from_language($oldlang, 'profile'), $userid));
 }
 
 /**
@@ -135,7 +142,7 @@ function set_activity_preference($userid, $activity, $method) {
     }
     else {
         try {
-            $pref = new StdClass;
+            $pref = new stdClass();
             $pref->usr = $userid;
             $pref->activity = $activity;
             $pref->method = $method;
@@ -222,7 +229,6 @@ function expected_account_preferences() {
                  'licensedefault' => '',
                  'messages'       => 'allow',
                  'lang'           => 'default',
-                 'addremovecolumns' => 0,
                  'maildisabled'   => 0,
                  'tagssideblockmaxtags' => get_config('tagssideblockmaxtags'),
                  'groupsideblockmaxgroups' => '',
@@ -238,7 +244,10 @@ function expected_account_preferences() {
                  'viewsperpage' => 20,
                  'itemsperpage' => 10,
                  'orderpagesby' => 'latestmodified',
-                 'searchinfields' => 'titleanddescriptionandtags'
+                 'searchinfields' => 'titleanddescriptionandtags',
+                 'view_details_active' => 0,
+                 'showlayouttranslatewarning' => 1,
+                 'accessibilityprofile' => false,
                  );
 }
 
@@ -246,17 +255,19 @@ function general_account_prefs_form_elements($prefs) {
     global $USER;
     require_once('license.php');
     $elements = array();
-    $elements['friendscontrol'] = array(
-        'type' => 'radio',
-        'defaultvalue' => $prefs->friendscontrol,
-        'title'  => get_string('friendsdescr', 'account'),
-        'options' => array(
-            'nobody' => get_string('friendsnobody', 'account'),
-            'auth'   => get_string('friendsauth', 'account'),
-            'auto'   => get_string('friendsauto', 'account')
-        ),
-        'help' => true
-    );
+    if (!get_config('friendsnotallowed')) {
+        $elements['friendscontrol'] = array(
+            'type' => 'radio',
+            'defaultvalue' => $prefs->friendscontrol,
+            'title'  => get_string('friendsdescr', 'account'),
+            'options' => array(
+                'nobody' => get_string('friendsnobody', 'account'),
+                'auth'   => get_string('friendsauth', 'account'),
+                'auto'   => get_string('friendsauto', 'account')
+            ),
+            'help' => true
+        );
+    }
     $elements['wysiwyg'] = array(
         'type' => 'switchbox',
         'defaultvalue' => (get_config('wysiwyg')) ? get_config('wysiwyg') == 'enable' : $prefs->wysiwyg,
@@ -281,17 +292,19 @@ function general_account_prefs_form_elements($prefs) {
         'title' => get_string('disableemail', 'account'),
         'help' => true,
     );
-    $elements['messages'] = array(
-        'type' => 'radio',
-        'defaultvalue' => $prefs->messages,
-        'title' => get_string('messagesdescr', 'account'),
-        'options' => array(
-            'nobody' => get_string('messagesnobody', 'account'),
-            'friends' => get_string('messagesfriends', 'account'),
-            'allow' => get_string('messagesallow', 'account'),
-        ),
-        'help' => true,
-    );
+    if (!get_config('friendsnotallowed')) {
+        $elements['messages'] = array(
+            'type' => 'radio',
+            'defaultvalue' => $prefs->messages,
+            'title' => get_string('messagesdescr', 'account'),
+            'options' => array(
+                'nobody' => get_string('messagesnobody', 'account'),
+                'friends' => get_string('messagesfriends', 'account'),
+                'allow' => get_string('messagesallow', 'account'),
+            ),
+            'help' => true,
+        );
+    }
     $languages = get_languages();
     // Determine default language.
     $instlang = get_user_institution_language($USER->id, $instlanginstname);
@@ -362,12 +375,6 @@ function general_account_prefs_form_elements($prefs) {
         'help' => true,
     );
 
-    $elements['addremovecolumns'] = array(
-        'type' => 'switchbox',
-        'defaultvalue' => $prefs->addremovecolumns,
-        'title' => get_string('showviewcolumns', 'account'),
-        'help' => 'true'
-    );
     // TODO: add a way for plugins (like blog!) to have account preferences
     $elements['multipleblogs'] = array(
         'type' => 'switchbox',
@@ -445,6 +452,20 @@ function general_account_prefs_form_elements($prefs) {
             'defaultvalue' => $prefs->devicedetection,
         );
     }
+
+    $elements['showlayouttranslatewarning'] = array(
+        'type' => 'switchbox',
+        'defaultvalue' => $prefs->showlayouttranslatewarning,
+        'title' => get_string('showlayouttranslatewarning', 'account'),
+        'description' => get_string('showlayouttranslatewarningdescription', 'account', hsc(get_config('sitename'))),
+    );
+
+    $elements['accessibilityprofile'] = array(
+        'type' => 'switchbox',
+        'defaultvalue' => $prefs->accessibilityprofile,
+        'title' => get_string('accessiblepagecreation', 'account'),
+        'description' => get_string('accessiblepagecreationdescription', 'account'),
+    );
 
     return $elements;
 }
@@ -715,9 +736,6 @@ function email_user($userto, $userfrom, $subject, $messagetext, $messagehtml='',
             $messagehtml);
     }
 
-
-    require_once('phpmailer/PHPMailerAutoload.php');
-
     $mail = new PHPMailer(true);
 
     $mail->CharSet = 'UTF-8';
@@ -830,23 +848,7 @@ function email_user($userto, $userfrom, $subject, $messagetext, $messagehtml='',
         // If there's a phpmailer error already, assume it's an invalid address
         throw new InvalidEmailException("Cannot send email to $usertoname with subject $subject. Error from phpmailer was: " . $mail->ErrorInfo);
     }
-    
-    //PATCH IOC008
-    if (get_config('local_xtecmail_app')) {
-        require_once(get_config('docroot') . 'opt/xtecmail/lib.php');
-        $xtecmail = new xtecmail(get_config('local_xtecmail_app'),
-                                 get_config('local_xtecmail_sender'),
-                                 get_config('local_xtecmail_env'));
-        $content = $messagehtml ?: $messagetext;
-        $type = $messagehtml ? 'text/html' : 'text/plain';
-        try {
-            $xtecmail->send(array($to), array(), array(), $mail->From, $mail->Subject, $content, $type);
-        } catch (xtecmailerror $e) {
-            throw new EmailException("Couldn't send email to $usertoname with subject $subject.");
-        }
-        return true;
-    }
-    //Fi
+
     $mail->WordWrap = 79;
 
     if ($messagehtml) {
@@ -911,6 +913,25 @@ function generate_email_processing_address($userid, $userto, $type='B') {
 }
 
 /**
+* Case insensitive checking for emails to existing db
+* @return bool if the emails exists or not
+*/
+function check_email_exists($email, $ownerid = 0) {
+    // get existing users 'usr','email'
+    $resultarray = get_column_sql("SELECT email FROM {usr} WHERE id != ?", array($ownerid));
+    $resultarray = array_merge($resultarray, get_column_sql("SELECT email FROM {artefact_internal_profile_email} WHERE owner != ?", array($ownerid)));
+    $resultarray = array_merge($resultarray, get_column_sql("SELECT title FROM {artefact} WHERE artefacttype = ? AND owner != ?", array('email', $ownerid)));
+    // get pending(approval required)/registered(no approval but need completion setup for new institution users ('user_registration', 'email')
+    $resultarray = array_merge($resultarray, get_column('usr_registration','email'));
+    foreach ($resultarray as $ind => $e) {
+        if (strtolower($e) == strtolower($email)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
  * Check whether an email account is over the site-wide bounce threshold.
  * If the user is over threshold, then e-mail is disabled for their
  * account, and they are sent a notification to notify them of the change.
@@ -951,7 +972,7 @@ function check_overcount($mailinfo) {
             $lang = get_user_language($mailinfo->owner);
 
             // Send a notification that e-mail has been disabled
-            $message = new StdClass;
+            $message = new stdClass();
             $message->users = array($mailinfo->owner);
 
             $message->subject = get_string_from_language($lang, 'maildisabled', 'account');
@@ -1010,7 +1031,7 @@ function update_bounce_count($userto, $reset=false) {
  */
 function process_email($address) {
 
-    $email = new StdClass;
+    $email = new stdClass();
 
     if (strlen($address) <= 30) {
         log_debug ('-- Email address not long enough to contain valid data.');
@@ -1205,13 +1226,13 @@ function full_name($user=null) {
     global $USER;
 
     if ($user === null) {
-       $userobj = new StdClass;
+       $userobj = new stdClass();
        $userobj->firstname = $USER->get('firstname');
        $userobj->lastname  = $USER->get('lastname');
        $userobj->deleted   = $USER->get('deleted');
     }
     else if ($user instanceof User) {
-       $userobj = new StdClass;
+       $userobj = new stdClass();
        $userobj->firstname = $user->get('firstname');
        $userobj->lastname  = $user->get('lastname');
        $userobj->deleted   = $user->get('deleted');
@@ -1237,7 +1258,7 @@ function get_user_for_display($user=null) {
         'studentid',
     );
 
-    if (is_numeric($user) && isset($usercache[$user])) {
+    if (is_numeric($user) && isset($usercache[$user]) && !defined('BEHAT_TEST')) {
         return $usercache[$user];
     }
 
@@ -1245,7 +1266,7 @@ function get_user_for_display($user=null) {
         $user = (object)$user;
     }
     else if (is_null($user) || (is_numeric($user) && $user == $USER->get('id'))) {
-        $user = new StdClass;
+        $user = new stdClass();
         foreach ($fields as $f) {
             $user->$f = $USER->get($f);
         }
@@ -1254,7 +1275,7 @@ function get_user_for_display($user=null) {
     }
     else if ($user instanceof User) {
         $userObj = $user;
-        $user = new StdClass;
+        $user = new stdClass();
         foreach ($fields as $f) {
             $user->$f = $userObj->get($f);
         }
@@ -1271,7 +1292,7 @@ function get_user_for_display($user=null) {
         $user->id = null;
     }
 
-    if (is_numeric($user->id)) {
+    if (is_numeric($user->id) && !defined('BEHAT_TEST')) {
         if (!isset($usercache[$user->id])) {
             return $usercache[$user->id] = $user;
         }
@@ -1301,7 +1322,7 @@ function display_username($user=null) {
     global $USER;
 
     if ($user === null) {
-        $user = new StdClass;
+        $user = new stdClass();
         $user->username = $USER->get('username');
     }
     // if cached (non $USER) $user object is missing username
@@ -1315,6 +1336,25 @@ function display_username($user=null) {
     else {
         return $user->username;
     }
+}
+
+/**
+ * Translate the supplied user id to it's display name
+ *
+ * @param array $ids  User id number
+ * @return object $results containing id and text values
+ */
+function translate_user_ids_to_names($ids) {
+    // for an empty list, the element '' is transmitted
+    $ids = array_diff($ids, array(''));
+    $results = array();
+    foreach ($ids as $id) {
+        $deleted = get_field('usr', 'deleted', 'id', $id);
+        if (($deleted === '0') && is_numeric($id)) {
+            $results[] = (object) array('id' => $id, 'text' => display_name($id));
+        }
+    }
+    return $results;
 }
 
 /**
@@ -1434,6 +1474,11 @@ function get_user($userid) {
  * @param int $suspendinguserid The ID of the user who is performing the suspension
  */
 function suspend_user($suspendeduserid, $reason, $suspendinguserid=null) {
+    if ($suspendeduserid == 0) {
+        // We shouldn't be suspending 'root' user
+        throw new UserException(get_string('invaliduser', 'error'));
+    }
+
     if ($suspendinguserid === null) {
         global $USER;
         $suspendinguserid = $USER->get('id');
@@ -1448,7 +1493,7 @@ function suspend_user($suspendeduserid, $reason, $suspendinguserid=null) {
         $suspendinguserid = $admins[0]->id;
     }
 
-    $suspendrec = new StdClass;
+    $suspendrec = new stdClass();
     $suspendrec->id              = $suspendeduserid;
     $suspendrec->suspendedcusr   = $suspendinguserid;
     $suspendrec->suspendedreason = is_array($reason) ? get_string('privacyrefusal', 'admin') : $reason;
@@ -1460,7 +1505,7 @@ function suspend_user($suspendeduserid, $reason, $suspendinguserid=null) {
     remove_user_sessions($suspendeduserid);
 
     $lang = get_user_language($suspendeduserid);
-    $message = new StdClass;
+    $message = new stdClass();
     $message->users = array($suspendeduserid);
     $message->subject = get_string_from_language($lang, 'youraccounthasbeensuspended');
     if ($reason == '') {
@@ -1489,6 +1534,7 @@ function suspend_user($suspendeduserid, $reason, $suspendinguserid=null) {
                 get_config('sitename'), display_name($suspendinguserid, $suspendeduserid), $reason);
         }
     }
+    $message->includesuspendedusers = true;
     require_once('activity.php');
     activity_occurred('maharamessage', $message);
 
@@ -1501,7 +1547,7 @@ function suspend_user($suspendeduserid, $reason, $suspendinguserid=null) {
  * @param int $userid The ID of the user to unsuspend
  */
 function unsuspend_user($userid) {
-    $suspendedrec = new StdClass;
+    $suspendedrec = new stdClass();
     $suspendedrec->id = $userid;
     $suspendedrec->suspendedcusr = null;
     $suspendedrec->suspendedreason = null;
@@ -1509,10 +1555,11 @@ function unsuspend_user($userid) {
     update_record('usr', $suspendedrec);
 
     $lang = get_user_language($userid);
-    $message = new StdClass;
+    $message = new stdClass();
     $message->users = array($userid);
     $message->subject = get_string_from_language($lang, 'youraccounthasbeenunsuspended');
     $message->message = get_string_from_language($lang, 'youraccounthasbeenunsuspendedtext2', 'mahara', get_config('sitename'));
+
     require_once('activity.php');
     activity_occurred('maharamessage', $message);
 
@@ -1538,7 +1585,7 @@ function delete_user($userid) {
 
     $user = get_record('usr', 'id', $userid, null, null, null, null, implode(', ', $fieldstomunge));
 
-    $deleterec = new StdClass;
+    $deleterec = new stdClass();
     $deleterec->id = $userid;
     $deleterec->deleted = 1;
     foreach ($fieldstomunge as $field) {
@@ -1599,6 +1646,11 @@ function delete_user($userid) {
     delete_records('usr_login_data', 'usr', $userid);
     delete_records('usr_pendingdeletion', 'usr', $userid); // just in case
     delete_records('usr_agreement', 'usr', $userid);
+    delete_records('existingcopy', 'usr', $userid);
+    delete_records('artefact_internal_profile_email', 'owner', $userid);
+    // Delete any submission history
+    delete_records('module_assessmentreport_history', 'userid', $userid);
+    delete_records('module_assessmentreport_history', 'markerid', $userid);
 
     if (is_plugin_active('framework', 'module')) {
         delete_records('framework_assessment_feedback', 'usr', $userid);
@@ -1663,7 +1715,7 @@ function delete_user($userid) {
  * @param int $userid The ID of the user to undelete
  */
 function undelete_user($userid) {
-    $deleterec = new StdClass;
+    $deleterec = new stdClass();
     $deleterec->id = $userid;
     $deleterec->deleted = 0;
     update_record('usr', $deleterec);
@@ -1821,8 +1873,37 @@ function can_send_message($from, $to) {
     if (is_object($to)) {
         $to = $to->id;
     }
+
+    // Site admins can send to any user in the system
+    // regardless of the user's notification settings.
+    if ($from->admin) {
+        return true;
+    }
+
     $messagepref = get_account_preference($to, 'messages');
-    return (is_friend($from->id, $to) && $messagepref == 'friends') || $messagepref == 'allow' || $from->admin;
+
+    $cansend = false;
+    // Can send message if users are friends and the 'friendsnotallowed' feature is not set
+    if (is_friend($from->id, $to) && $messagepref == 'friends'
+        && !get_config('friendsnotallowed')) {
+        $cansend = true;
+    }
+    // Can send message if recipient 'allows' recieving messages and the 'isolatedinstitutions' is not set
+    if ($messagepref == 'allow' && !is_isolated()) {
+        $cansend = true;
+    }
+    // Can send message if the 'isolatedinstitutions' is set and both users are from the same institution
+    if ($messagepref != 'nobody' && is_isolated()) {
+        try {
+            isolatedinstitution_access($to, $from->id);
+            $cansend = true;
+        }
+        catch (AccessDeniedException $e) {
+            $cansend = false;
+        }
+    }
+
+    return $cansend;
 }
 
 function load_user_institutions($userid) {
@@ -1831,15 +1912,13 @@ function load_user_institutions($userid) {
     }
     $userid = (int) $userid;
 
-    require_once('ddl.php');
-    $table = new XMLDBTable('institution');
-    $field = new XMLDBField('logoxs');
-    $logoxs = field_exists($table, $field) ? ',i.logoxs' : '';
+    $logoxs = db_column_exists('institution', 'logoxs') ? ',i.logoxs' : '';
+    $tags = db_column_exists('institution', 'tags') ? ',i.tags' : '';
     if ($userid !== 0 && $institutions = get_records_sql_assoc('
         SELECT u.institution, ' . db_format_tsfield('ctime') . ',' . db_format_tsfield('u.expiry', 'membership_expiry') . ',
                u.studentid, u.staff, u.admin, i.displayname, i.theme, i.registerallowed, i.showonlineusers,
                i.allowinstitutionpublicviews, i.logo' . $logoxs . ', i.style, i.licensemandatory, i.licensedefault,
-               i.dropdownmenu, i.skins, i.suspended
+               i.dropdownmenu, i.skins, i.suspended' . $tags . '
         FROM {usr_institution} u INNER JOIN {institution} i ON u.institution = i.name
         WHERE u.usr = ? ORDER BY i.priority DESC', array($userid))) {
         return $institutions;
@@ -1977,7 +2056,7 @@ function profile_url($user, $full=true, $useid=false) {
 }
 
 /**
- * used by user/myfriends.php and user/find.php to get the data (including pieforms etc) for display
+ * used by user/index.php to get the data (including pieforms etc) for display
  * @param array $userids
  * @return array containing the users in the order from $userids
  */
@@ -1998,7 +2077,7 @@ function get_users_data($userids, $getviews=true) {
                           WHERE ap.usr = u.id AND ap.field = \'friendscontrol\'), \'auth\') AS friendscontrol,
                 (SELECT 1 FROM {usr_friend} WHERE ((usr1 = ? AND usr2 = u.id) OR (usr2 = ? AND usr1 = u.id))) AS friend,
                 (SELECT 1 FROM {usr_friend_request} fr WHERE fr.requester = ? AND fr.owner = u.id) AS requestedfriendship,
-                (SELECT title FROM {artefact} WHERE artefacttype = \'introduction\' AND owner = u.id) AS introduction,
+                (SELECT description FROM {artefact} WHERE artefacttype = \'introduction\' AND owner = u.id) AS introduction,
                 fp.message
                 FROM {usr} u
                 LEFT JOIN {usr_account_preference} ap ON (u.id = ap.usr AND ap.field = \'hiderealname\')
@@ -2022,29 +2101,57 @@ function get_users_data($userids, $getviews=true) {
     }
 
     if (!$data || !$getviews || !$views = get_views(array_keys($data), null, null)) {
-        $views = array();
+      $views = array();
     }
 
     if ($getviews) {
         $viewcount = array_map('count', $views);
         // since php is so special and inconsistent, we can't use array_map for this because it breaks the top level indexes.
         $cleanviews = array();
-        foreach ($views as $userindex => $viewarray) {
-            $cleanviews[$userindex] = array_slice($viewarray, 0, 5);
 
-            // Don't reveal any more about the view than necessary
-            foreach ($cleanviews as $userviews) {
-                foreach ($userviews as &$view) {
-                    foreach (array_keys(get_object_vars($view)) as $key) {
-                        if ($key != 'id' && $key != 'title' && $key != 'url' && $key != 'fullurl') {
-                            unset($view->$key);
+        foreach ($views as $userindex => $view) {
+            $collectionobject = null;
+            foreach ($view as $viewid => $vdata) {
+                //pages in a collection
+                if (!empty($vdata->collection)) {
+                    if (!$collectionobject) {
+                        $collectionobject = $vdata->collection;
+                        $cleanviews[$userindex][] = $vdata;
+                    }
+                    else {
+                        if ($collectionobject != $vdata->collection && isset($collectionobject)) {
+                          $collectionobject = $vdata->collection;
+                          $cleanviews[$userindex][] = $vdata;
                         }
+                    }
+                }
+            }
+            // pages not in a collection, separating the loop to display collections first, then single pages
+            foreach ($view as $viewid => $vdata) {
+                if (empty($vdata->collection)) {
+                    $cleanviews[$userindex][] = $vdata;
+                }
+            }
+            // $cleanviews[$userindex] = array_slice($cleanviews[$userindex], 0, 10); // if we want to limit output
+        }
+
+        // Don't reveal any more about the view than necessary
+        foreach ($cleanviews as $userviews) {
+            foreach ($userviews as &$view) {
+                foreach (array_keys(get_object_vars($view)) as $key) {
+                    if (!empty($view->collection)) {
+                        if ($key == 'title') {
+                            $view->$key = $view->collection->get('name');
+                        }
+                    }
+                    if ($key != 'id' && $key != 'title' && $key != 'url' && $key != 'fullurl') {
+                        // pages in a collection should appear with collection name as title
+                        unset($view->$key);
                     }
                 }
             }
         }
     }
-
     foreach ($data as $friend) {
         if ($getviews && isset($cleanviews[$friend->id])) {
             $friend->views = $cleanviews[$friend->id];
@@ -2066,14 +2173,14 @@ function get_users_data($userids, $getviews=true) {
     return $ordereddata;
 }
 
-function build_userlist_html(&$data, $page, $admingroups) {
+function build_userlist_html(&$data, $searchtype, $admingroups, $filter='', $query='') {
     if ($data['data']) {
-        $userlist = array_map(create_function('$u','return (int)$u[\'id\'];'), $data['data']);
-        $userdata = get_users_data($userlist, $page == 'myfriends');
+        $userlist = array_map(function($u) { return (int)$u['id']; }, $data['data']);
+        $userdata = get_users_data($userlist, $filter != 'pending');
     }
     $smarty = smarty_core();
     $smarty->assign('data', isset($userdata) ? $userdata : null);
-    $smarty->assign('page', $page);
+    $smarty->assign('page', $searchtype);
     $smarty->assign('offset', $data['offset']);
 
     $params = array();
@@ -2084,8 +2191,7 @@ function build_userlist_html(&$data, $page, $admingroups) {
     if (isset($data['filter'])) {
         $params['filter'] = $data['filter'];
     }
-
-    if ($page == 'myfriends') {
+    if ($searchtype == 'myfriends') {
         $resultcounttextsingular = get_string('friend', 'group');
         $resultcounttextplural = get_string('friends', 'group');
     }
@@ -2099,7 +2205,7 @@ function build_userlist_html(&$data, $page, $admingroups) {
     $data['tablerows'] = $smarty->fetch('user/userresults.tpl');
     $pagination = build_pagination(array(
         'id' => 'friendslist_pagination',
-        'url' => get_config('wwwroot') . 'user/' . $page . '.php?' . http_build_query($params),
+        'url' => get_config('wwwroot') . 'user/index.php?' . http_build_query($params),
         'jsonscript' => 'json/friendsearch.php',
         'datatable' => 'friendslist',
         'searchresultsheading' => 'searchresultsheading',
@@ -2111,7 +2217,9 @@ function build_userlist_html(&$data, $page, $admingroups) {
         'numbersincludeprevnext' => 2,
         'resultcounttextsingular' => $resultcounttextsingular,
         'resultcounttextplural' => $resultcounttextplural,
-        'extradata' => array('page' => $page),
+        'extradata' => array('searchtype' => $searchtype),
+        'filter'    => $filter,
+        'query' => $query,
     ));
     $data['pagination'] = $pagination['html'];
     $data['pagination_js'] = $pagination['javascript'];
@@ -2263,34 +2371,41 @@ function friends_control_sideblock($returnto='myfriends') {
         )
     );
     // Make a sideblock to put the friendscontrol block in
-    return array(
-        'name' => 'friendscontrol',
+    $sideblock = array(
+        'name'   => 'friendscontrol',
         'weight' => -5,
-        'data' => array('form' => pieform($form))
+        'data'   => array('form' => pieform($form)),
+        'template' => 'sideblocks/friendscontrol.tpl',
+        'visible' => true,
     );
+    return $sideblock;
 }
 
 function friendscontrol_submit(Pieform $form, $values) {
     global $USER, $SESSION;
     $USER->set_account_preference('friendscontrol', $values['friendscontrol']);
     $SESSION->add_ok_msg(get_string('updatedfriendcontrolsetting', 'account'));
-    redirect($values['returnto'] == 'find' ? '/user/find.php' : '/user/myfriends.php');
+    redirect('/user/index.php');
 }
 
-function acceptfriend_form($friendid) {
+function acceptfriend_form($friendid, $modalmode='') {
+    $value = ($modalmode == 'modal' ? get_string('approverequest', 'group') : '<span class="icon icon-check icon-lg text-success left" role="presentation" aria-hidden="true"></span>' . get_string('approve', 'group'));
+    $elementclass = $modalmode == 'modal' ? 'form-as-button' : 'form-as-button pull-left';
+    $class = $modalmode == 'modal' ? 'link-unstyled' : 'default btn-secondary';
+
     return pieform(array(
         'name' => 'acceptfriend' . (int) $friendid,
         'validatecallback' => 'acceptfriend_validate',
         'successcallback'  => 'acceptfriend_submit',
         'renderer' => 'div',
-        'class' => 'form-as-button',
+        'class' => $elementclass,
         'autofocus' => 'false',
         'elements' => array(
             'acceptfriend_submit' => array(
                 'type' => 'button',
                 'usebuttontag' => true,
-                'class' => 'btn-link btn-text',
-                'value' => get_string('approverequest', 'group'),
+                'class' => $class,
+                'value' =>  $value,
             ),
             'id' => array(
                 'type' => 'hidden',
@@ -2328,13 +2443,13 @@ function acceptfriend_submit(Pieform $form, $values) {
     }
 
     // friend db record
-    $f = new StdClass;
+    $f = new stdClass();
     $f->ctime = db_format_timestamp(time());
     $f->usr1 = $user->id;
     $f->usr2 = $USER->get('id');
 
     // notification info
-    $n = new StdClass;
+    $n = new stdClass();
     $n->url = profile_url($USER, false);
     $n->users = array($user->id);
     $n->fromuser = $USER->get('id');
@@ -2359,20 +2474,22 @@ function acceptfriend_submit(Pieform $form, $values) {
 }
 
 // Form to add someone who has friendscontrol set to 'auto'
-function addfriend_form($friendid) {
+function addfriend_form($friendid, $displaymode='') {
+    $value = $displaymode == 'pageactions' ? '<span class="icon icon-user-plus icon-lg left" role="presentation"></span>' : '<span class="icon icon-user-plus icon-lg left" role="presentation"></span>' . get_string('addtofriendslist', 'group');
     return pieform(array(
         'name' => 'addfriend' . (int) $friendid,
         'validatecallback' => 'addfriend_validate',
         'successcallback'  => 'addfriend_submit',
         'renderer' => 'div',
         'autofocus' => 'false',
-        'class' => 'form-as-button pull-right',
+        'class' => 'form-as-button float-right',
         'elements' => array(
             'addfriend_submit' => array(
+                'elementtitle' => get_string('addtofriendslist', 'group'),
                 'type' => 'button',
                 'usebuttontag' => true,
-                'class' => 'btn-default last',
-                'value' => '<span class="icon icon-user-plus icon-lg left" role="presentation"></span>' . get_string('addtofriendslist', 'group'),
+                'class' => 'btn-secondary last' . ($displaymode == 'pageactions' ? ' addaction' : ''),
+                'value' => $value,
             ),
             'id' => array(
                 'type' => 'hidden',
@@ -2412,11 +2529,11 @@ function addfriend_submit(Pieform $form, $values) {
     }
 
     // friend db record
-    $f = new StdClass;
+    $f = new stdClass();
     $f->ctime = db_format_timestamp(time());
 
     // notification info
-    $n = new StdClass;
+    $n = new stdClass();
     $n->url = profile_url($USER, false);
     $n->users = array($user->id);
     $lang = get_user_language($user->id);
@@ -2446,15 +2563,17 @@ function addfriend_submit(Pieform $form, $values) {
 /**
  * Create user
  *
- * @param object $user stdclass or User object for the usr table
- * @param array  $profile profile field/values to set
- * @param string|object $institution Institution the user should joined to (name or Institution object)
- * @param bool $remoteauth authinstance record for a remote authinstance
- * @param string $remotename username on the remote site
- * @param array $accountprefs user account preferences to set
+ * @param object         $user             stdclass or User object for the usr table
+ * @param array          $profile          profile field/values to set
+ * @param string|object  $institution      Institution the user should joined to (name or Institution object)
+ * @param bool           $remoteauth       authinstance record for a remote authinstance
+ * @param string         $remotename       username on the remote site
+ * @param array          $accountprefs     user account preferences to set
+ * @param boolean        $quickhash        use quickhash when resetting password
+ * @param string         $institutionrole  creating user in institution with higher than member role (used with $institution);
  * @return integer id of the new user
  */
-function create_user($user, $profile=array(), $institution=null, $remoteauth=null, $remotename=null, $accountprefs=array(), $quickhash=false) {
+function create_user($user, $profile=array(), $institution=null, $remoteauth=null, $remotename=null, $accountprefs=array(), $quickhash=false, $institutionrole='member') {
     db_begin();
 
     if (!empty($institution)) {
@@ -2478,12 +2597,16 @@ function create_user($user, $profile=array(), $institution=null, $remoteauth=nul
         }
         if (empty($user->quota)) {
             $quota = get_config_plugin('artefact', 'file', 'defaultquota');
-            if (!empty($institution) && !empty($institution->quota)) {
-                $quota = min($quota, $institution->quota);
+            if (!empty($institution) && $institution->defaultquota > 0) {
+                $quota = min($quota, $institution->defaultquota);
             }
             $user->quota = $quota;
         }
-        if (get_config('defaultaccountlifetime')) {
+        if (isset($profile->expiry)) {
+            //set the expiry date from the csv upload
+            $user->expiry = $profile->expiry;
+        }
+        else if (get_config('defaultaccountlifetime')) {
             // we need to set the user expiry to the site default one
             $user->expiry = date('Y-m-d',mktime(0, 0, 0, date('m'), date('d'), date('Y')) + (int)get_config('defaultaccountlifetime'));
         }
@@ -2500,7 +2623,7 @@ function create_user($user, $profile=array(), $institution=null, $remoteauth=nul
         set_profile_field($user->id, 'lastname', $user->lastname, TRUE);
     }
     foreach ($profile as $k => $v) {
-        if (in_array($k, array('firstname', 'lastname', 'email'))) {
+        if (in_array($k, array('firstname', 'lastname', 'email', 'expiry'))) {
             continue;
         }
         set_profile_field($user->id, $k, $v, TRUE);
@@ -2508,7 +2631,14 @@ function create_user($user, $profile=array(), $institution=null, $remoteauth=nul
 
     if (!empty($institution)) {
         if ($institution->name != 'mahara') {
-            $institution->addUserAsMember($user); // uses $user->newuser
+            $institutionstaff = $institutionadmin = null;
+            if ($institutionrole == 'admin') {
+                $institutionadmin = true;
+            }
+            if ($institutionrole == 'staff') {
+                $institutionstaff = true;
+            }
+            $institution->addUserAsMember($user, $institutionstaff, $institutionadmin); // uses $user->newuser
             if (empty($accountprefs['licensedefault'])) {
                 $accountprefs['licensedefault'] = LICENSE_INSTITUTION_DEFAULT;
             }
@@ -2585,11 +2715,8 @@ function update_user($user, $profile, $remotename=null, $accountprefs=array(), $
 
     db_begin();
 
-    // Log the user out, otherwise they can overwrite all this on the next request
-    remove_user_sessions($userid);
-
     $updated = array();
-    $newrecord = new StdClass;
+    $newrecord = new stdClass();
     foreach (get_object_vars($user) as $k => $v) {
         if (!empty($v) && ($k == 'password' || empty($oldrecord->$k) || $oldrecord->$k != $v)) {
             $newrecord->$k = $v;
@@ -2602,19 +2729,39 @@ function update_user($user, $profile, $remotename=null, $accountprefs=array(), $
         }
     }
 
+    foreach (get_object_vars($profile) as $k => $v) {
+        if ($k == 'expiry') {
+            if (!$oldrecord->expiry) {
+                //adding an expiry for first time
+                $newrecord->expiry = $v;
+                $updated[$k] = $v;
+            }
+            else {
+                $unexpire = $oldrecord->expiry && strtotime($oldrecord->expiry) < time() && (empty($v) || strtotime($v) > time());
+                $newexpiry = db_format_timestamp($v);
+                if ($oldrecord->expiry != $newexpiry) {
+                    $newrecord->expiry = $newexpiry;
+                    $updated[$k] = $v;
+                    if ($unexpire) {
+                        $newrecord->expirymailsent = 0;
+                        $newrecord->lastaccess = db_format_timestamp(time());
+                    }
+                }
+            }
+            continue;
+        }
+        if (get_profile_field($userid, $k) != $v) {
+            set_profile_field($userid, $k, $v);
+            $updated[$k] = $v;
+        }
+    }
+
     if (count(get_object_vars($newrecord))) {
         $newrecord->id = $userid;
         update_record('usr', $newrecord);
         if (!empty($newrecord->password)) {
             $newrecord->authinstance = $user->authinstance;
             reset_password($newrecord, false, $quickhash);
-        }
-    }
-
-    foreach (get_object_vars($profile) as $k => $v) {
-        if (get_profile_field($userid, $k) != $v) {
-            set_profile_field($userid, $k, $v);
-            $updated[$k] = $v;
         }
     }
 
@@ -2701,20 +2848,25 @@ function install_system_profile_view() {
     $view->set_access(array(array(
         'type' => 'loggedin'
     )));
-    $blocktypes = array('profileinfo' => 1, 'myviews' => 1, 'mygroups' => 1, 'myfriends' => 2, 'wall' => 2);  // column ids
+    $blocktypes = array(
+        'profileinfo' => array(0,0),
+        'myviews'     => array(0,1),
+        'mygroups'    => array(0,2),
+        'myfriends'   => array(1,0),
+        'wall'        => array(1,1)
+    );  // block coordinates (x,y) in grid
     $installed = get_column_sql('SELECT name FROM {blocktype_installed} WHERE name IN (' . join(',', array_map('db_quote', array_keys($blocktypes))) . ')');
-    $weights = array(1 => 0, 2 => 0);
     foreach (array_keys($blocktypes) as $blocktype) {
         if (in_array($blocktype, $installed)) {
-            $weights[$blocktypes[$blocktype]]++;
             $title = ($blocktype == 'profileinfo') ? get_string('aboutme', 'blocktype.internal/profileinfo') : '';
             $newblock = new BlockInstance(0, array(
                 'blocktype'  => $blocktype,
                 'title'      => $title,
                 'view'       => $view->get('id'),
-                'row'        => 1,
-                'column'     => $blocktypes[$blocktype],
-                'order'      => $weights[$blocktypes[$blocktype]],
+                'positionx'  => $blocktypes[$blocktype][0] * 6,
+                'positiony'  => $blocktypes[$blocktype][1] * 3,
+                'height'     => 3,
+                'width'      => 6,
             ));
             $newblock->commit();
         }
@@ -2750,8 +2902,8 @@ function install_system_dashboard_view() {
         array(
             'blocktype' => 'newviews',
             'title' => '',
-            'row'   => 1,
-            'column' => 1,
+            'positionx' => 0,
+            'positiony' => 0,
             'config' => array(
                 'limit' => 5,
             ),
@@ -2759,15 +2911,15 @@ function install_system_dashboard_view() {
         array(
             'blocktype' => 'myviews',
             'title' => '',
-            'row'   => 1,
-            'column' => 1,
+            'positionx' => 0,
+            'positiony' => 3,
             'config' => null,
         ),
         array(
             'blocktype' => 'inbox',
             'title' => '',
-            'row'   => 1,
-            'column' => 2,
+            'positionx' => 6,
+            'positiony' => 0,
             'config' => array(
                 'feedback' => true,
                 'groupmessage' => true,
@@ -2783,8 +2935,8 @@ function install_system_dashboard_view() {
         array(
             'blocktype' => 'inbox',
             'title' => '',
-            'row'   => 1,
-            'column' => 2,
+            'positionx' => 6,
+            'positiony' => 3,
             'config' => array(
                 'newpost' => true,
                 'maxitems' => '5',
@@ -2793,25 +2945,24 @@ function install_system_dashboard_view() {
         array(
             'blocktype' => 'watchlist',
             'title' => '',
-            'row'   => 1,
-            'column' => 2,
+            'positionx' => 6,
+            'positiony' => 6,
             'config' => array(
                 'count' => '10',
             ),
         ),
     );
     $installed = get_column_sql('SELECT name FROM {blocktype_installed}');
-    $weights = array(1 => 0, 2 => 0);
     foreach ($blocktypes as $blocktype) {
         if (in_array($blocktype['blocktype'], $installed)) {
-            $weights[$blocktype['column']]++;
             $newblock = new BlockInstance(0, array(
                 'blocktype'  => $blocktype['blocktype'],
                 'title'      => $blocktype['title'],
                 'view'       => $view->get('id'),
-                'row'        => $blocktype['row'],
-                'column'     => $blocktype['column'],
-                'order'      => $weights[$blocktype['column']],
+                'positionx'  => $blocktype['positionx'],
+                'positiony'  => $blocktype['positiony'],
+                'width'      => 6,
+                'height'     => 3,
                 'configdata' => $blocktype['config'],
             ));
             $newblock->commit();
@@ -2860,7 +3011,7 @@ function profile_icon_url($user, $maxwidth=40, $maxheight=40) {
     }
 
     // Available sizes of the 'no_userphoto' image:
-    $allowedsizes = array(16, 20, 25, 40, 50, 60, 100);
+    $allowedsizes = array(16, 20, 25, 30, 40, 50, 60, 100);
     if ($maxwidth != $maxheight || !in_array($maxwidth, $allowedsizes)) {
         log_warn('profile_icon_url: maxwidth, maxheight should be equal and in (' . join(', ', $allowedsizes) . ')');
     }
@@ -2918,7 +3069,9 @@ function remote_avatar_url($email, $size) {
         log_warn('remote_avatar_url: size should be in (' . join(', ', $allowedsizes) . ')');
         $s = 40;
     }
-    $notfound = $THEME->get_image_url('no_userphoto' . $s);
+    // The no_userphoto at 100px doesn't have a size suffix
+    $notfoundimg = ($s == 100) ? 'no_userphoto' : 'no_userphoto' . $s;
+    $notfound = $THEME->get_image_url($notfoundimg);
     if (!empty($email) && get_config('remoteavatars')) {
         return remote_avatar($email, $s, $notfound);
     }
@@ -3054,8 +3207,14 @@ function get_onlineusers($limit=10, $offset=0, $orderby='firstname,lastname') {
             }
         }
     }
+    else if (!$USER->get('admin')) {
+        $showusers = get_field('institution', 'showonlineusers', 'name', 'mahara');
+        if ((int)$showusers === 1) {
+            $showusers = 3;
+        }
+    }
 
-    $result = array('count' => 0, 'limit' => $limit, 'offset' => $offset, 'data' => false);
+    $result = array('count' => 0, 'limit' => $limit, 'offset' => $offset, 'data' => false, 'showusers' => $showusers);
     switch ($showusers) {
         case 0: // show none
             return $result;
@@ -3063,12 +3222,17 @@ function get_onlineusers($limit=10, $offset=0, $orderby='firstname,lastname') {
             $sql = "SELECT DISTINCT u.* FROM {usr} u JOIN {usr_institution} i ON id = i.usr
                 WHERE deleted = 0 AND lastaccess > ? AND i.institution IN (" . join(',',array_map('db_quote', array_keys($institutions))) . ")
                 ORDER BY $orderby";
-            $countsql = 'SELECT count(DISTINCT id) FROM {usr} JOIN {usr_institution} i ON id = i.usr
+            $countsql = 'SELECT COUNT(DISTINCT id) FROM {usr} JOIN {usr_institution} i ON id = i.usr
                 WHERE deleted = 0 AND lastaccess > ? AND i.institution IN (' . join(',',array_map('db_quote', array_keys($institutions))) . ')';
             break;
         case 2: // show all
             $sql = "SELECT * FROM {usr} WHERE deleted = 0 AND lastaccess > ? ORDER BY $orderby";
-            $countsql = 'SELECT count(id) FROM {usr} WHERE deleted = 0 AND lastaccess > ?';
+            $countsql = 'SELECT COUNT(id) FROM {usr} WHERE deleted = 0 AND lastaccess > ?';
+            break;
+        case 3: // Show all only from no institution
+            $sql = "SELECT DISTINCT u.* FROM {usr} u WHERE deleted = 0 AND lastaccess > ? AND u.id NOT IN (SELECT DISTINCT usr FROM {usr_institution})
+                ORDER BY $orderby";
+            $countsql = 'SELECT COUNT(DISTINCT id) FROM {usr} u WHERE deleted = 0 AND lastaccess > ? AND u.id NOT IN (SELECT DISTINCT usr FROM {usr_institution})';
             break;
     }
 
@@ -3093,7 +3257,8 @@ function get_onlineusers($limit=10, $offset=0, $orderby='firstname,lastname') {
     else {
         $onlineusers = array();
     }
-    $result['data'] = array_map(create_function('$a', 'return $a->id;'), $onlineusers);
+    $result['onlineusers'] = $onlineusers; // return a list of user objects
+    $result['data'] = array_map(function($a) { return $a->id; }, $onlineusers); // return a list of user id numbers
 
     return $result;
 }
@@ -3304,7 +3469,7 @@ function get_latest_privacy_versions($institutions = array(), $ignoreagreevalue 
  *
  */
 function save_user_reply_to_agreement($userid, $sitecontentid, $agreed) {
-    $usragreement = new StdClass;
+    $usragreement = new stdClass();
     $usragreement->usr = $userid;
     $usragreement->sitecontentid = $sitecontentid;
     $usragreement->ctime = db_format_timestamp(time());
@@ -3338,4 +3503,56 @@ function get_institution_versioned_content($institution = 'mahara') {
         ORDER BY s.id DESC", array($institution, $institution));
 
     return $content;
+}
+
+/**
+ * Check isolated institution access
+ *
+ * If the 'isolatedinstitutions' feature is set, check who can access user profile/request friendship page.
+ * @param $userid string Id of the user the current user is trying to access
+ * @param $currentuser string Optional - Id of the current user if we want it to be someone other than logged in user
+ * @return bool
+ * @throws AccessDeniedException
+ */
+function isolatedinstitution_access($userid, $currentuserid = null) {
+    global $USER;
+
+    if (!empty($currentuserid)) {
+        $user = new User();
+        $user->find_by_id($currentuserid);
+    }
+    else {
+        $user = $USER;
+    }
+
+    $is_admin = $user->get('admin') || $user->get('staff');
+    if (is_isolated() && !$is_admin) {
+        // If loggedin user is not in the same institution as the user then access is denied.
+        $userobj = new User();
+        $userobj->find_by_id($userid);
+        $userinsts = array_keys($userobj->get('institutions'));
+        $loggedininsts = array_keys($user->get('institutions'));
+        $ok = (empty($userinsts) && empty($loggedininsts)) ? true : false; // both users in 'mahara'
+        if (!$userobj->get('admin') && !$ok && empty(array_intersect($userinsts, $loggedininsts))) {
+            throw new AccessDeniedException(get_string('notinthesameinstitution', 'error'));
+        }
+        else {
+            // If 'owngroupsonly' is set we only allow access when
+            // - Both current user and being viewed user are members of the same institution and they have groups in common
+            // - The current user is an admin/institution admin in the same institution
+            // - The current user is a member viewing the profile of an institution admin/staff in their institution
+            // - The current user is viewing the profile of a site admin
+            $is_institutional_admin = $user->is_institutional_admin() || $user->is_institutional_staff();
+            $is_viewing_admin = $userobj->get('admin') || $userobj->is_institutional_admin() || $userobj->get('staff') || $userobj->is_institutional_staff();
+            if (get_config('owngroupsonly') && (!$is_institutional_admin && !$is_viewing_admin)) {
+                $membersofsamegroup = count_records_sql("
+                    SELECT COUNT(*) FROM {group_member} gm WHERE gm.member = ?
+                    AND gm.group IN (SELECT gm2.group FROM {group_member} gm2 WHERE gm2.member = ?)", array($user->get('id'), $userid));
+                if (!$membersofsamegroup && $user->get('id') != $userid) {
+                    throw new AccessDeniedException(get_string('notinthesamegroup', 'error'));
+                }
+            }
+        }
+    }
+    return true;
 }

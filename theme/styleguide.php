@@ -29,11 +29,13 @@ $inlinecss = <<<EOT
         padding: 20px;
         margin-bottom: 20px;
         border-radius: 5px;
+        overflow: hidden; /* create block formatting context */
     }
 
     [data-markdown] pre {
         margin-top: 20px;
         position: relative;
+        clear: left;
     }
 
     section[data-markdown] h3:first-child {
@@ -88,6 +90,13 @@ $inlinecss = <<<EOT
     .completed {
         color: #426600;
     }
+    p ~ div > .btn-group-top {
+        margin-top: 0;
+    }
+    .blockinstance .card-header {
+        border-bottom: 2px solid #ddd;
+        height: 45px;
+    }
 }
 </style>
 EOT;
@@ -131,4 +140,5 @@ $smarty->assign('copy', get_string('copy'));
 $smarty->assign('scrollup', get_string('scroll_to_top'));
 $smarty->assign('SIDEBARS', false);
 $smarty->assign('ADDITIONALHTMLHEAD', $inlinecss);
+$smarty->assign('wwwroot', get_config('wwwroot'));
 $smarty->display('styleguide.tpl');

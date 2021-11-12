@@ -6,7 +6,13 @@
 
     <span id="collectionbtns" class="collection-nav-btns">
       <nav class="custom-dropdown dropdown">
-          <ul class="hidden">
+          {foreach from=$collection item=view name=page}
+              {if $view->view == $viewid}
+                  {$currentindex = $dwoo.foreach.page.index}
+              {/if}
+          {/foreach}
+          <span class="picker form-control" tabindex="0" data-toggle="collapse" data-target="#pagelist" aria-expanded="false" role="button" aria-controls="#pagelist">{str tag="viewingpage" section="collection"}<span id="currentindex" data-currentindex="{$currentindex}">{$currentindex + 1}</span>/{count($collection)}</span>
+          <ul id="pagelist" class="collapse">
               {foreach from=$collection item=view name=page}
               <li>
                   {if $view->view == $viewid}
@@ -18,17 +24,18 @@
               </li>
               {/foreach}
           </ul>
-          <span class="picker form-control">{str tag="viewingpage" section="collection"}<span id="currentindex" data-currentindex="{$currentindex}">{$currentindex + 1}</span>/{count($collection)}</span>
       </nav>
 
       {if count($collection) > 1}
-          <button type="button" class="btn btn-default prevpage disabled" title='{str tag="prevpage"}'>
+          <button type="button" class="btn btn-secondary prevpage disabled" title='{str tag="prevpage"}'>
               <span class="icon left icon-chevron-left" role="presentation" aria-hidden="true"></span>
           </button>
-          <button type="button" class="btn btn-default nextpage disabled" title='{str tag="nextpage"}'>
+          <button type="button" class="btn btn-secondary nextpage disabled" title='{str tag="nextpage"}'>
               <span class="icon right icon-chevron-right" role="presentation" aria-hidden="true"></span>
           </button>
       {/if}
     </span>
-
+    {if $gradeselect}
+        {$gradeselect}
+    {/if}
 </div>

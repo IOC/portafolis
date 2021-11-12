@@ -2,10 +2,20 @@
 // Extenstion to Button groups so we can use forms as buttons
 // --------------------------------------------------
 
-.btn-group .form-as-button:first-child:not(.last) {
+.btn-group {
+    font-family: $font-family-sans-serif;
+}
+
+.btn-group .form-as-button {
     .btn {
         @include border-right-radius(0);
-        border-right-width: 0;
+    }
+}
+
+.btn-group .form-as-button:last-of-type {
+    .btn {
+        @include border-right-radius($border-radius);
+        border-right-width: $border-width;
     }
 }
 
@@ -62,7 +72,7 @@
         padding-top: 3px !important; // Override standard btn padding
     }
     &:only-of-type .btn {
-        border-radius: 3px !important;
+        border-radius: $border-radius;
     }
 }
 
@@ -77,7 +87,7 @@
 
 // If there are not-button siblings of group button elements
 .btn-group > .no-delete-btn {
-    margin-right: 28px;
+    margin-right: 32px;
 }
 
 .btn-group > .btn.btn-group-first {
@@ -108,4 +118,26 @@
 .btn-group > .btn-group-first.btn-group-last {
     display: inline-block;
     margin-left: -4px;
+    &.webservices {
+        margin-left: 0;
+    }
+}
+
+.btn-group {
+    z-index: 3;
+    margin-left: 5px;
+}
+// except add pages to collections need no margin-left
+.pagesavailable .btn-group {
+    margin-left: 0;
+}
+
+// Chrome bug - flex container doesn't work on fieldset tag
+fieldset.btn-group {
+  display: block;
+}
+
+.btn-group-top .form-as-button:only-of-type .btn {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
 }

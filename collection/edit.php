@@ -49,7 +49,8 @@ if ($collection->is_submitted()) {
 $urlparams = array();
 if (!empty($groupid)) {
     require_once('group.php');
-    define('MENUITEM', 'groups/views');
+    define('MENUITEM', 'engage/index');
+    define('MENUITEM_SUBPAGE', 'views');
     define('GROUP', $groupid);
     $group = group_current_group();
     define('TITLE', $group->name . ' - ' . get_string('editcollection', 'collection'));
@@ -71,7 +72,7 @@ else if (!empty($institutionname)) {
     $urlparams['institution'] = $institutionname;
 }
 else {
-    define('MENUITEM', 'myportfolio/views');
+    define('MENUITEM', 'create/views');
     define('TITLE', get_string('editcollection', 'collection'));
     $baseurl = get_config('wwwroot') . 'view/index.php';
 }
@@ -134,7 +135,8 @@ function collectionedit_validate(Pieform $form, $values) {
             $views = get_records_sql_array("SELECT v.id, v.title FROM {view} v
                                             JOIN {collection_view} cv ON cv.view = v.id
                                             JOIN {framework_evidence} fe ON fe.view = cv.view
-                                            WHERE cv.collection = ?", array($values['id']));
+                                            WHERE cv.collection = ?
+                                            GROUP BY v.id, v.title", array($values['id']));
             if (!empty($views)) {
                 $errorstr = get_string('changeframeworkproblems', 'module.framework');
                 foreach ($views as $view) {

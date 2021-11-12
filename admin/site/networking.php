@@ -28,7 +28,7 @@ $xmlrpcext  = extension_loaded('xmlrpc');
 
 if (!$opensslext || !$curlext || !$xmlrpcext) {
     $smarty = smarty();
-    setpageicon($smarty, 'icon-exchange');
+    setpageicon($smarty, 'icon-network-wired');
 
     $missingextensions = array();
     !$opensslext && $missingextensions[] = 'openssl';
@@ -99,11 +99,11 @@ $networkingform = pieform(
                         'value' => 'submit'
                     ),
                     'deletesubmit' => array(
-                        'class' => 'btn-default text-inline',
+                        'class' => 'btn-secondary text-inline',
                         'name' => 'submit', // must be called submit so we can access it's value
                         'type'  => 'button',
                         'usebuttontag' => true,
-                        'content' => '<span class="icon icon-refresh icon-lg left text-danger" role="presentation" aria-hidden="true"></span> '. get_string('deletekey', 'admin'),
+                        'content' => '<span class="icon icon-sync-alt icon-lg left text-danger" role="presentation" aria-hidden="true"></span> '. get_string('deletekey', 'admin'),
                         'value' => 'deletekey'
                     )
                 )
@@ -164,11 +164,11 @@ function networkingform_submit(Pieform $form, $values) {
 
     $form->reply(PIEFORM_OK, array(
         'message' => ($reply == '') ? get_string('networkingunchanged','admin') : $reply,
-        'goto'    => '/admin/site/networking.php',
+        'goto'    => get_config('wwwroot') . 'admin/site/networking.php',
     ));
 }
 
 $smarty = smarty();
-setpageicon($smarty, 'icon-exchange');
+setpageicon($smarty, 'icon-network-wired');
 $smarty->assign('networkingform', $networkingform);
 $smarty->display('admin/site/networking.tpl');

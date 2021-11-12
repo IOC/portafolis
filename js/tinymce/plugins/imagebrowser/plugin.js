@@ -137,7 +137,7 @@ tinymce.PluginManager.add('imagebrowser', function(editor) {
             jQuery('body').append(browser);
             win = jQuery('#imagebrowser');
 
-            jQuery(formname).submit(function( event ) {
+            jQuery(formname).on('submit', function( event ) {
                 event.preventDefault();
                 onSubmitForm();
             });
@@ -148,12 +148,12 @@ tinymce.PluginManager.add('imagebrowser', function(editor) {
             });
 
             // Formatting options toggle
-            jQuery('#imgbrowserconf_toggleformatting_container').click(function(event) {
+            jQuery('#imgbrowserconf_toggleformatting_container').on('click', function(event) {
                 jQuery('#imgbrowserconf_formattingoptions_container').toggleClass('js-hidden');
                 jQuery('#formattingoptionstoggle').toggleClass('retracted');
             });
 
-            jQuery(formname + '_align, ' + formname + '_hspace, ' + formname + '_vspace, ' + formname + '_border').change(function() {
+            jQuery(formname + '_align, ' + formname + '_hspace, ' + formname + '_vspace, ' + formname + '_border').on('change', function() {
                 updateStyle();
             });
 
@@ -179,30 +179,30 @@ tinymce.PluginManager.add('imagebrowser', function(editor) {
                 });
             }
 
-            jQuery(browser).removeClass('hidden');
+            jQuery(browser).removeClass('d-none');
 
             // execute additional js for the config block
             eval(configblock.data.javascript);
 
             if (deletebutton.length) {
-                deletebutton.focus();
+                deletebutton.trigger('focus');
             }
 
             // As we have several submit buttons in the form
             // Add the attribute clicked=true to the clicked button
             // This will help identify which submit button was clicked
-            jQuery('form' + formname + ' input[type=submit], button[type=submit]').click(function() {
+            jQuery('form' + formname + ' input[type=submit], button[type=submit]').on('click', function() {
                 jQuery("input[type=submit], button[type=submit]", jQuery(this).parents('form' + formname)).removeAttr("clicked");
                 // Add the submit button name/value as a hidden field to get this to work in FF
                 if (jQuery('#edit_file').length) {
-                    jQuery('#edit_file').prop('name', jQuery(this).context.name).prop('value', jQuery(this).context.value);
+                    jQuery('#edit_file').prop('name', jQuery(this)[0].name).prop('value', jQuery(this)[0].value);
                 }
                 else {
                     jQuery('<input>').attr({
                         type: 'hidden',
                         id: 'edit_file',
-                        name: jQuery(this).context.name,
-                        value: jQuery(this).context.value
+                        name: jQuery(this)[0].name,
+                        value: jQuery(this)[0].value
                     }).appendTo(jQuery(this).parents('form' + formname));
                 }
                 jQuery(this).attr("clicked", "true");
@@ -313,7 +313,7 @@ tinymce.PluginManager.add('imagebrowser', function(editor) {
                     waitLoad(imgElm);
                 });
                 if (jQuery('#configureblock').length) {
-                    jQuery('#configureblock').removeClass('hidden');
+                    jQuery('#configureblock').removeClass('d-none');
                 }
                 removeImageBrowser();
             }
@@ -323,7 +323,7 @@ tinymce.PluginManager.add('imagebrowser', function(editor) {
             setTimeout(function() {
                 jQuery('body').removeClass('modal-open');
                 jQuery('#imagebrowser div.configure').each( function() {
-                    jQuery(this).addClass('hidden');
+                    jQuery(this).addClass('d-none');
                 });
                 jQuery('#imagebrowser').remove();
             }, 1);
@@ -442,14 +442,14 @@ tinymce.PluginManager.add('imagebrowser', function(editor) {
         }
     } // end of loadImageBrowser
 
-    editor.addButton('imagebrowser', {
+    editor.ui.registry.addButton('imagebrowser', {
         icon: 'image',
         tooltip: 'Insert/edit image',
-        onclick: imageBrowserDialogue(),
+        onAction: imageBrowserDialogue(),
         stateSelector: 'img:not([data-mce-object],[data-mce-placeholder])'
     });
 
-    editor.addMenuItem('imagebrowser', {
+    editor.ui.registry.addMenuItem('imagebrowser', {
         icon: 'image',
         text: 'Insert image',
         onclick: imageBrowserDialogue(),

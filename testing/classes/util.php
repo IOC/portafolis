@@ -700,10 +700,24 @@ abstract class TestingUtil {
             log_info("Uninstalling $plugintype.$pluginname");
             $location = get_config('docroot') . $pluginpath . DIRECTORY_SEPARATOR . 'db';
             if (is_readable($location . DIRECTORY_SEPARATOR . 'install.xml')) {
+                if ($plugintype == 'auth' && $pluginname == 'webservice') {
+                    // This module has LTI module lti_assessment.oauthserver as a foreign key
+                    if (is_mysql()) {
+                        execute_sql('ALTER TABLE {lti_assessment} DROP FOREIGN KEY {ltiasse_oau_fk}');
+                    }
+                    else {
+                        execute_sql('ALTER TABLE {lti_assessment} DROP CONSTRAINT {ltiasse_oau_fk}');
+                    }
+                }
                 if ($plugintype == 'module' && $pluginname == 'framework') {
                     // This module has a core collection.framework as a foreign key
                     execute_sql('UPDATE {collection} SET framework = null');
-                    execute_sql('ALTER TABLE {collection} DROP CONSTRAINT {coll_fra_fk}');
+                    if (is_mysql()) {
+                        execute_sql('ALTER TABLE {collection} DROP FOREIGN KEY {coll_fra_fk}');
+                    }
+                    else {
+                        execute_sql('ALTER TABLE {collection} DROP CONSTRAINT {coll_fra_fk}');
+                    }
                 }
                 uninstall_from_xmldb_file($location . DIRECTORY_SEPARATOR . 'install.xml');
             }

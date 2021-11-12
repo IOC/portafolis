@@ -14,30 +14,41 @@ body {
 body > .main-content > .row {
     background-color: #FFFFFF;
 }
-@media (min-width: 768px) {
-    body > .main-content > .row {
-        border-top-left-radius: 3px;
-        border-top-right-radius: 3px;
-        border-bottom-right-radius: 3px;
-        border-bottom-left-radius: 3px;
-        margin-bottom: 20px; /* to show the user's custom body background, if set */
-    }
-}
-@media (max-width: 767px) {
-    .main-content {
-        padding-top: 0 !important;
-    }
+
+/* Heading background customizations */
+.pageheader {
+    background-color: {$header_background_color};
+    background: {$header_background_image|safe} ;
+    background-size: 100%;
 }
 
+.collection-nav h2 {
+    color:  {$view_text_heading_color};
+    border-bottom: 1px solid {$view_text_heading_color};
+}
 
-/** all other custom settings should be scoped to be within .user-page-content **/
+/* Used to style author, tag links in page headers */
+.pageheader-content .text-small {
+    color: {$view_text_heading_color};
+}
+.pageheader-content .text-small a {
+    color: {$view_text_heading_color};
+    text-decoration: underline;
+}
+.pageheader-content .text-small a:hover,
+.pageheader-content .text-small a:active {
+    color: {$view_text_heading_color};
+    text-decoration: underline;
+}
+
+/* All other custom settings should be scoped to be within .user-page-content */
 /* with the exception of the page title and page description */
 
 /* page settings (also page description) */
 
 .user-page-content,
-.user-page-content .panel .panel-body table,
-.user-page-content .panel-body ul,
+.user-page-content .card .card-body table,
+.user-page-content .card-body ul,
 #view-description {
     font-family: {$view_text_font_family|safe};
     color: {$view_text_font_color};
@@ -70,7 +81,7 @@ body > .main-content > .row {
 .user-page-content h1,
 .user-page-content h2,
 .user-page-content h3,
-.user-page-content .panel-body h3,
+.user-page-content .card-body h3,
 .user-page-content h4,
 .user-page-content h5,
 .user-page-content h6,
@@ -78,34 +89,34 @@ body > .main-content > .row {
 #viewh1 {
     color: {$view_text_heading_color};
     font-family: {$view_heading_font_family|safe};
-    font-weight: bold;
 }
 
 
 /* blocks */
 
-.user-page-content .panel .title:not(.feedtitle) {
+.user-page-content .block-header a {
+    color: #FFFFFF;
+}
+
+.user-page-content .card .card-header:not(.feedtitle) {
     font-weight: bold;
-    color: {$view_text_emphasized_color};
-    font-family: {$view_heading_font_family|safe};
-    border-color: {$view_text_emphasized_color};
+    color: {$view_block_header_font_color};
+    font-family: {$view_block_header_font|safe};
+    border-color: {$view_block_header_font_color};
+    background: none;
 }
-.user-page-content .panel .title a,
-.user-page-content .panel .title a:link,
-.user-page-content .panel .title a:visited,
-.user-page-content .panel .title a:active {
-    color: {$view_text_emphasized_color};
-    text-decoration: none;
-}
-.user-page-content .panel .title a:hover {
+.user-page-content .card .card-header a:hover {
     color: {$view_link_hover_color};
     text-decoration: none;
+}
+.user-page-content .card .card-header .collapse-indicator {
+    color: {$view_block_header_font_color};
 }
 .user-page-content .link-blocktype:hover {
     background-color: transparent;
 }
-.user-page-content .panel {
-    background-color: transparent; /* take away default white panel bg */
+.user-page-content .card {
+    background-color: transparent; /* take away default white card bg */
 }
 
 
@@ -113,9 +124,6 @@ body > .main-content > .row {
 
 .user-page-content .list-group-item {
     background-color: transparent;
-}
-.user-page-content .panel > .block .list-group .list-group-item {
-    border-color: {$view_text_emphasized_color};
 }
 
 
@@ -131,6 +139,6 @@ body > .main-content > .row {
 }
 
 
-/** advanced: custom css **/
+/* advanced: custom css */
 
 {$view_custom_css|safe}

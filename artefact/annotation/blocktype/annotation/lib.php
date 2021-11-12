@@ -16,6 +16,10 @@ class PluginBlocktypeAnnotation extends MaharaCoreBlocktype {
         return false;
     }
 
+    public static function single_artefact_per_block() {
+        return false;
+    }
+
     public static function get_title() {
         return get_string('title', 'blocktype.annotation/annotation');
     }
@@ -33,7 +37,7 @@ class PluginBlocktypeAnnotation extends MaharaCoreBlocktype {
     }
 
     public static function has_title_link() {
-        return false;  // true; // need to do more work on aretfact/artefact.php before this can be switched on.
+        return false;
     }
 
     public static function allowed_in_view(View $view) {
@@ -115,7 +119,7 @@ class PluginBlocktypeAnnotation extends MaharaCoreBlocktype {
         return false;
     }
 
-    public static function render_instance(BlockInstance $instance, $editing=false) {
+    public static function render_instance(BlockInstance $instance, $editing=false, $versioning=false) {
         $smarty = smarty_core();
         $artefactid = '';
         $text = '';
@@ -131,8 +135,11 @@ class PluginBlocktypeAnnotation extends MaharaCoreBlocktype {
             $text = $artefact->get('description');
             require_once(get_config('docroot') . 'lib/view.php');
             $view = new View($viewid);
-            list($feedbackcount, $annotationfeedback) = ArtefactTypeAnnotationfeedback::get_annotation_feedback_for_view($artefact, $view, $instance->get('id'), true, $editing);
+            list($feedbackcount, $annotationfeedback) = ArtefactTypeAnnotationfeedback::get_annotation_feedback_for_view($artefact, $view, $instance->get('id'), true, $editing, $versioning);
             $smarty->assign('annotationfeedback', $annotationfeedback);
+        }
+        if ($versioning) {
+            $text = $configdata['text'];
         }
         $smarty->assign('text', $text);
         $smarty->assign('artefactid', $artefactid);
@@ -202,13 +209,13 @@ class PluginBlocktypeAnnotation extends MaharaCoreBlocktype {
                 'height' => $height . 'px',
                 'defaultvalue' => $text,
                 'rules' => array(
-                    'maxlength' => 65536,
+                    'maxlength' => 1000000,
                     'required' => true
                 ),
             ),
             'annotationreadonlymsg' => array(
                 'type' => 'html',
-                'class' => 'message info' . ($textreadonly ? '' : ' hidden'),
+                'class' => 'message info' . ($textreadonly ? '' : ' d-none'),
                 'value' => get_string('annotationreadonlymessage', 'blocktype.annotation/annotation'),
                 'help' => true,
             ),
@@ -219,7 +226,7 @@ class PluginBlocktypeAnnotation extends MaharaCoreBlocktype {
             ),
             'tags' => array(
                 'type' => 'tags',
-                'class' => $readonly ? 'hidden' : '',
+                'class' => $readonly ? 'd-none' : '',
                 'width' => '100%',
                 'title' => get_string('tags'),
                 'description' => get_string('tagsdescprofile'),
@@ -227,7 +234,7 @@ class PluginBlocktypeAnnotation extends MaharaCoreBlocktype {
             ),
             'tagsreadonly' => array(
                 'type' => 'html',
-                'class' => $readonly ? '' : 'hidden',
+                'class' => $readonly ? '' : 'd-none',
                 'width' => '100%',
                 'title' => get_string('tags'),
                 'value' => '<div id="instconf_tagsreadonly_display">' . (is_array($tags) ? hsc(join(', ', $tags)) : '') . '</div>',
@@ -276,7 +283,7 @@ class PluginBlocktypeAnnotation extends MaharaCoreBlocktype {
                 'defaultvalue' => (($evidence) ? $evidence->element : null),
             );
             array_walk($selectdescriptions, function (&$a, $b) {
-                $a = '<div class="hidden" id="option_' . $b . '">' . $a . '</div>';
+                $a = '<div class="d-none" id="option_' . $b . '">' . $a . '</div>';
             });
             $elements['smartevidencedesc'] = array(
                 'type' => 'html',
@@ -313,17 +320,17 @@ class PluginBlocktypeAnnotation extends MaharaCoreBlocktype {
 
         if (!empty($values['smartevidence'])) {
             // Check that the new smartevidence standard we are changing to is not alreay covered by another annotation block
-            $block = $form->get_element('blockconfig');
-            $view = $form->get_element('id');
+            $block = $form->get_element_option('blockconfig', 'value');
+            $viewid = $form->get_element_option('id', 'value');
             require_once('view.php');
-            $view = new View($view['value']);
+            $view = new View($viewid);
             $collection = $view->get('collection');
             if (is_object($collection) && $collection->get('framework')) {
                 $annotationid = get_field('framework_evidence', 'annotation',
                                            'view', $view->get('id'),
                                            'framework', $collection->get('framework'),
                                            'element', $values['smartevidence']);
-                if ($annotationid && $annotationid != $block['value']) {
+                if ($annotationid && ($annotationid != $block)) {
                     $result['message'] = get_string('annotationclash', 'module.framework');
                     $form->set_error('smartevidence', $result['message']);
                     $form->reply(PIEFORM_ERR, $result);
@@ -421,7 +428,8 @@ class PluginBlocktypeAnnotation extends MaharaCoreBlocktype {
     public static function get_instance_javascript(BlockInstance $bi) {
         return array(
             array(
-                'file' => 'js/annotation.js'
+                'file' => 'js/annotation.js',
+                'initjs' => " annotationBlockInit(); ",
             )
         );
     }
@@ -436,28 +444,5 @@ class PluginBlocktypeAnnotation extends MaharaCoreBlocktype {
         if ($fromversion == 0) {
             set_field('blocktype_installed', 'active', 0, 'artefactplugin', 'annotation');
         }
-    }
-
-    public static function get_instance_config_javascript(BlockInstance $instance) {
-        return <<<EOF
-        jQuery(function($) {
-            function show_se_desc(id) {
-                $("#instconf_smartevidencedesc_container div:not(.description)").addClass('hidden');
-                $("#option_" + id).removeClass('hidden');
-            }
-            if ($("#instconf_smartevidence").length) {
-                // block title will be overwritten with framework choice so make it disabled
-                $("#instconf_title").attr('disabled', true);
-
-                // Set up evidence choices and show/hide related descriptions
-                $("#instconf_smartevidence").select2();
-
-                show_se_desc($("#instconf_smartevidence").val());
-                $("#instconf_smartevidence").on('change', function() {
-                    show_se_desc($(this).val());
-                });
-            }
-        });
-EOF;
     }
 }

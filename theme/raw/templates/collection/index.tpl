@@ -3,14 +3,14 @@
 <p class="lead view-description">{str tag=collectiondescription section=collection}</p>
 {if !$canedit}<p>{str tag=canteditgroupcollections section=collection}</p>{/if}
 {if $collections}
-<div class="panel panel-default">
+<div class="card">
     <div id="mycollections" class="list-group">
         {$collectionhtml|safe}
     </div>
 </div>
        {$pagination|safe}
        {if $pagination_js}
-       <script type="application/javascript">
+       <script>
        {$pagination_js|safe}
        </script>
        {/if}

@@ -68,12 +68,12 @@ abstract class PluginArtefact extends Plugin implements IPluginArtefact {
     /**
      * This function returns an array of menu items to be displayed
      * on a group page when viewed by group members.
-     * Each item should be a StdClass object containing -
+     * Each item should be a stdClass() object containing -
      * - title language pack key
      * - url relative to wwwroot
      * @return array
      */
-    public static function group_tabs($groupid) {
+    public static function group_tabs($groupid, $role) {
         return array();
     }
 
@@ -588,6 +588,8 @@ abstract class ArtefactType implements IArtefactType {
      * this method, and call parent::commit() in your own function.
      */
     public function commit() {
+        global $USER;
+
         static $last_source, $last_output;
 
         $is_new = false;
@@ -602,7 +604,7 @@ abstract class ArtefactType implements IArtefactType {
 
         db_begin();
 
-        $fordb = new StdClass();
+        $fordb = new stdClass();
         foreach (get_object_vars($this) as $k => $v) {
             $fordb->{$k} = $v;
             if (in_array($k, array('mtime', 'ctime', 'atime')) && !empty($v)) {
@@ -634,20 +636,38 @@ abstract class ArtefactType implements IArtefactType {
         }
 
         if (!$is_new) {
-          $deleted = delete_records('artefact_tag', 'artefact', $this->id);
+          $deleted = delete_records('tag', 'resourcetype', 'artefact', 'resourceid', $this->id);
         }
 
         if (is_array($this->tags)) {
-            $this->tags = check_case_sensitive($this->tags, 'artefact_tag');
+            if ($this->group) {
+                $ownertype = 'group';
+                $ownerid = $this->group;
+            }
+            else if ($this->institution) {
+                $ownertype = 'institution';
+                $ownerid = $this->institution;
+            }
+            else {
+                $ownertype = 'user';
+                $ownerid = $this->owner;
+            }
+            $this->tags = check_case_sensitive($this->tags, 'tag');
+
             foreach (array_unique($this->tags) as $tag) {
                 if (empty($tag)) {
                     continue;
                 }
-                insert_record(
-                    'artefact_tag',
+                $tag = check_if_institution_tag($tag);
+                insert_record('tag',
                     (object) array(
-                        'artefact' => $this->id,
-                        'tag'      => $tag,
+                        'resourcetype' => 'artefact',
+                        'resourceid' => $this->get('id'),
+                        'ownertype' => $ownertype,
+                        'ownerid' => $ownerid,
+                        'tag' => $tag,
+                        'ctime' => db_format_timestamp(time()),
+                        'editedby' => $USER->get('id'),
                     )
                 );
             }
@@ -825,13 +845,14 @@ abstract class ArtefactType implements IArtefactType {
 
         // Detach any files from this artefact
         delete_records_select('artefact_attachment', "artefact IN $idstr");
+        delete_records_select('interaction_forum_post_attachment', "attachment IN $idstr");
 
         // Make sure that the artefacts are removed from any view blockinstances
         require_once(get_config('docroot') . 'blocktype/lib.php');
         BlockInstance::bulk_remove_artefacts($artefactids);
 
         delete_records_select('view_artefact', "artefact IN $idstr");
-        delete_records_select('artefact_tag', "artefact IN $idstr");
+        delete_records_select('tag', "resourcetype = 'artefact' AND resourceid IN ('" . join("','", array_map('intval', $artefactids)) . "')");
         delete_records_select('artefact_access_role', "artefact IN $idstr");
         delete_records_select('artefact_access_usr', "artefact IN $idstr");
         execute_sql("UPDATE {usr} SET profileicon = NULL WHERE profileicon IN $idstr");
@@ -885,7 +906,7 @@ abstract class ArtefactType implements IArtefactType {
         else {
             $smarty->assign('license', false);
         }
-
+        $smarty->assign('view', (!empty($options['viewid']) ? $options['viewid'] : null));
         return array(
             'html' => $smarty->fetch('artefact.tpl'),
             'javascript'=>''
@@ -1036,7 +1057,7 @@ abstract class ArtefactType implements IArtefactType {
             'parentmetadata' => 1,
             'path' => 1    // the path value will be updated later
         );
-        $data = new StdClass;
+        $data = new stdClass();
         foreach (get_object_vars($this) as $k => $v) {
             if (in_array($k, array('atime', 'ctime', 'mtime'))) {
                 $data->$k = db_format_timestamp($v);
@@ -1082,7 +1103,7 @@ abstract class ArtefactType implements IArtefactType {
             $this->set('parent', $artefactcopies[$copyinfo->oldparent]->newid);
         }
         else {
-            $this->set('parent', $this->default_parent_for_copy($view, $template, array_map(create_function('$a', 'return $a->newid;'), $artefactcopies)));
+            $this->set('parent', $this->default_parent_for_copy($view, $template, array_map(function($a) { return $a->newid; }, $artefactcopies)));
         }
     }
 
@@ -1215,8 +1236,18 @@ abstract class ArtefactType implements IArtefactType {
         if (empty($artefactids)) {
             return array();
         }
-        $artefactids = join(',', array_map('intval', $artefactids));
-        $tags = get_records_select_array('artefact_tag', 'artefact IN (' . $artefactids . ')');
+        $typecast = is_postgres() ? '::varchar' : '';
+        $artefactids = join("','", array_map('intval', $artefactids));
+        $tags = get_records_sql_array("
+            SELECT
+                (CASE
+                    WHEN t.tag LIKE 'tagid_%' THEN CONCAT(i.displayname, ': ', t2.tag)
+                    ELSE t.tag
+                END) AS tag, t.resourceid
+            FROM {tag} t
+            LEFT JOIN {tag} t2 ON t2.id" . $typecast . " = SUBSTRING(t.tag, 7)
+            LEFT JOIN {institution} i ON i.name = t2.ownerid
+            WHERE t.resourcetype = 'artefact' AND t.resourceid IN ('" . $artefactids . "')");
         if (!$tags) {
             return array();
         }
@@ -1231,11 +1262,21 @@ abstract class ArtefactType implements IArtefactType {
             ORDER BY a.title', array($this->id));
 
         // load tags
+        $typecast = is_postgres() ? '::varchar' : '';
         if ($list) {
-            $tags = get_records_select_array('artefact_tag', 'artefact IN (' . join(',', array_keys($list)) . ')');
+            $tags = get_records_sql_array("
+                SELECT
+                    (CASE
+                        WHEN t.tag LIKE 'tagid_%' THEN CONCAT(i.displayname, ': ', t2.tag)
+                        ELSE t.tag
+                    END) AS tag, t.resourceid
+                FROM {tag} t
+                LEFT JOIN {tag} t2 ON t2.id" . $typecast . " = SUBSTRING(t.tag, 7)
+                LEFT JOIN {institution} i ON i.name = t2.ownerid
+                WHERE t.resourcetype = 'artefact' AND t.resourceid IN ('" . join("','", array_keys($list)) . "')");
             if ($tags) {
                 foreach ($tags as $t) {
-                    $list[$t->artefact]->tags[] = $t->tag;
+                    $list[$t->resourceid]->tags[] = $t->tag;
                 }
                 foreach ($list as &$attachment) {
                     if (!empty($attachment->tags)) {
@@ -1261,7 +1302,7 @@ abstract class ArtefactType implements IArtefactType {
         if (!record_exists('artefact', 'id', $attachmentid)) {
             throw new ArtefactNotFoundException(get_string('artefactnotfound', 'mahara', $attachmentid));
         }
-        $data = new StdClass();
+        $data = new stdClass();
         $data->artefact = $this->get('id');
         $data->attachment = $attachmentid;
         $data->item = $itemid;
@@ -1338,7 +1379,18 @@ abstract class ArtefactType implements IArtefactType {
         if (empty($id)) {
             return array();
         }
-        $tags = get_column_sql('SELECT tag FROM {artefact_tag} WHERE artefact = ? ORDER BY tag', array($id));
+        $typecast = is_postgres() ? '::varchar' : '';
+        $tags = get_column_sql("
+            SELECT
+                (CASE
+                    WHEN t.tag LIKE 'tagid_%' THEN CONCAT(i.displayname, ': ', t2.tag)
+                    ELSE t.tag
+                END) AS tag
+            FROM {tag} t
+            LEFT JOIN {tag} t2 ON t2.id" . $typecast . " = SUBSTRING(t.tag, 7)
+            LEFT JOIN {institution} i ON i.name = t2.ownerid
+            WHERE t.resourcetype = ? AND t.resourceid = ?
+            ORDER BY tag", array('artefact', $id));
         if (!$tags) {
             return array();
         }
@@ -1565,7 +1617,7 @@ function artefact_check_plugin_sanity($pluginname) {
     foreach ($types as $type) {
         $pluginclassname = generate_class_name('blocktype', $type);
         if (get_config('installed')) {
-            if (table_exists(new XMLDBTable('blocktype_installed')) && $taken = get_record_select('blocktype_installed',
+            if (db_table_exists('blocktype_installed') && $taken = get_record_select('blocktype_installed',
                 'name = ? AND artefactplugin != ? ',
                 array($type, $pluginname))) {
                 throw new InstallationException(get_string('blocktypenametaken', 'error', $type,
@@ -1959,7 +2011,7 @@ function artefact_get_types_from_filter($filter) {
  *
  * @param array $ids list of artefact ids
  *
- * @return array list of StdClass objects, each containing a name & url property
+ * @return array list of stdClass() objects, each containing a name & url property
  */
 function artefact_get_owner_info($ids) {
     $data = get_records_sql_assoc('
@@ -1978,24 +2030,26 @@ function artefact_get_owner_info($ids) {
         $ids
     );
     $wwwroot = get_config('wwwroot');
-    foreach ($data as &$d) {
-        if ($d->institution == 'mahara') {
-            $name = get_config('sitename');
-            $url  = $wwwroot;
+    if ($data) {
+        foreach ($data as &$d) {
+            if ($d->institution == 'mahara') {
+                $name = get_config('sitename');
+                $url = $wwwroot;
+            }
+            else if ($d->institution) {
+                $name = $d->displayname;;
+                $url = $wwwroot . 'institution/index.php?institution=' . $d->institution;
+            }
+            else if ($d->group) {
+                $name = $d->groupname;;
+                $url = group_homepage_url((object)array('id' => $d->group, 'urlid' => $d->groupurlid));
+            }
+            else {
+                $name = display_name($d);
+                $url = profile_url($d);
+            }
+            $d = (object)array('name' => $name, 'url' => $url);
         }
-        else if ($d->institution) {
-            $name = $d->displayname;;
-            $url  = $wwwroot . 'institution/index.php?institution=' . $d->institution;
-        }
-        else if ($d->group) {
-            $name = $d->groupname;;
-            $url  = group_homepage_url((object) array('id' => $d->group, 'urlid' => $d->groupurlid));
-        }
-        else {
-            $name = display_name($d);
-            $url  = profile_url($d);
-        }
-        $d = (object) array('name' => $name, 'url' => $url);
     }
     return $data;
 }
@@ -2054,6 +2108,9 @@ function artefact_get_progressbar_items($onlythese = false) {
                 }
                 $special->ismeta = true;
                 $artefactoptions[$special->name] = $special;
+                if (!$special->active) {
+                    unset($artefactoptions[$special->name]);
+                }
             }
         }
 
@@ -2154,4 +2211,74 @@ function artefact_get_progressbar_metaartefacts($plugin, $onlythese = false) {
         }
     }
     return $results;
+}
+/**
+ * Helper function to allow for attaching / detaching files via pieform artefactchooser
+ *
+ * @param object  $instance    The class object that contains the attach() and detach() functions
+ * @param array   $values      The pieform submitted values array from filebrowser
+ * @param string  $id          Optional: The id of the thing we want to attach/detach artefact to/from
+ * @param boolean $mailsent    Optional: If we are not allowed to attach artefacts after mail is sent
+ * @param boolean $publish     Optional: Check if current user is allowed to publish the artefacts
+ */
+function update_attachments($instance, $values, $id=null, $mailsent=false, $publish=false) {
+    global $USER;
+
+    $old = $instance->attachment_id_list($id);
+    $new = is_array($values) ? $values : array();
+
+    if ($publish) {
+        // only allow the attaching of files that exist and are editable by user
+        foreach ($new as $key => $fileid) {
+            $file = artefact_instance_from_id($fileid);
+            if (!($file instanceof ArtefactTypeFile) || !$USER->can_publish_artefact($file)) {
+                unset($new[$key]);
+            }
+        }
+    }
+    if ($id) {
+        // We are attaching the artefact to a non-artefact parent as defined by the $id
+        if (!empty($new) || !empty($old)) {
+            foreach ($old as $o) {
+                if (!in_array($o, $new)) {
+                    try {
+                        $instance->detach($id, $o);
+                    }
+                    catch (ArtefactNotFoundException $e) {}
+                }
+            }
+            foreach ($new as $n) {
+                if (!in_array($n, $old)) {
+                    try {
+                        if (empty($mailsent)) {
+                            $instance->attach($id, $n);
+                        }
+                    }
+                    catch (ArtefactNotFoundException $e) {}
+                }
+            }
+        }
+    }
+    else {
+        // attaching artefact to parent artefact
+        if (!empty($new) || !empty($old)) {
+            foreach ($old as $o) {
+                if (!in_array($o, $new)) {
+                    try {
+                        $instance->detach($o);
+                    }
+                    catch (ArtefactNotFoundException $e) {}
+                }
+            }
+            foreach ($new as $n) {
+                if (!in_array($n, $old)) {
+                    try {
+                        $instance->attach($n);
+                    }
+                    catch (ArtefactNotFoundException $e) {}
+                }
+            }
+        }
+    }
+    return $new;
 }

@@ -80,7 +80,7 @@ abstract class PluginInteraction extends Plugin implements IPluginInteraction {
                 'defaultvalue' => (isset($instance) ? $instance->get('description') : ''),
                 'rules'        => array(
                     'required' => true,
-                    'maxlength' => 65536,
+                    'maxlength' => 1000000,
                 )
             ),
         );
@@ -222,7 +222,7 @@ abstract class InteractionInstance implements IInteractionInstance {
         if (empty($this->dirty)) {
             return;
         }
-        $fordb = new StdClass;
+        $fordb = new stdClass();
         foreach (get_object_vars($this) as $k => $v) {
             if ($k == 'ctime') {
                 $v = db_format_timestamp($v);
@@ -253,6 +253,18 @@ abstract class InteractionInstance implements IInteractionInstance {
     }
 
     public abstract function interaction_remove_user($userid);
+
+    public abstract function attach($id, $attachmentid);
+
+    public abstract function detach($id, $attachmentid=null);
+
+    public static function attached_id_list($attachmentid) {
+        return array();
+    }
+
+    public static function attachment_id_list($post) {
+        return array();
+    }
 }
 
 function interaction_check_plugin_sanity($pluginname) {
@@ -314,57 +326,4 @@ function delete_interaction_submit(Pieform $form, $values) {
     $SESSION->add_ok_msg(get_string('interactiondeleted', 'group', get_string('name', 'interaction.' . $instance->get('plugin'))));
     redirect('/interaction/' . $instance->get('plugin') . '/index.php?group=' . $instance->get('group'));
 
-}
-
-/**
- * creates the information for the interaction_sideblock
- *
- * @param int $groupid the group the sideblock is for
- * @param boolean (optional) $membership whether the user is a member
- * @return array containing indices 'name', 'weight', 'data'
- */
-function interaction_sideblock($groupid, $membership=true) {
-    $interactiontypes = array_flip(
-        array_map(
-            create_function('$a', 'return $a->name;'),
-            plugins_installed('interaction')
-        )
-    );
-
-    if (!$interactions = get_records_select_array('interaction_instance',
-        '"group" = ? AND deleted = ?', array($groupid, 0),
-        'plugin, ctime', 'id, plugin, title')) {
-        $interactions = array();
-    }
-
-    foreach ($interactions as $i) {
-        if (!is_array($interactiontypes[$i->plugin])) {
-            $interactiontypes[$i->plugin] = array();
-        }
-        $interactiontypes[$i->plugin][] = $i;
-    }
-
-    // Sort them according to how the plugin wants them sorted
-    if ($interactiontypes) {
-        foreach ($interactiontypes as $plugin => &$interactions) {
-            safe_require('interaction', $plugin);
-            $classname = generate_class_name('interaction', $plugin);
-            if (method_exists($classname, 'sideblock_sort')) {
-                $interactions = call_static_method($classname, 'sideblock_sort', $interactions);
-            }
-        }
-    }
-
-    $data = array(
-        'group' => $groupid,
-        'interactiontypes' => $interactiontypes,
-        'membership' => $membership,
-    );
-
-    // Add a sideblock for group interactions
-    return array(
-        'name' => 'groupinteractions',
-        'weight' => -5,
-        'data' => $data
-    );
 }

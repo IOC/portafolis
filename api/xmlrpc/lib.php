@@ -253,7 +253,7 @@ function user_authorise($token, $useragent) {
 
     // load existing profile information
     $profilefields = array();
-    $profile_data = get_records_select_assoc('artefact', "owner=? AND artefacttype IN (" . join(",",array_map(create_function('$a','return db_quote($a);'),array_keys($element_list))) . ")", array($USER->get('id')), '','artefacttype, title');
+    $profile_data = get_records_select_assoc('artefact', "owner=? AND artefacttype IN (" . join(",",array_map( function($a) { return db_quote($a); },array_keys($element_list))) . ")", array($USER->get('id')), '','artefacttype, title');
     if ($profile_data == false) {
         $profile_data = array();
     }
@@ -348,13 +348,13 @@ function search_folders_and_files($username, $search='') {
     $filetypesql = "('" . join("','", $filetypes) . "')";
 
     $ownersql = artefact_owner_sql($user->id);
-
-    //retrieve folders and files of a specific Mahara folder
+    $typecast = is_postgres() ? '::varchar' : '';
+    // Retrieve folders and files of a specific Mahara folder
     $sql = "SELECT
                 *
             FROM
                 {artefact} a
-            LEFT JOIN {artefact_tag} at ON (at.artefact = a.id)
+            LEFT JOIN {tag} at ON (at.resourcetype = 'artefact' AND at.resourceid = a.id" . $typecast . ")
             WHERE
                 $ownersql
                 AND
@@ -501,7 +501,7 @@ function send_content_ready($token, $username, $format, $importdata, $fetchnow=f
     }
 
 
-    $result = new StdClass;
+    $result = new stdClass();
     if ($fetchnow && PluginImport::import_immediately_allowed()) {
         // either immediately spawn a curl request to go fetch the file
         $importer = PluginImport::create_importer($queue->id, $tr, $queue);
@@ -669,7 +669,7 @@ function get_groups_for_user($username) {
     require_once('group.php');
     $USER->reanimate($user->id, $authinstance->instanceid);
     $groupdata = group_get_associated_groups($USER->get('id'), 'all', null, null);
-    $data = new stdclass();
+    $data = new stdClass();
     $data->data = array();
     $data->count = $groupdata['count'];
     $data->displayname = display_name($user);
@@ -714,7 +714,7 @@ function get_notifications_for_user($username, $notificationtypes, $maxitems) {
     $params[] = $maxitems;
     $records = get_records_sql_array($sql, $params);
 
-    $data = new stdclass;
+    $data = new stdClass();
     $data->data = $records;
     $data->count = count($records);
     $data->displayname = display_name($user);
@@ -743,7 +743,7 @@ function get_watchlist_for_user($username, $maxitems) {
 
     $records = get_records_sql_array($sql, array($USER->get('id'), $maxitems));
 
-    $data = new stdclass;
+    $data = new stdClass();
     $data->data = array();
     $data->count = count($records);
     $data->displayname = display_name($user);

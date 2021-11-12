@@ -1,6 +1,6 @@
 {include file="header.tpl"}
 
-{include file="view/editviewtabs.tpl" selected='share' issiteview=$issiteview}
+{include file="view/editviewpageactions.tpl" selected='share'}
 
 <div id="accessurl-container">
 
@@ -28,8 +28,8 @@
     {/if}
 
     {if $editurls}
-    <div class="panel panel-default">
-        <h2 class="panel-heading">
+    <div class="card">
+        <h2 class="card-header">
             {str tag=secreturls section=view}
         </h2>
 
@@ -43,12 +43,12 @@
                         <div class="col-xs-12 col-sm-3">
                             <div class="btn-action-list">
                                 <div class="btn-top-right btn-group btn-group-top">
-                                    <a id="copytoclipboard-{$item.id}" data-clipboard-text="{$item.url}" class="url-copytoclipboardbutton btn btn-default btn-xs" title="{str tag=copytoclipboard}" href="#">
-                                        <span class="icon icon-files-o icon-lg" role="presentation" aria-hidden="true"></span>
+                                    <a id="copytoclipboard-{$item.id}" data-clipboard-text="{$item.url}" class="url-copytoclipboardbutton btn btn-secondary btn-sm" title="{str tag=copytoclipboard}" href="#">
+                                        <span class="icon icon-regular icon-copy icon-lg" role="presentation" aria-hidden="true"></span>
                                         <span class="sr-only">{str tag=copytoclipboard}</span>
                                     </a>
-                                    <a id="edit-{$item.id}" class="url-open-editform nojs-hidden-inline btn btn-default closed" title="{str tag=edit}" href="">
-                                        <span class="icon icon-pencil icon-lg" role="presentation" aria-hidden="true"></span>
+                                    <a id="edit-{$item.id}" class="url-open-editform nojs-hidden-inline btn btn-secondary closed" title="{str tag=edit}" href="">
+                                        <span class="icon icon-pencil-alt icon-lg" role="presentation" aria-hidden="true"></span>
                                         <span class="icon icon-chevron-down right" role="presentation" aria-hidden="true"></span>
                                         <span class="sr-only">{str tag=edit}</span>
                                     </a>
@@ -74,9 +74,9 @@
     <h2 class="access-title">{str tag=sharedwithothers section=view}</h2>
     <!-- Access -->
     {$form|safe}
+    {include file="progress_meter.tpl"}
 
 </div>
 
 </div>
-
 {include file="footer.tpl"}

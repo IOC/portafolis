@@ -56,7 +56,7 @@ $string['nbadges'] = array('1 badge', '%s badges');
 $string['nobackpack'] = 'No Backpack found.<br> Please add your <a href="%s">Backpack</a> email address to your <a href="%s">profile</a>.';
 
 $string['nobadgegroups'] = 'No public badge collections / badges found.';
-
+$string['nobadgesselectone'] = 'No badges selected';
 $string['nobackpackidin1'] = 'Your email %s is not found in the service %s.';
 
 $string['nobadgegroupsin1'] = 'No public badge collections / badges found in the service %s for email %s.';
@@ -68,9 +68,23 @@ $string['title_backpack'] = 'Mozilla Backpack';
 
 $string['title_passport'] = 'Open Badge Passport';
 
+$string['title_badgr'] = 'Badgr Backpack';
+
 $string['fetchingbadges'] = 'Fetching entries. This may take a while.';
 
-$string['missingbadgesources'] = 'Missing sources setting. Please add to your config.php file, e.g.<br><br>$cfg->openbadgedisplayer_source = \'{"backpack":"https://backpack.openbadges.org/"}\'';
+$string['missingbadgesources'] = 'Missing sources setting. Please add it to your config.php file, e.g.<br><br>$cfg->openbadgedisplayer_source = \'{"backpack":"https://backpack.openbadges.org/"}\'';
 
 $string['selectall'] = 'Select all';
 $string['selectnone'] = 'Select none';
+
+// Badgr token page
+$string['featuredisabled'] = 'The openbadgedisplayer blocktype is not active';
+$string['badgrsourcemissing1'] = 'Badgr is not in the sources configuration in your config.php file.';
+$string['badgrusername'] = "Badgr username";
+$string['badgrpassword'] = "Badgr password";
+$string['badgrtokentitle'] = "Badgr";
+$string['badgrtoken'] = "Badgr token: %s";
+$string['badgrtokenadded'] = "Badgr token added to account";
+$string['badgrtokendeleted'] = "Badgr token deleted";
+$string['badgrtokennotfound'] = "Badgr token not found with supplied credentials";
+$string['nobadgruid1'] = 'Before you can use Badgr, you need to set a token. Please go to "User menu → Settings → Apps → Badgr" to set it.';

@@ -48,8 +48,8 @@ $institutionselector = pieform(array(
 
 $pending = get_records_sql_array('
     SELECT u.* FROM {usr_registration} u
-    WHERE u.institution = ? AND u.pending = 1
-    ORDER BY u.expiry ASC', array($institution)
+    WHERE u.institution = ? AND u.pending IN (1, 2)
+    ORDER BY u.pending ASC, u.expiry ASC', array($institution)
 );
 if (!$pending) {
         $pending = array();
@@ -80,6 +80,7 @@ function build_pending_html($data, $institution) {
                     }
                 }
             }
+            $item->expiryformat = format_date(strtotime($item->expiry));
         }
     }
     $smarty = smarty_core();
@@ -103,7 +104,7 @@ jQuery(function($) {
 EOF;
 
 $smarty = smarty();
-setpageicon($smarty, 'icon-university');
+setpageicon($smarty, 'icon-user-clock');
 
 $smarty->assign('INLINEJAVASCRIPT', $js);
 $smarty->assign('data', $data);

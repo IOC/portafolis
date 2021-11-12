@@ -49,8 +49,10 @@ define('PIEFORM_CANCEL', -2);
  *         // definition of elements in the form
  *     )
  * );
+ * $form = pieform($form);
  *
- * $smarty->assign('myform', pieform($form));
+ * $smarty = smarty_core();
+ * $smarty->assign('myform', $form);
  *
  * function myform_validate(Pieform $form, $values) {
  *     // perform validation agains form elements here
@@ -148,6 +150,8 @@ class Pieform {/*{{{*/
     private $has_required_fields = false;
     private $all_required_field_labels_hidden = false;
 
+    private $has_oneof_fields = false;
+
     private $submitvalue = 'submit';
 
     /*}}}*/
@@ -233,7 +237,7 @@ class Pieform {/*{{{*/
         }
 
         $this->data['configdirs'] = array_map(
-            create_function('$a', 'return substr($a, -1) == "/" ? substr($a, 0, -1) : $a;'),
+            function($a) { return substr($a, -1) == "/" ? substr($a, 0, -1) : $a; },
             (array) $this->data['configdirs']);
 
 
@@ -272,7 +276,7 @@ class Pieform {/*{{{*/
                     'type'         => 'text',
                     'title'        => get_string('spamtrap'),
                     'defaultvalue' => '',
-                    'class'        => 'dontshow hidden',
+                    'class'        => 'dontshow d-none',
                 ),
             );
             $spamelements2 = array(
@@ -590,8 +594,8 @@ class Pieform {/*{{{*/
             }
             else {
                 global $SESSION;
-                // The login system comes past here twice so we need to pace first error message above form
-                if (!empty($values['login_submitted'])) {
+                // The login system comes past here twice so we need to paste first error message above form
+                if (isset($values['pieform_login'])) {
                     $SESSION->add_error_msg($this->get_property('errormessage'), false, 'loginbox');
                 }
                 else {
@@ -782,9 +786,12 @@ class Pieform {/*{{{*/
             if ($this->has_required_fields) {
                 $result .= '<div class="form-group requiredmarkerdesc';
                 if ($this->all_required_field_labels_hidden) {
-                    $result .= ' hidden';
+                    $result .= ' d-none';
                 }
                 $result .= '">' . get_string('requiredfields', 'pieforms', $this->get_property('requiredmarker')) . '</div>';
+            }
+            if ($this->has_oneof_fields) {
+                $result .= '<div class="form-group oneofmarkerdesc">' . get_string('oneoffields', 'pieforms', $this->get_property('oneofmarker')) . '</div>';
             }
             $this->include_plugin('renderer',  $this->data['renderer']);
 
@@ -857,7 +864,7 @@ class Pieform {/*{{{*/
                 'newIframeOnSubmit'     => $this->data['newiframeonsubmit'],
                 'checkDirtyChange'      => $this->data['checkdirtychange'],
             ));
-            $result .= "<script type=\"application/javascript\">new Pieform($data);</script>\n";
+            $result .= "<script>new Pieform($data);</script>\n";
         }
         return $result;
     }/*}}}*/
@@ -935,11 +942,30 @@ class Pieform {/*{{{*/
     }/*}}}*/
 
     /**
+     * Returns the element's option with the given name. Throws a PieformException if the
+     * element's cannot be found.
+     *
+     * @param  string $name     The name of the element to find
+     * @param  string $option     The name of the option to find, i.e 'disabled'
+     * @return array            The element's option
+     * @throws PieformException If the element could not be found
+     */
+    public function get_element_option($name, $option) {/*{{{*/
+        if (!isset($this->elementrefs[$name])) {
+            throw new PieformException('Element "' . $name . '" cannot be found');
+        }
+        if (!isset($this->elementrefs[$name][$option])) {
+            throw new PieformException('Element "' . $name . '" option "' . $option . '" cannot be found');
+        }
+        return $this->elementrefs[$name][$option];
+    }/*}}}*/
+
+    /**
      * Sends a message back to a form
      */
-    public function reply($returncode, $message) {
+    public function reply($returncode, $message, $replacehtml=null) {
         if ($this->submitted_by_js()) {
-            $this->json_reply($returncode, $message);
+            $this->json_reply($returncode, $message, $replacehtml);
         }
 
         $function = $this->get_property('replycallback');
@@ -988,7 +1014,7 @@ class Pieform {/*{{{*/
         }
         echo <<<EOF
 <html>
-    <head><script type="application/javascript">
+    <head><script>
         function sendResult() {
             parent.pieformHandlers["{$this->name}"]($result);
         }
@@ -1147,6 +1173,9 @@ EOF;
         }
         if (!empty($element['error'])) {
             $classes[] = 'error';
+            if (!empty($element['rules']) && !empty($element['rules']['oneof'])) {
+                $classes[] = 'oneof';
+            }
         }
         if ($this->data['elementclasses']) {
             $classes[] = $element['type'];
@@ -1239,7 +1268,7 @@ EOF;
             $result .= $this->name . '_' . $element['id'] . '_error ';
         }
         if ((!$this->has_errors() || $this->get_property('showdescriptiononerror')) && !empty($element['description'])) {
-            $result .= $this->name . '_' . $element['id'] . '_description ';
+            $result .= $this->name . '_' . $element['name'] . '_description ';
         }
         return $result;
     }
@@ -1527,6 +1556,15 @@ EOF;
                 $requiredmarker = '';
             }
 
+            if ($this->get_property('oneofmarker') &&
+                (!empty($element['rules']['oneof']))) {
+                $oneofmarker = ' <span class="oneofmarker">' . $this->get_property('oneofmarker') . '</span>';
+                $this->has_oneof_fields = true;
+            }
+            else {
+                $oneofmarker = '';
+            }
+
             if (!empty($element['hiddenlabel'])) {
                 $labelclass = ' class="sr-only"';
             }
@@ -1534,16 +1572,19 @@ EOF;
                 $labelclass = '';
             }
             $nolabeltypes = array('radio', 'emaillist', 'date', 'files', 'checkboxes', 'bytes');
-
+            if ($element['type'] == 'select' && !empty($element['collapseifoneoption']) && !empty($element['options']) && count($element['options']) < 2) {
+                // we are using a select field as a hidden field
+                $element['nolabel'] = true;
+            }
             if (!empty($element['nolabel']) || in_array($element['type'], $nolabeltypes)) {
                 // Don't bother with a label for the element.
                 // Special 'nolabeltypes' have their own label(s) added direct to the form field(s).
                 // You can style specific non labels to be like labels by accessing the
                 // pseudolabel class attribute.
-                $element['labelhtml'] = '<span class="pseudolabel">' . $title . $requiredmarker . '</span>';
+                $element['labelhtml'] = '<span class="pseudolabel">' . $title . $requiredmarker . $oneofmarker . '</span>';
             }
             else {
-                $element['labelhtml'] = '<label' . $labelclass . ' for="' . $this->name . '_' . $element['id'] . '">' . $title . $requiredmarker . '</label>';
+                $element['labelhtml'] = '<label' . $labelclass . ' for="' . $this->name . '_' . $element['id'] . '">' . $title . $requiredmarker . $oneofmarker . '</label>';
             }
         }
 
@@ -1709,6 +1750,9 @@ EOF;
             // Whether to add * markers after each required field
             'requiredmarker' => false,
 
+            // Whether to add # markers after each oneof field
+            'oneofmarker' => false,
+
             // Whether to show the description as well as the error message
             // when displaying errors
             'showdescriptiononerror' => true,
@@ -1820,9 +1864,9 @@ function pieform_get_headdata() {/*{{{*/
 
     // TODO: jsdirectory should be independent of ANY form
     if ($GLOBALS['_PIEFORM_REGISTRY']) {
-        array_unshift($htmlelements, '<script type="application/javascript" src="'
+        array_unshift($htmlelements, '<script src="'
             . Pieform::hsc(append_version_number($form->get_property('jsdirectory') . 'pieforms.js')) . '"></script>');
-        array_unshift($htmlelements, '<script type="application/javascript">pieformPath = "'
+        array_unshift($htmlelements, '<script>pieformPath = "'
             . Pieform::hsc($form->get_property('jsdirectory')) . '";</script>');
     }
 

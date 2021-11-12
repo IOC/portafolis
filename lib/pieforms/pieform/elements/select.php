@@ -163,7 +163,7 @@ function pieform_element_select(Pieform $form, $element) {
             $other_attrib['class'] = 'text form-control secondary-textbox';
         }
         else {
-            $other_attrib['class'] = 'text form-control secondary-textbox hidden';
+            $other_attrib['class'] = 'text form-control secondary-textbox d-none';
             $other_value = '';
         }
         $result .= '<label for="' . $form->make_id($other_attrib, true) . '" class="accessible-hidden sr-only">' . get_string('licenseotherurl') . '</label>'
@@ -177,12 +177,11 @@ function pieform_element_select(Pieform $form, $element) {
 
 function pieform_element_select_render_options($options, $values, &$optionselected, $element) {
     $result = '';
-
     foreach ($options as $key => $value) {
         // Select the element if it's in the values or if there are no values
         // and this is the first option
+        $stringvalue = !is_array($values) && (string)$key === (string)$values;
 
-        $stringvalue = !is_array($values) && $key == $values;
         $inarrayvalue = is_array($values) && in_array($key, $values);
         $firstoption = isset($values[0]) && $values[0] === null && !$optionselected;
 
@@ -325,17 +324,17 @@ function pieform_element_select_get_inlinejs() {
         var element = jQuery(el);
         var other = jQuery('#' + element.prop('id') + '_other');
         if (element.val() == 'other') {
-            other.removeClass('hidden');
+            other.removeClass('d-none');
         }
         else {
-            other.addClass('hidden');
+            other.addClass('d-none');
         }
     }
 EOF;
 }
 
 function pieform_element_select_get_headdata() {
-    $result  = '<script type="application/javascript">' . "\n";
+    $result  = '<script>' . "\n";
     $result .= pieform_element_select_get_inlinejs();
     $result .= '</script>' . "\n";
     return array($result);

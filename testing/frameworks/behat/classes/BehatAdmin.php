@@ -70,6 +70,7 @@ class BehatAdmin extends BehatBase {
                 'institutionexpirynotification',
                 'institutionautosuspend',
                 'requireregistrationconfirm',
+                'isolatedinstitutions',
             // Account settings
             // Security settings
             // Proxy settings
@@ -102,6 +103,11 @@ class BehatAdmin extends BehatBase {
             // Ensure allowpublicprofiles is set as well
             $settings['allowpublicprofiles'] = 1;
         }
+        foreach ($settings as $key => $setting) {
+            if (!array_search($key, $allowsettings)) {
+                throw new SystemException("The option \"$key\" is not a valid setting");
+            }
+        }
 
         // Update site settings
         $oldsearchplugin = get_config('searchplugin');
@@ -117,6 +123,90 @@ class BehatAdmin extends BehatBase {
             ArtefactTypeFolder::change_public_folder_name($oldlanguage, $settings['lang']);
         }
 
+        if (isset($settings['searchplugin']) && $oldsearchplugin != $settings['searchplugin']) {
+            // Call the old search plugin's sitewide cleanup method
+            safe_require('search', $oldsearchplugin);
+            call_static_method(generate_class_name('search', $oldsearchplugin), 'cleanup_sitewide');
+            // Call the new search plugin's sitewide initialize method
+            safe_require('search', $settings['searchplugin']);
+            $initialize = call_static_method(generate_class_name('search', $settings['searchplugin']), 'initialize_sitewide');
+            if (!$initialize) {
+                throw new SystemException(get_string('searchconfigerror1', 'admin', $settings['searchplugin']));
+            }
+            // Call the new search plugin's can connect
+            safe_require('search', $settings['searchplugin']);
+            $connect = call_static_method(generate_class_name('search', $settings['searchplugin']), 'can_connect');
+            if (!$connect) {
+                throw new SystemException(get_string('searchconfigerror1', 'admin', $settings['searchplugin']));
+            }
+        }
+    }
+
+    /**
+     * Sets the specified plugin settings.
+     * A table with | Plugintype | Plugin | value | is expected.
+     *
+     * @Given /^the following plugins are set:$/
+     * @param TableNode $table
+     * @throws SystemException
+     */
+    public function plugin_activation_set(TableNode $table) {
+
+        $settings = array();
+        foreach ($table->getHash() as $pluginsetting) {
+            $settings[$pluginsetting['plugintype']][$pluginsetting['plugin']] = $pluginsetting['value'];
+        }
+
+        // Validate the settings
+        $allowsettings = array(
+            'blocktype' => array (
+                'annotation',
+                'blog',
+                'comment',
+            ),
+            'artefact' => array (
+                'blog',
+                'plans',
+                'resume',
+            ),
+            'grouptype' => array(
+                'course',
+            ),
+            'module' => array(
+                'smartevidence',
+                'lti',
+                'mobileapi',
+            ),
+        );
+        // Update plugin settings
+        foreach ($settings as $plugintype => $plugins) {
+            if (!isset($allowsettings[$plugintype])) {
+                throw new SystemException("Not a valid plugintype \"$plugintype\"");
+            }
+            else {
+                foreach ($plugins as $plugin => $value) {
+                    if (!in_array($plugin, $allowsettings[$plugintype])) {
+                        throw new SystemException("\"$plugin\" is not a valid plugin for plugintype \"$plugintype\"");
+                    }
+                    else {
+                        if ($plugintype == 'blocktype') {
+                            // Don't enable blocktypes unless the artefact plugin that provides them is also enabled
+                            $artefact = get_field('blocktype_installed', 'artefactplugin', 'name', $plugin);
+                            if (!empty($value) && !empty($artefact)) {
+                                set_field('artefact_installed', 'active', 1, 'name', $artefact);
+                            }
+                        }
+                        else if ($plugintype == 'artefact' && empty($value)) {
+                            // Disable all the artefact's blocktypes too
+                            set_field('blocktype_installed', 'active', 0, 'artefactplugin', $plugin);
+                        }
+                        if (!set_field($plugintype . '_installed', 'active', $value, 'name', $plugin)) {
+                            throw new SystemException("Can not activate / deactivate the \"$plugintype\" \"$plugin\"");
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -158,6 +248,24 @@ class BehatAdmin extends BehatBase {
                     ),
                 ),
             ),
+            'search' => array (
+                'elasticsearch' => array(
+                    'indexname' => array(),
+                    'types' => array(
+                        'usr',
+                        'interaction_instance',
+                        'interaction_forum_post',
+                        'group',
+                        'view',
+                        'artefact',
+                        'block_instance',
+                        'collection',
+                    ),
+                    'cronlimit' => array(),
+                    'shards' => array(),
+                    'replicashards' => array(),
+                ),
+            ),
         );
         // if artefact internal profilemandatory is set we need to make sure that firstname/lastname/email are included.
         if (!empty($settings['artefact']['internal']['profilemandatory'])) {
@@ -172,6 +280,12 @@ class BehatAdmin extends BehatBase {
             $mandatory = array('firstname', 'lastname', 'email');
             $values = array_merge($mandatory, $values);
             $settings['artefact']['internal']['profilepublic'] = implode(',', $values);
+        }
+        // if search elasticsearch types set we need to make sure to use only valid ones
+        if (!empty($settings['search']['elasticsearch']['types'])) {
+            $values = explode(',', $settings['search']['elasticsearch']['types']);
+            $values = array_intersect($values, $allowsettings['search']['elasticsearch']['types']);
+            $settings['search']['elasticsearch']['types'] = implode(',', $values);
         }
 
         // Update plugin settings

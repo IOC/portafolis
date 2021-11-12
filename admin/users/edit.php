@@ -21,6 +21,11 @@ require_once('activity.php');
 require_once(get_config('docroot') . 'lib/antispam.php');
 
 $id = param_integer('id');
+if ($id == 0) {
+    // We shouldn't be editing / masquerading as 'root' user
+    throw new UserException(get_string('invaliduser', 'error'));
+}
+
 $user = new User;
 $user->find_by_id($id);
 $authobj = AuthFactory::create($user->authinstance);
@@ -158,25 +163,51 @@ if (is_using_probation($user->id)) {
     );
 }
 
-$authinstances = auth_get_auth_instances();
-if (count($authinstances) > 1) {
-    $options = array();
+$options = array();
+$external = false;
+$externalauthjs = array();
 
-    // NOTE: This is a little broken at the moment. The "username in the remote
-    // system" setting is only actively used by the XMLRPC authentication
-    // plugin, and thus only makes sense when the user is authenticating in
-    // this manner.
-    //
-    // We hope to one day make it possible for users to get into accounts via
-    // multiple methods, at which time we can tie the username-in-remote-system
-    // setting to the XMLRPC plugin only, making the UI a bit more consistent
-    $external = false;
-    $externalauthjs = array();
-    foreach ($authinstances as $authinstance) {
-        // If a user has a "No Institution" auth method (institution "mahara", id = 1) and he belongs to an Institution,
-        // his Institution Admin will be able to change his auth method away to one of the Institution's auth methods
-        // that's the second part of the "if"
-        if ($USER->can_edit_institution($authinstance->name) || ($authinstance->id == 1 && $user->authinstance == 1)) {
+// Get a list of the user's institutions
+$user_insts = $user->institutions;
+
+// Confirm that the auth method is valid.
+$valid_auth = false;
+foreach ($user_insts as $inst) {
+    if (record_exists('auth_instance', 'id', $user->authinstance , 'institution', $inst->institution)) {
+        $valid_auth = true;
+    }
+    if (!$valid_auth) {
+        // If their auth method doesn't work for any of their insts, change it to internal.
+        $internal = get_field('auth_instance', 'id', 'authname', 'internal', 'institution', $inst->institution);
+        if (!$internal) {
+            // Institution has no internal auth instance. Create one.
+            $todb = new stdClass();
+            $todb->instancename = 'internal';
+            $todb->authname = 'internal';
+            $todb->active = 1;
+            $todb->institution = $inst->institution;
+            $max = get_field('auth_instance', 'MAX(priority)', 'institution', $inst->institution);
+            $todb->priority = $max ? $max + 1 : 0;
+            $internal = insert_record('auth_instance', $todb, 'id', true);
+        }
+        // Now we know we have an internal auth for the user, set it
+        $user->authinstance = $internal;
+        $user->commit();
+    }
+}
+
+$authinstances = auth_get_auth_instances();
+// If the user has no institution, their inst is mahara
+if (!$user_insts) {
+    $mahara = new stdClass();
+    $mahara->institution = "mahara";
+    $user_insts[] = $mahara;
+}
+
+// Now add the valid auth methods for institutions the user is in to the page.
+foreach ($authinstances as $authinstance) {
+    foreach ($user_insts as $inst) {
+        if ($authinstance->name == $inst->institution || $authinstance->name == 'mahara') {
             $options[$authinstance->id] = $authinstance->displayname . ': ' . $authinstance->instancename;
             $authobj = AuthFactory::create($authinstance->id);
             if ($authobj->needs_remote_username()) {
@@ -185,72 +216,89 @@ if (count($authinstances) > 1) {
             }
         }
     }
-
-    if (isset($options[$user->authinstance])) {
-        $elements['authinstance'] = array(
-            'type'         => 'select',
-            'title'        => get_string('authenticatedby', 'admin'),
-            'description'  => get_string('authenticatedbydescription', 'admin'),
-            'options'      => $options,
-            'defaultvalue' => $user->authinstance,
-            'help'         => true,
-        );
-        $un = get_field('auth_remote_user', 'remoteusername', 'authinstance', $user->authinstance, 'localusr', $user->id);
-        $elements['remoteusername'] = array(
-            'type'         => 'text',
-            'title'        => get_string('remoteusername', 'admin'),
-            'description'  => get_string('remoteusernamedescription1', 'admin', hsc(get_config('sitename'))),
-            'help'         => true,
-        );
-        if ($un) {
-            $elements['remoteusername']['defaultvalue'] = $un;
-        }
-    }
-    $remoteusernames = json_encode(get_records_menu('auth_remote_user', 'localusr', $id));
-    $js = "<script type='application/javascript'>
-          var externalauths = ['" . implode("','", $externalauthjs) . "'];
-          var remoteusernames = " . $remoteusernames . ";
-          jQuery(document).ready(function() {
-          // set up initial display
-          var authinstanceid = jQuery('#edituser_site_authinstance :selected').val();
-          is_external(authinstanceid);
-
-          // update display as auth method dropdown changes
-          jQuery('#edituser_site_authinstance').change(function() {
-              authinstanceid = jQuery('#edituser_site_authinstance :selected').val();
-              is_external(authinstanceid);
-          });
-
-          function is_external(id) {
-              if (jQuery.inArray(authinstanceid,externalauths) != -1) {
-                  // is external option so show external auth field and help text rows
-                  jQuery('#edituser_site_remoteusername_container').css('display','block');
-                  jQuery('#edituser_site_remoteusername_container').next('div').css('display','block');
-                  if (remoteusernames[id]) {
-                      // if value exists in auth_remote_user display it
-                      jQuery('#edituser_site_remoteusername').val(remoteusernames[id]);
-                  }
-                  else {
-                      jQuery('#edituser_site_remoteusername').val('');
-                  }
-              }
-              else {
-                  // is internal option so hide external auth field and help text rows
-                  jQuery('#edituser_site_remoteusername_container').css('display','none');
-                  jQuery('#edituser_site_remoteusername_container').next('div').css('display','none');
-              }
-          }
-      });
-      </script>";
-
-    $elements['externalauthjs'] = array(
-        'type'         => 'html',
-        'class'        => 'hidden',
-        'value'        => $js,
-    );
 }
 
-$tags = get_column_sql('SELECT tag FROM {usr_tag} WHERE usr = ? AND NOT tag ' . db_ilike() . " 'lastinstitution:%'", array($user->id));
+$elements['authinstance'] = array(
+    'type'         => 'select',
+    'title'        => get_string('authenticatedby', 'admin'),
+    'description'  => get_string('authenticatedbydescription', 'admin'),
+    'options'      => $options,
+    'defaultvalue' => $user->authinstance,
+    'help'         => true,
+);
+$un = get_field('auth_remote_user', 'remoteusername', 'authinstance', $user->authinstance, 'localusr', $user->id);
+$elements['remoteusername'] = array(
+    'type'         => 'text',
+    'title'        => get_string('remoteusername', 'admin'),
+    'description'  => get_string('remoteusernamedescription1', 'admin', hsc(get_config('sitename'))),
+    'help'         => true,
+);
+if ($un) {
+    $elements['remoteusername']['defaultvalue'] = $un;
+}
+
+$remoteusernames = json_encode(get_records_menu('auth_remote_user', 'localusr', $id));
+$js = "<script type='application/javascript'>
+        var externalauths = ['" . implode("','", $externalauthjs) . "'];
+        var remoteusernames = " . $remoteusernames . ";
+        jQuery(function() {
+        // set up initial display
+        var authinstanceid = jQuery('#edituser_site_authinstance :selected').val();
+        is_external(authinstanceid);
+
+        // update display as auth method dropdown changes
+        jQuery('#edituser_site_authinstance').on('change', function() {
+            authinstanceid = jQuery('#edituser_site_authinstance :selected').val();
+            is_external(authinstanceid);
+        });
+
+        function is_external(id) {
+            if (jQuery.inArray(authinstanceid,externalauths) != -1) {
+                // is external option so show external auth field and help text rows
+                jQuery('#edituser_site_remoteusername_container').css('display','block');
+                jQuery('#edituser_site_remoteusername_container').next('div').css('display','block');
+                if (remoteusernames[id]) {
+                    // if value exists in auth_remote_user display it
+                    jQuery('#edituser_site_remoteusername').val(remoteusernames[id]);
+                }
+                else {
+                    jQuery('#edituser_site_remoteusername').val('');
+                }
+            }
+            else {
+                // is internal option so hide external auth field and help text rows
+                jQuery('#edituser_site_remoteusername_container').css('display','none');
+                jQuery('#edituser_site_remoteusername_container').next('div').css('display','none');
+            }
+        }
+    });
+    </script>";
+
+$elements['externalauthjs'] = array(
+    'type'         => 'html',
+    'class'        => 'hidden',
+    'value'        => $js,
+);
+
+$tags = array();
+if ($tagsarray = get_records_sql_array("SELECT t.tag, t.prefix, t.ownerid
+    FROM (
+        SELECT ut.tag, NULL AS prefix, 0 AS ownerid
+        FROM {tag} ut
+        WHERE resourcetype = ? AND resourceid = ? AND ownertype != 'instituion'
+        AND NOT tag " . db_ilike() . " 'lastinstitution:%'
+        UNION
+        SELECT it.tag, it.ownerid AS prefix, i.id AS ownerid
+        FROM {tag} it
+        JOIN {institution} i ON i.name = it.ownerid
+        WHERE resourcetype = ? AND resourceid = ?
+        AND tag " . db_ilike() . " 'lastinstitution:%'
+    ) t
+    GROUP BY t.tag, t.prefix, t.ownerid", array('usr', $user->id, 'usr', $user->id))) {
+    foreach ($tagsarray as $k => $v) {
+        $tags[] = $v->tag;
+    }
+}
 
 $elements['tags'] = array(
     'defaultvalue' => $tags,
@@ -378,14 +426,7 @@ function edituser_site_validate(Pieform $form, $values) {
                 $form->set_error('email', get_string('invalidemailaddress', 'artefact.internal'));
             }
 
-            if (record_exists_sql('
-                    SELECT id
-                    FROM {usr}
-                    WHERE deleted != 1 AND email = ? AND id != ?', array($email, $user->id))
-                || record_exists_sql('
-                    SELECT owner
-                    FROM {artefact_internal_profile_email}
-                    WHERE email = ? AND owner != ?', array($email, $user->id))) {
+            if (check_email_exists($email, $user->id)) {
                 $form->set_error('email', get_string('emailalreadytakenbyothers', 'auth.internal'));
             }
         }
@@ -435,6 +476,7 @@ function edituser_site_submit(Pieform $form, $values) {
         if ($unexpire) {
             $user->expirymailsent = 0;
             $user->lastaccess = db_format_timestamp(time());
+            $user->active = 1;
         }
     }
 
@@ -453,7 +495,7 @@ function edituser_site_submit(Pieform $form, $values) {
     if ($values['maildisabled'] == 0 && get_account_preference($user->id, 'maildisabled') == 1) {
         // Reset the sent and bounce counts otherwise mail will be disabled
         // on the next send attempt
-        $u = new StdClass;
+        $u = new stdClass();
         $u->email = $user->email;
         $u->id = $user->id;
         update_bounce_count($u,true);
@@ -583,18 +625,32 @@ function edituser_site_submit(Pieform $form, $values) {
     // Update user's primary email address
     set_user_primary_email($user->id, $values['email']);
 
-    delete_records('usr_tag', 'usr', $user->id);
+    delete_records('tag', 'resourcetype', 'usr', 'resourceid', $user->id);
     if (is_array($values['tags'])) {
-        $values['tags'] = check_case_sensitive($values['tags'], 'usr_tag');
+        $values['tags'] = check_case_sensitive($values['tags'], 'tag');
         foreach(array_unique($values['tags']) as $tag) {
             if (empty($tag)) {
                 continue;
             }
+            $tag = check_if_institution_tag($tag);
+            if (preg_match("/^lastinstitution\:(.*)/", $tag, $matches)) {
+                $ownertype = 'institution';
+                $ownerid = $matches[1];
+            }
+            else {
+                $ownertype = 'user';
+                $ownerid = $user->id;
+            }
             insert_record(
-                'usr_tag',
+                'tag',
                 (object) array(
-                    'usr' => $user->id,
-                    'tag' => strtolower($tag),
+                    'resourcetype' => 'usr',
+                    'resourceid' => $user->id,
+                    'ownertype' => $ownertype,
+                    'ownerid' => $ownerid,
+                    'tag' => $tag,
+                    'ctime' => db_format_timestamp(time()),
+                    'editedby' => $USER->get('id'),
                 )
             );
         }
@@ -628,7 +684,7 @@ if (empty($suspended)) {
             ),
             'submit' => array(
                 'type'  => 'submit',
-                'class' => 'btn-default',
+                'class' => 'btn-secondary',
                 'value' => get_string('suspenduser','admin'),
             ),
         )
@@ -647,7 +703,7 @@ else {
             ),
             'submit' => array(
                 'type'  => 'submit',
-                'class' => 'btn-default',
+                'class' => 'btn-secondary',
                 'value' => get_string('unsuspenduser','admin'),
             ),
         )
@@ -697,8 +753,8 @@ $deleteform = pieform(array(
         'submit' => array(
             'type' => 'button',
             'usebuttontag' => true,
-            'class' => 'btn-default',
-            'value'          => '<span class="icon icon-trash icon-lg text-danger left" role="presentation" aria-hidden="true"></span><span>'. get_string('deleteuser', 'admin') . '</span>',
+            'class' => 'btn-secondary',
+            'value'          => '<span class="icon icon-trash-alt icon-lg text-danger left" role="presentation" aria-hidden="true"></span><span>'. get_string('deleteuser', 'admin') . '</span>',
             'confirm' => get_string('confirmdeleteuser', 'admin'),
         ),
     ),
@@ -793,7 +849,7 @@ foreach ($institutions as $i) {
             ),
             $i->institution.'_remove' => array(
                 'type'  => 'submit',
-                'class' => 'btn-default',
+                'class' => 'btn-secondary',
                 'value' => get_string('removeuserfrominstitution', 'admin'),
                 'confirm' => get_string('confirmremoveuserfrominstitution', 'admin'),
             )
@@ -954,6 +1010,7 @@ $smarty->assign('institutionform', $institutionform);
 $smarty->assign('loginas', $id != $USER->get('id') && is_null($USER->get('parentuser')));
 $smarty->assign('PAGEHEADING', display_name($user));
 $smarty->assign('SUBSECTIONHEADING', TITLE);
+setpageicon($smarty, 'icon-user-cog');
 
 # Only allow deletion and suspension of a user if the viewed user is not
 # the current user; or if they are the current user, they're not the only

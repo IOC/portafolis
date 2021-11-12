@@ -132,7 +132,7 @@ $form = pieform(array(
             'title' => get_string('postbody', 'artefact.blog'),
             'description' => get_string('postbodydesc', 'artefact.blog'),
             'rules' => array(
-                'maxlength' => 65536,
+                'maxlength' => 1000000,
                 'required' => true
             ),
             'defaultvalue' => $description,
@@ -143,6 +143,7 @@ $form = pieform(array(
             'title'        => get_string('tags'),
             'description'  => get_string('tagsdesc'),
             'help' => true,
+            'institution'  => $institutionname,
         ),
         'license' => license_form_el_basic(isset($blogpostobj) ? $blogpostobj : null),
         'licensing_advanced' => license_form_el_advanced(isset($blogpostobj) ? $blogpostobj : null),
@@ -209,13 +210,6 @@ $smarty = smarty(array(), array(), array(), array(
     'tinymceconfig' => '
         image_filebrowser: "editpost_filebrowser",
     ',
-    'sideblocks' => array(
-        array(
-            'name'   => 'quota',
-            'weight' => -10,
-            'data'   => array(),
-        ),
-    ),
 ));
 $smarty->assign('INLINEJAVASCRIPT', $javascript);
 $smarty->assign('form', $form);
@@ -277,34 +271,8 @@ function editpost_submit(Pieform $form, $values) {
     $postobj->set('description', EmbeddedImage::prepare_embedded_images($values['description'], 'blogpost', $postobj->get('id')));
 
     // Attachments
-    $old = $postobj->attachment_id_list();
-    // $new = is_array($values['filebrowser']['selected']) ? $values['filebrowser']['selected'] : array();
-    $new = is_array($values['filebrowser']) ? $values['filebrowser'] : array();
-    // only allow the attaching of files that exist and are editable by user
-    foreach ($new as $key => $fileid) {
-        $file = artefact_instance_from_id($fileid);
-        if (!($file instanceof ArtefactTypeFile) || !$USER->can_publish_artefact($file)) {
-            unset($new[$key]);
-        }
-    }
-    if (!empty($new) || !empty($old)) {
-        foreach ($old as $o) {
-            if (!in_array($o, $new)) {
-                try {
-                    $postobj->detach($o);
-                }
-                catch (ArtefactNotFoundException $e) {}
-            }
-        }
-        foreach ($new as $n) {
-            if (!in_array($n, $old)) {
-                try {
-                    $postobj->attach($n);
-                }
-                catch (ArtefactNotFoundException $e) {}
-            }
-        }
-    }
+    update_attachments($postobj, $values['filebrowser'], null, null, true);
+
     $postobj->commit();
     db_commit();
 

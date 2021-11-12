@@ -10,11 +10,13 @@
  */
 
 define('INTERNAL', 1);
-define('MENUITEM', 'myportfolio');
+define('MENUITEM', 'create/tags');
 require('init.php');
 require_once('searchlib.php');
-define('TITLE', get_string('mytags'));
+require_once('view.php');
+require_once('collection.php');
 
+define('TITLE', get_string('mytags'));
 
 $tagsort = param_alpha('ts', null) != 'freq' ? 'alpha' : 'freq';
 $tags = get_my_tags(null, false, $tagsort);
@@ -49,14 +51,14 @@ jQuery(function($) {
   };
 
   function sortTagAlpha(a, b) {
-      var aid = $(a).prop('id');
-      var bid = $(b).prop('id');
+      var aid = $(a).children().prop('id');
+      var bid = $(b).children().prop('id');
       return aid.toLowerCase() < bid.toLowerCase() ? -1 : (aid.toLowerCase() > bid.toLowerCase() ? 1 : 0);
   }
 
   function sortTagFreq(a, b) {
-      var aid = $(a).prop('id');
-      var bid = $(b).prop('id');
+      var aid = $(a).children().prop('id');
+      var bid = $(b).children().prop('id');
       return mytags[bid] - mytags[aid];
   }
 
@@ -65,23 +67,20 @@ jQuery(function($) {
   function rewriteTagSortLink(id, elem) {
       $(elem).on('click', function(e) {
           e.preventDefault();
-          var elems = $(mytags_container).find('a.tag');
-          elems.sort(sort_functions[getUrlParameter('ts', $(this).prop('href'))]);
+          var ul = $(mytags_container).children();
+          var li = ul.children("li");
+          li.detach().sort(sort_functions[getUrlParameter('ts', $(this).prop('href'))]);
+          ul.append(li);
 
-          // FF needs spaces in between each element for wrapping
-          $(mytags_container).empty();
-          elems.each(function () {
-              $(mytags_container).append(this, ' ')
-          });
           // set all tabs to inactive
           $('ul.nav-tabs li').each(function() {
               $(this).removeClass('active');
-              $(this).find('a').removeClass('current-tab');
+              $(this).find('a').removeClass('active');
               $(this).find('.sr-only').html('(' + get_string_ajax('tab', 'mahara') + ')');
           });
           // set current one to active
           $(this).closest('li').addClass('active');
-          $(this).addClass('current-tab');
+          $(this).addClass('active');
           $(this).find('.sr-only').html('(' + get_string_ajax('tab', 'mahara') + ' ' + get_string_ajax('selected', 'mahara') + ')');
 
           return false;
@@ -131,12 +130,12 @@ jQuery(function($) {
                   }
                   var edit_tag_link = $('#results_container a.edit-tag').first();
                   if (edit_tag_link.length) {
-                      if (data.data.tag) {
+                      if (data.data.tag && !data.data.is_institution_tag) {
                           edit_tag_link.prop('href', config.wwwroot + 'edittags.php?tag=' + data.data.tagurl);
-                          edit_tag_link.removeClass('hidden');
+                          edit_tag_link.removeClass('d-none');
                       }
                       else {
-                          edit_tag_link.addClass('hidden');
+                          edit_tag_link.addClass('d-none');
                       }
                   }
 
@@ -169,6 +168,8 @@ jQuery(function($) {
                       }
                       else if (!$(this).hasClass('selected') && data.data.type == getUrlParameter('type', $(this).prop('href'))) {
                           $(this).addClass('selected');
+                          $('#currentfilter').text($(this).text());
+                          $('#results_filter').parent().removeClass('open');
                       }
                   });
                   $('#results_sort a').each(function () {rewriteTagLink(this, ['tag', 'type'], [ 'sort'])});
@@ -203,10 +204,19 @@ foreach (array('alpha', 'freq') as $option) {
 
 $data->queryprefix = (strpos($data->baseurl, '?') === false ? '?' : '&');
 
+$notinstitutiontag = true;
+if ($tag) {
+    $tagname = strpos($tag, ':') ? explode(': ', $tag)[1] : $tag;
+    if (get_field('tag', 'ownertype', 'tag', $tagname) == 'institution') {
+        $notinstitutiontag = false;
+    }
+}
 $smarty = smarty(array('paginator'));
+setpageicon($smarty, 'icon-tags');
 $smarty->assign('tags', $tags);
 $smarty->assign('tagsortoptions', $tagsortoptions);
 $smarty->assign('tag', $tag);
+$smarty->assign('not_institution_tag', $notinstitutiontag);
 $smarty->assign('results', $data);
 $smarty->assign('INLINEJAVASCRIPT', $js);
 $smarty->display('tags.tpl');

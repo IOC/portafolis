@@ -46,9 +46,7 @@ function get_string(name) {
  * Getting the string via ajax as deferred object
  */
 function get_string_ajax(str, section) {
-    // need to pass all the arguments except 'section' in case there are %s variables
-    var getstringargs = [str].concat([].slice.call(arguments, 2));
-
+    var getstringargs = Array.prototype.concat.apply([], arguments);
     // If string already exists in strings object
     if (typeof(strings[str]) !== 'undefined') {
         return get_string.apply(this, getstringargs);
@@ -141,7 +139,7 @@ function formStartProcessing(form, btn) {
     if (button.length) {
         // we add a hidden input field so the "disabled" button still gets to
         // pass its value through
-        var node = jQuery('<input type="hidden" />').attr({
+        var node = jQuery('<input type="hidden"></input>').attr({
             'value': button.val(),
             'name': button.attr('name')
         });
@@ -154,20 +152,17 @@ function formStartProcessing(form, btn) {
         }
 
         button.prop('disabled', true);
-        button.blur();
+        button.trigger("blur");
 
-        // Start the progress meter if it is enabled.
-        if (form && form.elements && form.elements['progress_meter_token']) {
-            meter_update_timer(form.elements['progress_meter_token'].value);
-        }
     }
 }
 
+var meter_timeout;
 function meter_update_timer(instance) {
     sendjsonrequest(config.wwwroot + 'json/progress_meter.php', { 'instance' : instance }, 'GET', function(data) {
         if (typeof(data) != 'undefined') {
-            if (!data.data.finished || !jQuery('#meter_overlay').is(':visible')) {
-                setTimeout(function() { meter_update_timer(instance) }, 1000);
+            if (!data.finished || !jQuery('#meter_overlay').is(':visible')) {
+                meter_timeout = setTimeout(function() { meter_update_timer(instance) }, 300);
             }
             meter_update(data.data);
         }
@@ -217,7 +212,7 @@ function formGlobalError(form, data) {
 
 // Message related functions
 
-function makeMessage(message, type) {
+function makeMessage(message, type, temp) {
     if (message === undefined) {
         return;
     }
@@ -225,6 +220,9 @@ function makeMessage(message, type) {
     var messageContainer = jQuery('<div class="alert"></div>').append(message);
     switch (type) {
         case 'ok':
+            if (temp) {
+                messageContainer.addClass('alert-temp').get(0);
+            }
             return messageContainer.addClass('alert-success').get(0);
         case 'error':
             return messageContainer.addClass('alert-danger').get(0);
@@ -267,7 +265,7 @@ function processingStart(msg) {
         msg = get_string('loading');
     }
 
-    jQuery('.loading-box').removeClass('hidden').html(
+    jQuery('.loading-box').removeClass('d-none').html(
         '<div class="loading-inner">' +
             '<span class="icon-spinner icon-pulse icon icon-lg"></span>' +
             '<span class="loading-message"></span>' +
@@ -281,7 +279,7 @@ function processingStart(msg) {
  */
 function processingStop() {
     setTimeout(function() {
-        jQuery('.loading-box').addClass('hidden');
+        jQuery('.loading-box').addClass('d-none');
     }, 100); //give users enough time to see the loading indicator
     window.isRequestProcessing = false;
 }
@@ -415,7 +413,10 @@ function basename(path) {
 
 jQuery(function($) {
     // Autofocus the first element with a class of 'autofocus' on page load (@todo: move this to pieforms.js)
-    $('.autofocus').first().focus();
+    $('.autofocus').first().trigger("focus");
+    if ($('.autofocus').first().trigger("focus").prop('id') == 'settings_title' && getUrlParameter('new', window.location.href)) {
+        $('.autofocus').first().trigger('select');
+    }
 });
 
 // Contextual Help
@@ -430,10 +431,10 @@ var badIE = false;
 function contextualHelpIcon(formName, helpName, pluginType, pluginName, page, section) {
     var link = jQuery(
         '<a href="#">' +
-            '<span class="icon icon-info-circle" alt="' + get_string('Help') + '></span>' +
+            '<span class="icon icon-info-circle" alt="' + get_string('Help') + '"></span>' +
         '</a>'
     );
-    link.click(function(e) {
+    link.on("click", function(e) {
         contextualHelp(formName, helpName, pluginType, pluginName, page, section, link);
         e.preventDefault();
     });
@@ -487,7 +488,7 @@ function contextualHelp(formName, helpName, pluginType, pluginName, page, sectio
 
     // create and display the container
     contextualHelpContainer = jQuery(
-        '<div style="position: absolute" class="contextualHelp hidden" role="dialog">' +
+        '<div style="position: absolute" class="contextualHelp d-none" role="dialog">' +
             '<span class="icon icon-spinner icon-pulse"></span>' +
         '</div>'
     );
@@ -511,7 +512,7 @@ function contextualHelp(formName, helpName, pluginType, pluginName, page, sectio
 
     // Once it has been positioned, make it visible
     contextualHelpContainer.offset(position);
-    contextualHelpContainer.removeClass('hidden');
+    contextualHelpContainer.removeClass('d-none');
 
     contextualHelpSelected = key;
 
@@ -556,29 +557,29 @@ function contextualHelp(formName, helpName, pluginType, pluginName, page, sectio
  */
 function buildContextualHelpBox(content) {
     contextualHelpContainer.html(
-        '<div class="pull-right pts">' +
+        '<div class="float-right pts">' +
             '<a href="" class="help-dismiss" onclick="return false;">' +
-                '<span class="icon icon-remove"></span>' +
+                '<span class="icon icon-times"></span>' +
                 '<span class="sr-only">' + get_string('closehelp') + '</span>' +
             '</a>' +
         '</div>' +
         '<div id="helpstop">' + content +  '</div>'
     );
 
-    jQuery('#helpstop').click(function(e) {
+    jQuery('#helpstop').on("click", function(e) {
         if (e.target.nodeName != "A") {
             e.preventDefault();
             e.stopPropagation();
         }
     });
-    contextualHelpContainer.find('.help-dismiss').focus();
+    contextualHelpContainer.find('.help-dismiss').trigger("focus");
 }
 
 /*
  * Positions the box so that it's next to the link that was activated
  */
 function contextualHelpPosition(container) {
-    contextualHelpContainer.css('visibility', 'hidden').removeClass('hidden');
+    contextualHelpContainer.css('visibility', 'hidden').removeClass('d-none');
     var position = contextualHelpLink.offset();
     var containerwidth = contextualHelpContainer.outerWidth(true);
 
@@ -643,14 +644,14 @@ function ensureHelpIsOnScreen(container, position) {
 /* Only works in non-ie at the moment. Using 'document' as the element
    makes IE detect the event, but then makes it so you need to click on
    the help twice before it opens. */
-jQuery(document).click(function(e) {
+jQuery(document).on("click", function(e) {
     if (contextualHelpOpened && !badIE) {
         contextualHelpContainer.remove();
         contextualHelpContainer = null;
         contextualHelpSelected = null;
         contextualHelpOpened = false;
         if (contextualHelpLink) {
-            contextualHelpLink.focus();
+            contextualHelpLink.trigger("focus");
             contextualHelpLink = null;
         }
     }
@@ -735,10 +736,10 @@ function progressbarUpdate(artefacttype, remove) {
 
             // when progress is met
             if ((counting - completed) <= 0) {
-                progressitem.closest('li').addClass('hidden');
+                progressitem.closest('li').addClass('d-none');
             }
             else {
-                progressitem.closest('li').removeClass('hidden');
+                progressitem.closest('li').removeClass('d-none');
             }
             // now update the totals if we need to
             if ((oldcompleted > 0 && oldcompleted <= counting && remove ) || (completed <= counting && !remove)) {
@@ -759,6 +760,12 @@ function meter_update(data) {
     }
 
     if (data.finished) {
+        if (data.error) {
+            jQuery('#meter_fill').animate({width: 0}); // remove bar filled before hiding
+        }
+        else {
+            jQuery('#meter_fill').animate({width: jQuery('#meter_wrap').width()}); // show bar filled before hiding
+        }
         jQuery('#meter_overlay').hide();
 
         if (typeof(data.redirect) !== 'undefined') {
@@ -779,7 +786,7 @@ function meter_update(data) {
     else {
         new_width = 0;
     }
-    jQuery('#meter_fill').width(new_width);
+    jQuery('#meter_fill').animate({width: new_width});
 
     return true;
 }
@@ -843,15 +850,15 @@ function escapeRegExp(string) {
   return string.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1");
 }
 
-jQuery(document).ready(function($) {
+jQuery(function($) {
     // Allow the js / no-js toggle on all pages for theme styling
     $('body').removeClass('no-js').addClass('js');
 
     // Fix for Chrome and IE, which don't change focus when going to a fragment identifier link
     // Manually focuses the main content when the "skip to main content" link is activated
-    $('a.skiplink').click(function() {
+    $('a.skiplink').on("click", function() {
         var id = $j(this).attr('href');
-        $(id).attr('tabIndex', -1).focus();
+        $(id).attr('tabIndex', -1).trigger("focus");
     });
 });
 
@@ -870,6 +877,7 @@ jQuery(document).ready(function($) {
  */
 var chartobject;
 var canvascontext;
+var trueMaxHeight = 0;
 function fetch_graph_data(opts) {
 
     if (typeof opts.extradata != 'undefined') {
@@ -911,13 +919,56 @@ function fetch_graph_data(opts) {
             else {
                 canvascontext = document.getElementById(opts.id).getContext("2d");
             }
-            chartobject = new Chart(canvascontext)[json.data.graph](JSON.parse(json.data.datastr),JSON.parse(json.data.configstr));
-            legendtype = (typeof chartobject.options.datasetStroke !== 'undefined' && chartobject.options.datasetStroke == true) ? 'stroke' : 'fill';
-            chartobject.options.legendTemplate = "<ul class=\"<%=name.toLowerCase()%>-legend\"><% for (var i=0; i<datasets.length; i++){%><li><span style=\"background-color:<%=datasets[i]." + legendtype + "Color%>\"></span><%if(datasets[i].label){%><%=datasets[i].label%><%}%></li><%}%></ul>";
+            var datastr = JSON.parse(json.data.datastr);
+            var configstr = JSON.parse(json.data.configstr);
 
-            var legendHolder = document.createElement('div');
-            legendHolder.innerHTML = chartobject.generateLegend();
-            document.getElementById(opts.id + 'legend').appendChild(legendHolder.firstChild);
+            var config = {
+                type: json.data.graph.toLowerCase(),
+                data: {
+                    datasets: datastr.datasets,
+                    labels: datastr.labels,
+                },
+                options: {
+                    responsive: true,
+                    legendCallback: function(chart) {
+                        var text = [];
+                        if (chart.config.type != 'undefined' && chart.config.type == 'line') {
+                            text.push('<ul class="' + chart.id + '-legend">');
+                            for (var i = 0; i < chart.data.datasets.length; i++) {
+                                text.push('<li><span style="background-color:' +
+                                chart.data.datasets[i].borderColor +
+                                '"></span>');
+                                if (chart.data.datasets[i].label) {
+                                  text.push(chart.data.datasets[i].label);
+                                }
+                                text.push('</li>');
+                            }
+                            text.push('</ul>');
+                            return text.join('');
+                        }
+                        else {
+                            text.push('<ul class="' + chart.id + '-legend">');
+                            for (var i = 0; i < chart.data.labels.length; i++) {
+                                text.push('<li><span style="background-color:' +
+                                chart.data.datasets[0].backgroundColor[i] +
+                                '"></span>');
+                                if (chart.data.labels[i]) {
+                                  text.push(chart.data.labels[i]);
+                                }
+                                text.push('</li>');
+                            }
+                            text.push('</ul>');
+                            return text.join('');
+                        }
+                    },
+                    legend: {
+                        display: false,
+                    }
+                }
+              };
+            chartobject = new Chart(canvascontext, config);
+            document.getElementById(opts.id + 'legend').innerHTML = chartobject.generateLegend();
+
             if (json.data.title) {
                 jQuery('#' + opts.id + 'title').text(json.data.title);
             }
@@ -960,7 +1011,7 @@ function getUrlParameter(param, url) {
     }
     var vars = url.split("?");
 
-    if (!vars[1]) return null; // no search parameters
+    if (!vars[1]) return null; // no search parameters - are you using clean URLs?
 
     varparams = vars[1].split("&");
 
@@ -1027,15 +1078,15 @@ function parseQueryString(encodedString, useArrays) {
  * Make sure the previous/next key tabbing will move within the dialog
  */
 function keytabbinginadialog(dialog, firstelement, lastelement) {
-    firstelement.keydown(function(e) {
+    firstelement.on("keydown", function(e) {
         if (e.keyCode === $j.ui.keyCode.TAB && e.shiftKey) {
-            lastelement.focus();
+            lastelement.trigger("focus");
             e.preventDefault();
         }
     });
-    lastelement.keydown(function(e) {
+    lastelement.on("keydown", function(e) {
         if (e.keyCode === $j.ui.keyCode.TAB && !e.shiftKey) {
-            firstelement.focus();
+            firstelement.trigger("focus");
             e.preventDefault();
         }
     });
@@ -1051,35 +1102,162 @@ Number.isInteger = Number.isInteger || function(value) {
 };
 
 /**
- * Wire up the 'help' footer link so it opens help in a new window/tab
+ * Replace target=_blank with JS opener for security reasons
  */
-jQuery(document).ready(function($) {
-    if ($('#footerhelp').length > 0) {
-        var link = $('#footerhelp');
-        link.off('click');
-        link.on('click', function(e) {
-            e.stopPropagation();
-            e.preventDefault();
-            var newWnd = window;
-            newWnd.opener = null;
-            newWnd.open(link.prop('href'), '_blank');
-        });
+jQuery(function($) {
+    replaceTarget();
+    jQuery(window).on('blocksloaded', {}, function() {
+        var element = '.grid-stack';
+        replaceTarget(element);
+    });
+});
+
+function replaceTarget(element) {
+    var selector = 'a';
+    if (element) {
+        selector = element + ' ' + selector;
     }
+    $(selector).each(function() {
+        var url = $(this).attr('href');
+        if (typeof url !== typeof undefined && url !== false) {
+            if ($(this).attr('target') == '_blank' || (url.match("^http") && !url.match(config.wwwroot) && $(this).attr('target') != '_self')) {
+                var link = $(this);
+                link.removeAttr('target');
+
+                link.off('click');
+                link.on('click', function(e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    var newWnd = window;
+                    newWnd.opener = null;
+                    newWnd.open(link.prop('href'), '_blank');
+                });
+            }
+        }
+    });
+}
+
+/**
+ * Custom handling for the navigation accessibility
+ */
+jQuery(function($) {
+    /**
+     * Wire up menu so that links with submenu but no url just toggle the child collapse
+     */
+    $('nav .menu-dropdown-toggle').on('click', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        $(this).next().trigger('click');
+    });
+
+    /**
+     * Send focus to first menu item unless it's an element of a sub menu
+     * Closes menu and returns focus to menu button
+     */
+    $('nav .navbar-collapse').on('shown.bs.collapse', function(e) {
+        var parent = $(this);
+
+        if (!$(e.target).hasClass('child-nav collapse show')) {
+            $(this).find('ul li:first a').focus();
+        }
+
+        // Return focus to menu button from last submenu button
+        $($(this).find('button.navbar-showchildren:last')).on('blur', function() {
+            if ($(this).hasClass('collapsed')) {
+                var id = $(parent).attr('id');
+                $('button[aria-controls="' + id + '"]').focus();
+                $(parent).collapse('hide');
+            }
+        });
+
+        // Return focus to menu button from last element in menu when tabbing away
+        $(this).find('ul li:last a').on('blur', function() {
+            var id = $(parent).attr('id');
+            $('button[aria-controls="' + id + '"]').focus();
+            $(parent).collapse('hide');
+        });
+    });
+
+    // Returns focus back to the menu button when the menu is closed
+    $('nav .navbar-collapse').on('hide.bs.collapse', function(e) {
+        if (!$(e.target).hasClass('child-nav collapse show')) {
+            var id = $(this).attr('id');
+            $('button[aria-controls=' + id + ']').focus();
+        }
+    });
+});
+
+function pmeter_success(form, data) {
+    jQuery('#meter_fill').animate({width: jQuery('#meter_wrap').width()}); // show bar filled before hiding
+    formSuccess(form, data);
+    if (typeof(data.goto) !== 'undefined') {
+        window.location.href = data.goto;
+    }
+    return true;
+}
+
+function pmeter_error(form, data) {
+    formError(form, data);
+    var data = {finished:true, error:true};
+    meter_update(data);
+    clearTimeout(meter_timeout);
+}
+
+function pmeter_presubmit(form, btn) {
+    var startmeter = false;
+    if ($('#' + form.name + '_progress_meter_token').length) {
+        startmeter = true;
+    }
+
+    if (startmeter) {
+        // Start the progress meter.
+        if (form && form.elements && form.elements['progress_meter_token']) {
+            meter_update_timer(form.elements['progress_meter_token'].value);
+        }
+    }
+
+    formStartProcessing(form, btn);
+}
+
+function showmatchall() {
+    if ($('#searchviews_type').val() == 'tagsonly') {
+        $('#searchviews_matchalltags_container').parent().find('.d-none').removeClass('d-none'); // because the d-none from form is on container and input
+    }
+    else {
+        $('#searchviews_matchalltags_container').addClass('d-none');
+    }
+}
+$(function() {
+    $('#searchviews_type').on('change', function() {
+        showmatchall();
+    });
 });
 
 /**
- * Wire up the 'help' in blocks edit page so it opens help in a new window/tab
+ * Offset html anchors for fixed header
  */
-jQuery(document).ready(function($) {
-    if ($('#blockshelp').length > 0) {
-        var link = $('#blockshelp');
-        link.off('click');
-        link.on('click', function(e) {
-            e.stopPropagation();
-            e.preventDefault();
-            var newWnd = window;
-            newWnd.opener = null;
-            newWnd.open(link.prop('href'), '_blank');
-        });
-    }
+jQuery(function($) {
+    $(document).on('click', 'a', function(event) {
+        // needs to have a target hash
+        // target the same page
+        // the target has to be in the same block and needs to be inside a tag <a>
+        // or the target needs to be the header
+        if ($(this.hash).length &&
+            location.pathname.replace(/^\//, '') == this.pathname.replace(/^\//, '') &&
+            $(this).closest('body').find('a' + this.hash).length) {
+            event.preventDefault();
+            var target = $(this.hash);
+            var headerheight = 0;
+            if ($('#header-content').length) {
+                headerheight = $('#header-content').offset().top;
+            }
+            else if ($('.container.main-content').length) {
+                headerheight = $('.container.main-content').offset().top;
+            }
+            $('html, body').animate({
+                scrollTop: target.offset().top - headerheight
+            }, 500);
+            $('a' + this.hash).attr('tabindex', 0).focus();
+        }
+    });
 });

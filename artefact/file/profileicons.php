@@ -10,7 +10,7 @@
  */
 
 define('INTERNAL', 1);
-define('MENUITEM', 'content/profileicons');
+define('MENUITEM', 'profileicons');
 define('SECTION_PLUGINTYPE', 'artefact');
 define('SECTION_PLUGINNAME', 'file');
 define('SECTION_PAGE', 'profileicons');
@@ -48,7 +48,7 @@ $uploadform = pieform(array(
             'type' => 'file',
             'title' => get_string('profileicon', 'artefact.file'),
             'rules' => array('required' => true),
-            'maxfilesize'  => get_max_upload_size(false),
+            'maxfilesize'  => get_max_upload_size(true),
         ),
         'title' => array(
             'type' => 'text',
@@ -75,6 +75,7 @@ else {
 $profileiconattachedtoportfolioitems = json_encode(get_string('profileiconattachedtoportfolioitems', 'artefact.file'));
 $profileiconappearsinviews = json_encode(get_string('profileiconappearsinviews', 'artefact.file'));
 $profileiconappearsinskins = json_encode(get_string('profileiconappearsinskins', 'artefact.file'));
+$profileiconappearsinposts = json_encode(get_string('profileiconappearsinposts', 'artefact.file'));
 $confirmdeletefile = json_encode(get_string('confirmdeletefile', 'artefact.file'));
 
 $IJS = <<<EOF
@@ -119,7 +120,7 @@ var table = new TableRenderer(
                 'type'    : 'checkbox',
                 'class'   : 'checkbox',
                 'name'    : 'icons[' + rowdata.id + ']',
-                'value'   : rowdata.attachcount + ',' + rowdata.viewcount + ',' + rowdata.skincount
+                'value'   : rowdata.attachcount + ',' + rowdata.viewcount + ',' + rowdata.skincount + ',' + rowdata.postcount
             };
             if (!rowdata.id) {
                 options.disabled = 'disabled';
@@ -163,7 +164,7 @@ jQuery(function($) {
         $(form).find('input.checkbox').each(function () {
             var id = $(this).prop('name').match(/\d+/)[0];
             if ($(this).prop('checked')) {
-                var counts = $(this).prop('value').split(',', 3);
+                var counts = $(this).prop('value').split(',', 4);
                 var warn = '';
                 if (counts[0] > 0) {
                     warn += {$profileiconattachedtoportfolioitems} + ' ';
@@ -173,6 +174,9 @@ jQuery(function($) {
                 }
                 if (counts[2] > 0) {
                     warn += {$profileiconappearsinskins} + ' ';
+                }
+                if (counts[3] > 0) {
+                    warn += {$profileiconappearsinposts} + ' ';
                 }
                 if (warn != '') {
                     warn += {$confirmdeletefile};
@@ -194,7 +198,7 @@ function upload_validate(Pieform $form, $values) {
     require_once('file.php');
     require_once('uploadmanager.php');
 
-    $um = new upload_manager('file');
+    $um = new upload_manager('file', false, null, false, get_max_upload_size(true));
     if ($error = $um->preprocess_file()) {
         $form->set_error('file', $error);
         return false;
@@ -230,7 +234,7 @@ function upload_validate(Pieform $form, $values) {
 function upload_submit(Pieform $form, $values) {
     safe_require('artefact', 'file');
 
-    $data = new stdClass;
+    $data = new stdClass();
     $data->title = $values['title'] ? $values['title'] : $values['file']['name'];
 
     try {
@@ -318,20 +322,8 @@ function settings_submit_delete(Pieform $form, $values) {
     redirect('/artefact/file/profileicons.php');
 }
 
-$smarty = smarty(
-    array('tablerenderer'),
-    array(),
-    array(),
-    array(
-        'sideblocks' => array(
-            array(
-                'name'   => 'quota',
-                'weight' => -10,
-                'data'   => array(),
-            ),
-        ),
-    )
-);
+$smarty = smarty(array('tablerenderer'));
+setpageicon($smarty, 'icon-portrait');
 $smarty->assign('INLINEJAVASCRIPT', $IJS);
 $smarty->assign('uploadform', $uploadform);
 // This is a rare case where we don't actually care about the form, because

@@ -10,7 +10,8 @@
  */
 
 define('INTERNAL', 1);
-define('MENUITEM', 'groups/forums');
+define('MENUITEM', 'engage/index');
+define('MENUITEM_SUBPAGE', 'forums');
 define('SECTION_PLUGINTYPE', 'interaction');
 define('SECTION_PLUGINNAME', 'forum');
 define('SECTION_PAGE', 'edittopic');
@@ -20,19 +21,23 @@ safe_require('interaction', 'forum');
 require_once('group.php');
 require_once(get_config('docroot') . 'interaction/lib.php');
 require_once('antispam.php');
+safe_require('artefact', 'file');
 require_once('embeddedimage.php');
+define('SUBSECTIONHEADING', get_string('nameplural', 'interaction.forum'));
 
 $userid = $USER->get('id');
 $topicid = param_integer('id', 0);
 $returnto = param_alpha('returnto', 'topic');
 
+$page = get_config('wwwroot') . 'interaction/forum/edittopic.php';
 if ($topicid == 0) { // new topic
     unset($topicid);
     $forumid = param_integer('forum');
+    $page .= '?forum=' . $forumid;
 }
 else { // edit topic
     $topic = get_record_sql(
-        'SELECT p.subject, p.id AS postid, p.body, p.poster, p.topic AS id, ' . db_format_tsfield('p.ctime', 'ctime') . ', t.sticky, t.closed, f.id AS forum
+        'SELECT p.subject, p.id AS postid, p.body, p.poster, p.topic AS id, ' . db_format_tsfield('p.ctime', 'ctime') . ', t.sticky, t.closed, f.id AS forum, p.sent
         FROM {interaction_forum_post} p
         INNER JOIN {interaction_forum_topic} t ON (p.topic = t.id AND t.deleted != 1)
         INNER JOIN {interaction_instance} f ON (f.id = t.forum AND f.deleted != 1)
@@ -41,7 +46,7 @@ else { // edit topic
         array($topicid)
     );
     $forumid = $topic->forum;
-
+    $page .= '?id=' . $topic->id;
     if (!$topic) {
         throw new NotFoundException(get_string('cantfindtopic', 'interaction.forum', $topicid));
     }
@@ -76,16 +81,17 @@ if (!group_within_edit_window($forum->groupid)) {
 }
 
 if (!isset($topicid)) { // new topic
-    define('TITLE', $forum->title . ' - ' . get_string('addtopic','interaction.forum'));
+    $topictype = get_string('addtopic','interaction.forum');
+    define('TITLE', $forum->title . ' - ' . $topictype);
 }
-
 else { // edit topic
-    define('TITLE', $forum->title . ' - ' . get_string('edittopic','interaction.forum'));
+    $topictype = get_string('edittopic','interaction.forum');
+    define('TITLE', $forum->title . ' - ' . $topictype);
 
     // no record for edits to own posts with 30 minutes
     if (user_can_edit_post($topic->poster, $topic->ctime)) {
         $topic->editrecord = false;
-        $timeleft = (int)get_config_plugin('interaction', 'forum', 'postdelay') - round((time() - $topic->ctime) / 60);
+        $timeleft = ceil(get_config_plugin('interaction', 'forum', 'postdelay') - (time() - $topic->ctime) / 60);
     }
     else if ($moderator) {
         $topic->editrecord = true;
@@ -99,10 +105,27 @@ else { // edit topic
     }
 }
 
+$folder = param_integer('folder', 0);
+$browse = (int) param_variable('browse', 0);
+$highlight = null;
+if ($file = param_integer('file', 0)) {
+    $highlight = array($file);
+}
+
+$instance = new InteractionForumInstance($forumid);
+$currenttab = array('type' => 'user', 'id' => $USER->get('id'));
+$mailsent = (isset($topic) && !empty($topic->sent)) ? true : false;
 $editform = array(
-    'name'     => isset($topic) ? 'edittopic' : 'addtopic',
-    'method'   => 'post',
-    'autofocus' => isset($topic) ? 'body' : 'subject',
+    'name'              => 'edittopic',
+    'successcallback'   => isset($topic) ? 'edittopic_submit' : 'addtopic_submit',
+    'method'            => 'post',
+    'jsform'            => true,
+    'newiframeonsubmit' => true,
+    'jssuccesscallback' => 'edittopic_callback',
+    'jserrorcallback'   => 'edittopic_callback',
+    'plugintype'        => 'interaction',
+    'pluginname'        => 'forum',
+    'configdirs'        => array(get_config('libroot') . 'form/', get_config('docroot') . 'artefact/file/form/'),
     'elements' => array(
         'subject' => array(
             'type'         => 'text',
@@ -121,8 +144,34 @@ $editform = array(
             'defaultvalue' => isset($topic) ? $topic->body : null,
             'rules'        => array(
                 'required'  => true,
-                'maxlength' => 65536,
+                'maxlength' => 1000000,
             ),
+        ),
+        'filebrowser' => array(
+            'type'         => 'filebrowser',
+            'title'        => get_string('attachments', 'artefact.blog'),
+            'folder'       => $folder,
+            'highlight'    => $highlight,
+            'browse'       => $browse,
+            'page'         => $page . '&browse=1',
+            'browsehelp'   => 'browsemyfiles',
+            'config'       => array(
+                'upload'          => true,
+                'uploadplaces'    => array('user', 'group'),
+                'uploadagreement' => get_config_plugin('artefact', 'file', 'uploadagreement'),
+                'resizeonuploaduseroption' => get_config_plugin('artefact', 'file', 'resizeonuploaduseroption'),
+                'resizeonuploaduserdefault' => $USER->get_account_preference('resizeonuploaduserdefault'),
+                'createfolder'    => false,
+                'edit'            => true,
+                'noselect'        => $mailsent,
+                'select'          => true,
+                'alwaysopen'      => false,
+            ),
+            'defaultvalue'       => $instance->attachment_id_list(isset($topic) ? $topic->postid : 0),
+            'selectlistcallback' => 'artefact_get_records_by_id',
+            'selectcallback'     => 'add_attachment',
+            'unselectcallback'   => 'delete_attachment',
+            'tabs'               => $currenttab,
         ),
         'sticky' => array(
             'type'         => 'switchbox',
@@ -140,9 +189,10 @@ $editform = array(
             'type'         => 'switchbox',
             'title'        => get_string('sendnow', 'interaction.forum'),
             'description'  => get_string('sendnowdescription', 'interaction.forum', get_config_plugin('interaction', 'forum', 'postdelay')),
+            'disabled'     => isset($topic) && !empty($topic->sent),
             'defaultvalue' => false,
         ),
-        'submit'   => array(
+        'submitpost'   => array(
             'type'  => 'submitcancel',
             'class' => 'btn-primary',
             'value'       => array(
@@ -170,6 +220,10 @@ if (!$moderator) {
     unset($editform['elements']['closed']);
 }
 
+if (isset($topic) && (!empty($topic->sent) || !user_can_edit_post($topic->poster, $topic->ctime))) {
+    unset($editform['elements']['sendnow']);
+}
+
 $editform = pieform($editform);
 
 function addtopic_validate(Pieform $form, $values) {
@@ -192,8 +246,16 @@ function edittopic_validate(Pieform $form, $values) {
     }
 }
 
+function post_needs_approval($topicid) {
+    $needsapproval = get_field_sql("SELECT c.value FROM {interaction_forum_instance_config} c
+                              INNER JOIN {interaction_forum_topic} t
+                              ON t.forum = c.forum WHERE field = 'moderateposts' AND t.id = ?", array($topicid));
+    return ($needsapproval == 'posts' || $needsapproval == 'postsandreplies');
+}
+
+
 function addtopic_submit(Pieform $form, $values) {
-    global $USER, $SESSION;
+    global $USER, $SESSION, $moderator;
     $forumid = param_integer('forum');
     $groupid = get_field('interaction_instance', '"group"', 'id', $forumid);
 
@@ -214,6 +276,11 @@ function addtopic_submit(Pieform $form, $values) {
         'body'    => $values['body'],
         'ctime'   =>  db_format_timestamp(time())
     );
+
+    if (post_needs_approval($topicid) && !$moderator && ! $USER->get('admin')) {
+        $post->approved = 0;
+    }
+
     $postid = insert_record('interaction_forum_post', $post, 'id', true);
     set_field('interaction_forum_post', 'path', sprintf('%010d', $postid), 'id', $postid);
     // Rewrite the post id into links in the body
@@ -222,6 +289,10 @@ function addtopic_submit(Pieform $form, $values) {
     if (!empty($newbody) && $newbody != $post->body) {
         set_field('interaction_forum_post', 'body', $newbody, 'id', $postid);
     }
+
+    // Attachments
+    $instance = new InteractionForumInstance($forumid);
+    update_attachments($instance, $values['filebrowser'], $postid);
 
     if (!record_exists('interaction_forum_subscription_forum', 'user', $USER->get('id'), 'forum', $forumid)) {
         insert_record('interaction_forum_subscription_topic', (object)array(
@@ -240,13 +311,38 @@ function addtopic_submit(Pieform $form, $values) {
     if (!is_null($delay) && $delay == 0) {
         PluginInteractionForum::interaction_forum_new_post(array($postid));
     }
-    $SESSION->add_ok_msg(get_string('addtopicsuccess', 'interaction.forum'));
-    redirect('/interaction/forum/topic.php?id='.$topicid);
+
+    if (isset($post->approved) && $post->approved == 0) {
+        $forumid = get_field('interaction_forum_topic', 'forum', 'id', $topicid);
+           // Trigger activity.
+        $data = new stdClass();
+        $data->topicid      = $topicid;
+        $data->forumid      = $forumid;
+        $data->postbody     = $values['body'];
+        $data->poster       = $USER->get('id');
+        $data->postedtime   = time();
+        $data->reason       = '';
+        $data->event        = POST_NEEDS_APPROVAL;
+        activity_occurred('postmoderation', $data, 'interaction', 'forum');
+    }
+
+    $result = array(
+        'error'   => false,
+        'message' => get_string('addtopicsuccess', 'interaction.forum'),
+        'goto'    => get_config('wwwroot') . 'interaction/forum/topic.php?id=' . $topicid,
+    );
+    if ($form->submitted_by_js()) {
+        // Redirect back to the note page from within the iframe
+        $SESSION->add_ok_msg($result['message']);
+        $form->json_reply(PIEFORM_OK, $result, false);
+    }
+    $form->reply(PIEFORM_OK, $result);
 }
 
 function edittopic_submit(Pieform $form, $values) {
     global $SESSION, $USER, $topic;
     $topicid = param_integer('id');
+    $mailsent = get_field('interaction_forum_post', 'sent', 'id', $topic->postid);
     $returnto = param_alpha('returnto', 'topic');
     $groupid = get_field_sql("SELECT DISTINCT i.group FROM {interaction_instance} i
                               INNER JOIN {interaction_forum_topic} t ON i.id = t.forum
@@ -286,21 +382,63 @@ function edittopic_submit(Pieform $form, $values) {
             array('id' => $topicid)
         );
     }
+    // Attachments
+    $instance = new InteractionForumInstance($topic->forum);
+    update_attachments($instance, $values['filebrowser'], $topic->postid, $mailsent);
+
     db_commit();
-    $SESSION->add_ok_msg(get_string('edittopicsuccess', 'interaction.forum'));
+
+    $result = array(
+        'error'   => false,
+        'message' => get_string('edittopicsuccess', 'interaction.forum'),
+    );
     if ($returnto == 'view') {
-        redirect('/interaction/forum/view.php?id=' . $topic->forum);
+        $result['goto'] = get_config('wwwroot') . 'interaction/forum/view.php?id=' . $topic->forum;
     }
     else {
-        redirect('/interaction/forum/topic.php?id=' . $topicid);
+        $result['goto'] = get_config('wwwroot') . 'interaction/forum/topic.php?id=' . $topicid;
+    }
+
+    if ($form->submitted_by_js()) {
+        // Redirect back to the note page from within the iframe
+        $SESSION->add_ok_msg($result['message']);
+        $form->json_reply(PIEFORM_OK, $result, false);
+    }
+    $form->reply(PIEFORM_OK, $result);
+}
+
+function add_attachment($attachmentid) {
+    global $forumid, $topic;
+    $instance = new InteractionForumInstance($forumid);
+    if ($instance) {
+        $instance->attach($topic->postid, $attachmentid);
     }
 }
 
+function delete_note_attachment($attachmentid) {
+    global $forumid, $topic;
+    $instance = new InteractionForumInstance($forumid);
+    if ($instance) {
+        $instance->detach($topic->postid, $attachmentid);
+    }
+}
+
+$inlinejs = <<<EOF
+function edittopic_callback(form, data) {
+    edittopic_filebrowser.callback(form, data);
+};
+EOF;
+
 $smarty = smarty();
 $smarty->assign('heading', $forum->groupname);
-$smarty->assign('subheading', TITLE);
+$smarty->assign('subheading', $topictype);
+$smarty->assign('moderator', $moderator);
 $smarty->assign('editform', $editform);
-if (isset($timeleft)) {
-    $smarty->assign('timeleft', $timeleft);
+if (!isset($timeleft)) {
+    $timeleft = 0;
+}
+$smarty->assign('timeleft', $timeleft);
+if (isset($inlinejs)) {
+    $smarty->assign('INLINEJAVASCRIPT', $inlinejs);
 }
 $smarty->display('interaction:forum:edittopic.tpl');

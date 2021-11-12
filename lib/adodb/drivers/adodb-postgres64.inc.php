@@ -1,6 +1,6 @@
 <?php
 /*
- @version   v5.20.9  21-Dec-2016
+ @version   v5.20.14  06-Jan-2019
  @copyright (c) 2000-2013 John Lim (jlim#natsoft.com). All rights reserved.
  @copyright (c) 2014      Damien Regad, Mark Newnham and the ADOdb community
   Released under both BSD license and Lesser GPL library license.
@@ -105,7 +105,7 @@ class ADODB_postgres64 extends ADOConnection{
 	var $_genIDSQL = "SELECT NEXTVAL('%s')";
 	var $_genSeqSQL = "CREATE SEQUENCE %s START %s";
 	var $_dropSeqSQL = "DROP SEQUENCE %s";
-	var $metaDefaultsSQL = "SELECT d.adnum as num, d.adsrc as def from pg_attrdef d, pg_class c where d.adrelid=c.oid and c.relname='%s' order by d.adnum";
+    var $metaDefaultsSQL = "SELECT d.adnum as num, pg_get_expr(d.adbin, d.adrelid) as def from pg_attrdef d, pg_class c where d.adrelid=c.oid and c.relname='%s' order by d.adnum";
 	var $random = 'random()';		/// random function
 	var $autoRollback = true; // apparently pgsql does not autorollback properly before php 4.3.4
 							// http://bugs.php.net/bug.php?id=25404
@@ -663,14 +663,14 @@ class ADODB_postgres64 extends ADOConnection{
 		}
 
 		$col_names = $this->MetaColumnNames($table,true,true);
-		//3rd param is use attnum,
-		// see http://sourceforge.net/tracker/index.php?func=detail&aid=1451245&group_id=42718&atid=433976
+		// 3rd param is use attnum,
+		// see https://sourceforge.net/p/adodb/bugs/45/
 		$indexes = array();
 		while ($row = $rs->FetchRow()) {
 			$columns = array();
 			foreach (explode(' ', $row[2]) as $col) {
-				if (isset($col_names[$col])) {
-						$columns[] = $col_names[$col];
+                if (isset($col_names[$col])) {
+					$columns[] = $col_names[$col];
 				}
 			}
 

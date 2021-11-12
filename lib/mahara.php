@@ -19,7 +19,7 @@ defined('INTERNAL') || die();
 function ensure_sanity() {
 
     // PHP version
-    $phpversionrequired = '5.5.9';
+    $phpversionrequired = '7.0.0';
     if (version_compare(phpversion(), $phpversionrequired) < 0) {
         throw new ConfigSanityException(get_string('phpversion', 'error', $phpversionrequired));
     }
@@ -63,7 +63,9 @@ function ensure_sanity() {
     if (!extension_loaded('dom')) {
         throw new ConfigSanityException(get_string('domextensionnotloaded', 'error'));
     }
-
+    if (!extension_loaded('mbstring')) {
+        throw new ConfigSanityException(get_string('mbstringextensionnotloaded', 'error'));
+    }
     // Check for freetype in the gd extension
     $gd_info = gd_info();
     if (!$gd_info['FreeType Support']) {
@@ -141,9 +143,9 @@ function ensure_sanity() {
         }
         throw new ConfigSanityException($message);
     }
-
+    $dwoo_dir = get_dwoo_dir();
     if (
-        !check_dir_exists(get_config('dataroot') . 'dwoo') ||
+        !check_dir_exists($dwoo_dir) ||
         !check_dir_exists(get_config('dataroot') . 'temp') ||
         !check_dir_exists(get_config('dataroot') . 'langpacks') ||
         !check_dir_exists(get_config('dataroot') . 'htmlpurifier') ||
@@ -158,6 +160,10 @@ function ensure_sanity() {
     }
 
     raise_memory_limit('128M');
+}
+
+function get_dwoo_dir() {
+    return !empty(get_config('customdwoocachedir')) ? get_config('customdwoocachedir') . '/dwoo/' : get_config('dataroot') . 'dwoo/';
 }
 
 /**
@@ -245,7 +251,7 @@ function upgrade_mahara($upgrades) {
             // Update local version
             $name(array('localdata' => true));
 
-            $config = new StdClass;
+            $config = new stdClass();
             require(get_config('docroot') . 'local/version.php');
             set_config('localversion', $config->version);
             set_config('localrelease', $config->release);
@@ -681,6 +687,7 @@ function language_get_searchpaths() {
 
         // langpacksearchpaths configuration variable - for experts :)
         $lpsearchpaths = (array)get_config('langpacksearchpaths');
+        $langpacksearchpaths = array();
         //PATCH IOC007
         $langpacksearchpaths = (array)glob(get_config('docroot') . 'langpacks/*', GLOB_MARK | GLOB_ONLYDIR);
         //Fi
@@ -1022,7 +1029,7 @@ function set_config($key, $value) {
         }
     }
     else {
-        $config = new StdClass;
+        $config = new stdClass();
         $config->field = $key;
         $config->value = $value;
         $status = insert_record('config', $config);
@@ -1171,7 +1178,9 @@ function get_config_plugin_instance($plugintype, $instanceid, $key) {
         return $value;
     }
 
-    $records = get_records_array($plugintype . '_instance_config', 'instance', $instanceid, 'field', 'field, value');
+    $instancefield = $plugintype == 'interaction_forum' ? 'forum' : 'instance';
+    $records = get_records_array($plugintype . '_instance_config', $instancefield, $instanceid, 'field', 'field, value');
+
     if (!empty($records)) {
         foreach($records as $record) {
             $storeconfigname = "plugin_{$plugintype}_{$instance}_{$record->field}";
@@ -1211,7 +1220,7 @@ function set_config_plugin_instance($plugintype, $pluginname, $instanceid, $key,
         }
     }
     else {
-        $pconfig = new StdClass;
+        $pconfig = new stdClass();
         $pconfig->instance = $instanceid;
         $pconfig->field  = $key;
         $pconfig->value  = $value;
@@ -1616,7 +1625,7 @@ function safe_require($plugintype, $pluginname, $filename='lib.php', $function='
 
     $realpath = realpath($fullpath);
 
-    if (strpos($realpath, get_config('docroot') !== 0)) {
+    if (strpos($realpath, get_config('docroot')) !== 0) {
         if (!empty($nonfatal)) {
             return false;
         }
@@ -1824,6 +1833,31 @@ function generate_class_name() {
     return 'Plugin' . implode('', array_map('ucfirst', $args));
 }
 
+function generate_class_name_from_table() {
+    $tableargs = func_get_args();
+    $args = generate_plugin_type_from_table($tableargs[0]);
+
+    return 'Plugin' . implode('', array_map('ucfirst', $args));
+}
+
+function generate_plugin_type_from_table() {
+    $tableargs = func_get_args();
+    $table = $tableargs[0];
+    if ($prefix = get_config('dbprefix')) {
+        $table = preg_replace('/' . $prefix . '/', '', $table);
+    }
+    $tableargs = explode('_', $table);
+
+    if (count($tableargs) > 2) {
+        $args = array_slice($tableargs, 0, 2);
+        // Fix for multirecipientnotifications where table name doesn't follow convention
+        if (isset($args[1]) && $args[1] == 'multirecipient') {
+            $args[1] = 'multirecipientnotification';
+        }
+    }
+    return array((isset($args[0]) ? $args[0] : null), (isset($args[1]) ? $args[1] : null));
+}
+
 function generate_artefact_class_name($type) {
     return 'ArtefactType' . ucfirst($type);
 }
@@ -1920,6 +1954,15 @@ function handle_event($event, $data, $ignorefields = array()) {
         }
         $data = (array)$data;
     }
+
+    // Set viewaccess rules for elasticsearch
+    if ($event == 'updateviewaccess' && get_config('searchplugin') == 'elasticsearch' && is_array($data)) {
+        if (isset($data['rules']) && isset($data['rules']->view)) {
+            safe_require('search', 'elasticsearch');
+            ElasticsearchIndexing::add_to_queue($data['rules']->view, 'view');
+        }
+    }
+
     $refid = $reftype = $parentrefid = $parentreftype = null;
     // Need to set dirty to false for all the classes with destructors
     if ($logdata instanceof View) {
@@ -2043,18 +2086,19 @@ function handle_event($event, $data, $ignorefields = array()) {
         insert_record('event_log', $logentry);
         // If we are adding a comment to a page that is shared to a group
         // we need to add a 'sharedcommenttogroup' event
-        if ($reftype == 'comment' && empty($logdata['group'])) {
+        if (is_event_comment_shared_with_group($reftype, $logdata)) {
+            $wheresql = '';
             if (!empty($logdata['onartefact'])) {
                 $commenttype = 'artefact';
                 $commenttypeid = $logdata['onartefact'];
                 $wheresql = " IN (SELECT view FROM {view_artefact} WHERE " . $commenttype . " = ?) ";
             }
-            else {
+            else if (!empty($logdata['onview'])) {
                 $commenttype = 'view';
                 $commenttypeid = $logdata['onview'];
                 $wheresql = " = ? ";
             }
-            if ($groupids = get_records_sql_array("SELECT \"group\" FROM {view_access}
+            if ($wheresql != '' && $groupids = get_records_sql_array("SELECT \"group\" FROM {view_access}
                                                 WHERE view " . $wheresql . "
                                                 AND \"group\" IS NOT NULL", array($commenttypeid))) {
                 foreach ($groupids as $groupid) {
@@ -2121,6 +2165,26 @@ function handle_event($event, $data, $ignorefields = array()) {
 }
 
 /**
+ * Find out if the event relates to a comment
+ * and if the page the comment is on is shared
+ * with a group.
+ *
+ * @param string $reftype event reference type
+ * @param array $logdata the data that makes up the event
+ *
+ * @return boolean
+ */
+function is_event_comment_shared_with_group($reftype, $logdata) {
+    $result = false;
+    if ($reftype == 'comment' && empty($logdata['group'])) {
+        if (!empty($logdata['onartefact']) || !empty($logdata['onview'])) {
+            $result = true;
+        }
+    }
+    return $result;
+}
+
+/**
  * Find out who / what owns the event
  *
  * @param obj $event  event_log database record
@@ -2158,19 +2222,6 @@ function event_find_owner_type($event) {
         $ownertype = $event->resourcetype;
     }
     return array($ownerid, $ownertype);
-}
-
-/**
- * function to convert an array of objects to
- * an array containing one field per place
- *
- * @param array $array input array
- * @param mixed $field field to look for in each object
- */
-function mixed_array_to_field_array($array, $field) {
-    $repl_fun = create_function('$n, $field', '$n = (object)$n; return $n->{$field};');
-    $fields = array_pad(array(), count($array), $field);
-    return array_map($repl_fun, $array, $fields);
 }
 
 /**
@@ -2774,6 +2825,7 @@ function pieform_configure() {
         'autofocus' => true,
         'renderer'  => $renderer,
         'requiredmarker' => '*',
+        'oneofmarker' => '#',
         'elementclasses' => true,
         'descriptionintwocells' => true,
         'jsdirectory'    => get_config('wwwroot') . 'lib/pieforms/static/core/',
@@ -2994,6 +3046,12 @@ function can_view_view($view, $user_id=null) {
         }
         else if ($view->get('group') && $user->get('admin')) {
             return true;
+        }
+
+        $params = array('view', $view->get('id'));
+        $suspended = record_exists_select('objectionable', 'objecttype = ? AND objectid = ? AND suspended = 1', $params);
+        if ($suspended) {
+            return false;
         }
     }
 
@@ -3331,6 +3389,104 @@ function _get_views_trim_list(&$list, &$users, $limit, &$results) {
 }
 
 /**
+ * Given a view id will return wether this view is suspended or not.
+ *
+ * @param mixed $view           viewid or View to check
+ * @param bool  $artefacts      Whether to check if there are suspended artefacts on the view.
+ *                              If there are any then the view is treated as suspended.
+ *
+ * @returns boolean Wether the specified view is suspended or not.
+ */
+function is_view_suspended($view, $artefacts=true) {
+    require_once(get_config('libroot') . 'view.php');
+    if ($view instanceof View) {
+        $viewid = $view->get('id');
+    }
+    else {
+        $viewid = $view;
+    }
+
+    if ($artefacts) {
+        return get_field_sql("
+            SELECT SUM(suspended) FROM (
+                SELECT id, suspended FROM {objectionable}
+                WHERE objecttype = 'view' AND objectid = ?
+                AND resolvedtime IS NULL
+                UNION
+                SELECT o.id, suspended FROM {objectionable} o
+                JOIN {view_artefact} va ON va.artefact = o.objectid
+                WHERE objecttype = 'artefact' AND va.view = ?
+                AND resolvedtime IS NULL
+            ) AS foo
+        ", array($viewid, $viewid));
+    }
+    else {
+        return get_field_sql("
+            SELECT suspended FROM {objectionable}
+            WHERE objecttype = 'view' AND objectid = ? AND resolvedtime IS NULL
+        ", array($viewid));
+    }
+}
+/**
+ * Checks if artefact was in a previous version of the view
+ *
+ * @param int|object $artefact ID of an artefact or object itself.
+ *                   Will load object if ID is supplied.
+ * @param int $view ID of a page that contains artefact.
+ *
+ * @return boolean True if artefact is in previous version of view, False otherwise.
+ */
+function artefact_in_view_version($artefact, $view) {
+    if (!is_object($artefact)) {
+        require_once(get_config('docroot') . 'artefact/lib.php');
+        $artefact = artefact_instance_from_id($artefact);
+    }
+    // First check if in current view
+    if (artefact_in_view($artefact, $view)) {
+        return true;
+    }
+    // If not in current view then lets check the older versions
+    $db_version = get_db_version();
+    if (is_postgres() && version_compare($db_version, '9.2.0', '>=')) {
+        // We can check direct on the json data
+        return get_records_sql_array("SELECT id FROM {view_versioning} v, JSON_ARRAY_ELEMENTS(CAST(v.blockdata AS JSON)->'blocks') obj
+                                   WHERE (? = ANY(TRANSLATE(obj->'configdata'->>'artefactids','[]','{}')::int[]) OR
+                                          obj->'configdata'->>'artefactid' = ?)
+                                   AND view = ?", array($artefact->get('id'), $artefact->get('id'), $view));
+    }
+    else if (is_mysql() && mysql_get_type() == 'mysql' && version_compare($db_version, '8.0.0', '>=')) {
+        // Note: we can't translate the array string to an array yet so we need to do a regexp match instead
+        $mysqlregex = '\\\[' . $artefact->get('id') . ',|\\\s' . $artefact->get('id') . ',|\\\s' . $artefact->get('id') . '\\\]';
+        return get_records_Sql_array("SELECT id FROM {view_versioning} v WHERE view = ?
+                                      AND (REGEXP_LIKE(JSON_EXTRACT( CAST(v.blockdata AS JSON), '$.blocks[*].configdata.artefactid'), '" . $mysqlregex . "')
+                                        OR REGEXP_LIKE(JSON_EXTRACT( CAST(v.blockdata AS JSON), '$.blocks[*].configdata.artefactids'), '" . $mysqlregex . "')
+                                      )", array($view));
+    }
+
+    // If we can't check direct on the json data We'll need to limit the results to those that possibly
+    // contain the blockid and work back from most recent to make things faster
+    if ($versions = get_records_sql_array("SELECT id, view, blockdata
+                                       FROM {view_versioning}
+                                       WHERE view = ? AND blockdata LIKE '%' || ? || '%'
+                                       ORDER BY ctime DESC", array($view, $artefact->get('id')))) {
+        foreach ($versions as $version) {
+            $blockdata = json_decode($version->blockdata);
+            if (isset($blockdata->blocks) && is_array($blockdata->blocks)) {
+                foreach ($blockdata->blocks as $block) {
+                    if (isset($block->configdata) && isset($block->configdata->artefactid) && $block->configdata->artefactid == $artefact->get('id')) {
+                        return true;
+                    }
+                    if (isset($block->configdata) && isset($block->configdata->artefactids) && in_array($artefact->get('id'), $block->configdata->artefactids)) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
+/**
  * Checks if artefact or at least one of its ancestors is in view
  *
  * @param int|object $artefact ID of an artefact or object itself.
@@ -3370,7 +3526,7 @@ function artefact_in_view($artefact, $view) {
             SELECT s.id
             FROM {view} v INNER JOIN {skin} s
                 ON v.skin = s.id
-            WHERE v.id = ? AND ? in (s.bodybgimg, s.viewbgimg)
+            WHERE v.id = ? AND ? in (s.bodybgimg, s.headingbgimg)
     ";
     $params = array_merge($params, array($view, $artefact->get('id')));
 
@@ -3605,7 +3761,8 @@ function get_real_size($size=0) {
         'k'  => 1024,
     );
 
-    while (list($key) = each($scan)) {
+    $keys = array_keys($scan);
+    foreach ($keys as $key) {
         if (strlen($size) > strlen($key) && substr($size, -strlen($key)) == $key) {
             $size = substr($size, 0, -strlen($key)) * $scan[$key];
             return $size;
@@ -3678,6 +3835,11 @@ function display_size($size) {
  */
 function profile_sideblock() {
     global $USER, $SESSION;
+
+    if (!$USER->is_logged_in() || in_admin_section()) {
+        return null;
+    }
+
     safe_require('notification', 'internal');
     require_once('group.php');
     require_once('institution.php');
@@ -3695,7 +3857,7 @@ function profile_sideblock() {
         if ($authobj->authname == 'xmlrpc') {
             $peer = get_peer($authobj->wwwroot);
             if ($SESSION->get('mnetuser')) {
-                $data['mnetloggedinfrom'] = '<span class="icon left icon-external-link moodle-login"></span>' . get_string('youhaveloggedinfrom1', 'auth.xmlrpc', $authobj->wwwroot, $peer->name);
+                $data['mnetloggedinfrom'] = '<span class="icon left icon-external-link-alt moodle-login"></span>' . get_string('youhaveloggedinfrom1', 'auth.xmlrpc', $authobj->wwwroot, $peer->name);
             }
             else {
                 $data['peer'] = array('name' => $peer->name, 'wwwroot' => $peer->wwwroot);
@@ -3745,13 +3907,14 @@ function profile_sideblock() {
         }
     }
 
+    $typecast = is_postgres() ? '::varchar' : '';
     $data['grouplimitstr'] = $limitstr;
     $data['views'] = get_records_sql_array(
-        'SELECT v.id, v.title, v.urlid, v.owner
-        FROM {view} v
-        INNER JOIN {view_tag} vt ON (vt.tag = ? AND vt.view = v.id)
-        WHERE v.owner = ?
-        ORDER BY v.title',
+        "SELECT v.id, v.title, v.urlid, v.owner
+         FROM {view} v
+         INNER JOIN {tag} vt ON (vt.tag = ? AND vt.resourcetype = 'view' AND vt.resourceid = v.id" . $typecast . ")
+         WHERE v.owner = ?
+         ORDER BY v.title",
         array(get_string('profile'), $USER->get('id'))
     );
     if ($data['views']) {
@@ -3763,12 +3926,12 @@ function profile_sideblock() {
         }
     }
     $data['artefacts'] = get_records_sql_array(
-         'SELECT a.id, a.artefacttype, a.title
+        "SELECT a.id, a.artefacttype, a.title
          FROM {artefact} a
-         INNER JOIN {artefact_tag} at ON (a.id = at.artefact AND tag = ?)
+         INNER JOIN {tag} at ON (at.tag = ? AND at.resourcetype = 'artefact' AND at.resourceid = a.id" . $typecast . ")
          WHERE a.owner = ?
-         ORDER BY a.title',
-         array(get_string('profile'), $USER->get('id'))
+         ORDER BY a.title",
+        array(get_string('profile'), $USER->get('id'))
     );
     if (!empty($data['artefacts'])) {
         // check if we have any blogposts and fetch their blog id if we do
@@ -3778,7 +3941,17 @@ function profile_sideblock() {
             }
         }
     }
-    return $data;
+
+    $sideblock = array(
+        'name'   => 'profile',
+        'weight' => -20,
+        'id'     => 'sb-profile',
+        'data'   => $data,
+        'class' => 'user-card',
+        'template' => 'sideblocks/profile.tpl',
+        'visible' => $USER->is_logged_in() && !in_admin_section(),
+    );
+    return $sideblock;
 }
 
 /**
@@ -3796,62 +3969,29 @@ function profile_sideblock() {
 function onlineusers_sideblock() {
     global $USER;
 
-    // Determine what level of users to show
-    // 0 = none, 1 = institution/s only, 2 = all users
-    $showusers = 2;
-    $institutions = $USER->institutions;
-    if (!empty($institutions)) {
-        $showusers = 0;
-        foreach ($institutions as $i) {
-            if ($i->showonlineusers == 2) {
-                $showusers = 2;
-                break;
-            }
-            if ($i->showonlineusers == 1) {
-                $showusers = 1;
-            }
-        }
+    if (!$USER->is_logged_in() || in_admin_section() || !get_config('showonlineuserssideblock')) {
+        return null;
     }
-
     $maxonlineusers = get_config('onlineuserssideblockmaxusers');
-    switch ($showusers) {
-        case 0: // show none
-            return array(
-                'users' => array(),
-                'count' => 0,
-                'lastminutes' => floor(get_config('accessidletimeout') / 60),
-            );
-        case 1: // show institution only
-            $sql = 'SELECT DISTINCT u.* FROM {usr} u JOIN {usr_institution} i ON u.id = i.usr
-                WHERE i.institution IN ('.join(',', array_map('db_quote', array_keys($institutions))).')
-                AND lastaccess > ? AND deleted = 0 ORDER BY lastaccess DESC';
-            break;
-        case 2: // show all
-            $sql = 'SELECT * FROM {usr} WHERE lastaccess > ? AND deleted = 0 ORDER BY lastaccess DESC';
-            break;
-    }
+    $results = get_onlineusers($maxonlineusers, 0, 'lastaccess DESC');
 
-    $onlineusers = get_records_sql_array($sql, array(db_format_timestamp(time() - get_config('accessidletimeout'))), 0, $maxonlineusers);
-    if ($onlineusers) {
-        foreach ($onlineusers as &$user) {
-            $user->profileiconurl = profile_icon_url($user, 20, 20);
+    if ($results['showusers'] == 0 || empty($results['count'])) {
+        return null;
+    }
+    $onlineusers = $results['onlineusers'];
 
-            // If the user is an MNET user, show where they've come from
-            $authobj = AuthFactory::create($user->authinstance);
-            if ($authobj->authname == 'xmlrpc') {
-                $peer = get_peer($authobj->wwwroot);
-                $user->loggedinfrom = $peer->name;
-            }
-        }
-    }
-    else {
-        $onlineusers = array();
-    }
-    return array(
-        'users' => $onlineusers,
-        'count' => count($onlineusers),
-        'lastminutes' => floor(get_config('accessidletimeout') / 60),
+    $sideblock = array(
+        'name'   => 'onlineusers',
+        'id'     => 'sb-onlineusers',
+        'weight' => -10,
+        'data'   =>  array('users' => $onlineusers,
+                           'count' => count($onlineusers),
+                           'lastminutes' => floor(get_config('accessidletimeout') / 60),
+                     ),
+        'template' => 'sideblocks/onlineusers.tpl',
+        'visible' => $USER->is_logged_in() && !in_admin_section(),
     );
+    return $sideblock;
 }
 
 function tag_weight($freq) {
@@ -3859,34 +3999,36 @@ function tag_weight($freq) {
     // return log10($freq);
 }
 
-function get_my_tags($limit=null, $cloud=true, $sort='freq') {
+function get_my_tags($limit=null, $cloud=true, $sort='freq', $excludeinstitutiontags=false) {
     global $USER;
+    if (get_config('version') < 2018061801) {
+        // we are in upgrade before the table exists
+        return false;
+    }
     $id = $USER->get('id');
     if ($limit || $sort != 'alpha') {
-        $sort = 'COUNT(t.tag) DESC';
+        $sort = 'COUNT(1) DESC';  // In this instance '1' is not a number but the column reference to 'tag' column
     }
     else {
-        $sort = 't.tag ASC';
+        $sort = '1 ASC';
     }
+    $excludeinstitutiontagssql = $excludeinstitutiontags ? " AND t.tag NOT LIKE 'tagid_%'" : '';
+    $typecast = is_postgres() ? '::varchar' : '';
     $tagrecords = get_records_sql_array("
         SELECT
-            t.tag, COUNT(t.tag) AS count
-        FROM (
-           (SELECT at.tag, a.id, 'artefact' AS type
-            FROM {artefact_tag} at JOIN {artefact} a ON a.id = at.artefact
-            WHERE a.owner = ?)
-           UNION
-           (SELECT vt.tag, v.id, 'view' AS type
-            FROM {view_tag} vt JOIN {view} v ON v.id = vt.view
-            WHERE v.owner = ?)
-           UNION
-           (SELECT ct.tag, c.id, 'collection' AS type
-            FROM {collection_tag} ct JOIN {collection} c ON c.id = ct.collection
-            WHERE c.owner = ?)
-    ) t
-        GROUP BY t.tag
+            (CASE
+                WHEN t.tag LIKE 'tagid_%' THEN CONCAT(i.displayname, ': ', t2.tag)
+                ELSE t.tag
+            END) AS tag, COUNT(t.tag) AS count
+        FROM {tag} t
+        LEFT JOIN {tag} t2 ON t2.id" . $typecast . " = SUBSTRING(t.tag, 7)
+        LEFT JOIN {institution} i ON i.name = t2.ownerid
+        WHERE t.resourcetype IN ('artefact', 'view', 'collection', 'blocktype')
+        AND t.ownertype = 'user'
+        AND t.ownerid = ?" . $excludeinstitutiontagssql . "
+        GROUP BY 1
         ORDER BY " . $sort . (is_null($limit) ? '' : " LIMIT $limit"),
-        array($id, $id, $id)
+        array($id)
     );
     if (!$tagrecords) {
         return array();
@@ -3903,25 +4045,44 @@ function get_my_tags($limit=null, $cloud=true, $sort='freq') {
 
             foreach ($tagrecords as &$t) {
                 $weight = (tag_weight($t->count) - $minweight) / ($maxweight - $minweight);
-                $t->size = sprintf("%0.1f", $minsize + ($maxsize - $minsize) * $weight);
+                $t->size = sprintf("%0.1F", $minsize + ($maxsize - $minsize) * $weight);
             }
         }
-        usort($tagrecords, create_function('$a,$b', 'return strnatcasecmp($a->tag, $b->tag);'));
+        usort($tagrecords, function($a, $b) { return strnatcasecmp($a->tag, $b->tag); });
     }
-    else {
-        foreach ($tagrecords as &$t) {
-            $t->tagurl = urlencode($t->tag);
-        }
+    foreach ($tagrecords as &$t) {
+        $t->tagurl = urlencode($t->tag);
     }
     return $tagrecords;
 }
 
 function tags_sideblock() {
     global $USER;
-    $maxtags = $USER->get_account_preference('tagssideblockmaxtags');
-    $maxtags = is_null($maxtags) ? get_config('tagssideblockmaxtags') : $maxtags;
-    if ($tagrecords = get_my_tags($maxtags)) {
-        return array('tags' => $tagrecords);
+
+    if (get_config('showtagssideblock')) {
+        $maxtags = $USER->get_account_preference('tagssideblockmaxtags');
+        $maxtags = is_null($maxtags) ? get_config('tagssideblockmaxtags') : $maxtags;
+
+        $tags = null;
+        if ($tagrecords = get_my_tags($maxtags)) {
+            $tags = array('tags' => $tagrecords);
+        }
+        $sideblock = array(
+            'name'   => 'tags',
+            'id'     => 'sb-tags',
+            'weight' => 0,
+            'data'   => $tags,
+            'template' => 'sideblocks/tags.tpl',
+            'visible' => $USER->is_logged_in() &&
+                        (defined('MENUITEM') &&
+                         in_array(MENUITEM, array('profile',
+                                                  'create/files',
+                                                  'share/sharedbyme',
+                                                  'create/views')
+                                )
+                        ),
+        );
+        return $sideblock;
     }
     return null;
 }
@@ -3949,6 +4110,18 @@ function progressbar_artefact_link($pluginname, $artefacttype) {
 
 function progressbar_sideblock($preview=false) {
     global $USER;
+
+    if (!$USER->is_logged_in()) {
+        return null;
+    }
+
+    if (in_admin_section() && (!defined('SECTION_PAGE') || SECTION_PAGE != 'progressbar')) {
+        return null;
+    }
+
+    if (!get_config('showprogressbar')) {
+        return null;
+    }
 
     // TODO: Remove this URL param from here, and when previewing pass institution
     // by function param instead
@@ -4036,6 +4209,7 @@ function progressbar_sideblock($preview=false) {
             }
             $onlytheseplugins[$plugin][$item] = $item;
         }
+        require_once(get_config('docroot') . 'artefact/lib.php');
         $progressbaritems = artefact_get_progressbar_items($onlytheseplugins);
 
         // Get the data link about every item
@@ -4128,7 +4302,7 @@ function progressbar_sideblock($preview=false) {
                 $percent = 100;
             }
         }
-        return array(
+        $blockdata = array(
             'data' => $data,
             'percent' => $percent,
             'preview' => $preview,
@@ -4142,7 +4316,7 @@ function progressbar_sideblock($preview=false) {
         );
     }
     else if ($multiinstitutionprogress) {
-        return array(
+        $blockdata = array(
             'data' => null,
             'percent' => 0,
             'preview' => $preview,
@@ -4155,16 +4329,71 @@ function progressbar_sideblock($preview=false) {
             'totalcounting' => 0,
         );
     }
-    return array(
-        'data' => null,
-        'percent' => 0,
-        'preview' => $preview,
-        'count' => 1,
-        'institutions' => null,
-        'institution' => 'mahara',
+    else {
+        $blockdata = array(
+            'data' => null,
+            'percent' => 0,
+            'preview' => $preview,
+            'count' => 1,
+            'institutions' => null,
+            'institution' => 'mahara',
+        );
+    }
+    $blockname = $preview ? 'progressbar_preview' : 'progressbar';
+    $sideblock = array(
+        'name'   => $blockname,
+        'id'     => 'sb-progressbar',
+        'class'  => 'progressbar',
+        'weight' => -8,
+        'data'   => $blockdata,
+        'template' => 'sideblocks/progressbar.tpl',
     );
+
+    if ($preview) {
+        // we are calling this via a page's extraconfig so will only exist on that page
+        // so we can set visibility to true
+        $sideblock['visible'] = true;
+        return $sideblock;
+    }
+    else if ($USER->get_account_preference('showprogressbar')) {
+        $sideblock['visible'] = !in_admin_section();
+        return $sideblock;
+    }
+    else {
+        return null;
+    }
 }
 
+function quota_sideblock($group = false) {
+    global $USER;
+
+    $visible = false;
+    if ($USER->is_logged_in() &&
+        (defined('MENUITEM') && in_array(MENUITEM, array('create/files',
+                                                         'profileicons'))
+         ||
+         defined('MENUITEM') && in_array(MENUITEM, array('engage/index',
+                                                         'create/resume')) &&
+         defined('MENUITEM_SUBPAGE') && in_array(MENUITEM_SUBPAGE, array('files',
+                                                                         'goalsandskills'))  // for places that have arrowbar menu
+         ||
+         defined('SECTION_PAGE') && in_array(SECTION_PAGE, array('post',
+                                                                'editnote'))
+        )
+    ) {
+        $visible = true;
+    }
+    $template = $group ? 'sideblocks/groupquota.tpl' : 'sideblocks/quota.tpl';
+    $sideblock = array(
+        'name'   => 'quota',
+        'weight' => -10,
+        'data'   => array(), // worked out by the template
+        'template' => $template,
+        'visible' => $visible,
+        'override' => $group,
+    );
+    return $sideblock;
+}
 
 /**
  * Cronjob to recalculate how much quota each user is using and update it as
@@ -4239,38 +4468,45 @@ function cron_clean_internal_activity_notifications() {
  * Cronjob to check Launchpad for the latest Mahara version
  */
 function cron_check_for_updates() {
+
+    $url = 'https://mahara.org/local/versions.php';
     $request = array(
-        CURLOPT_URL => 'https://launchpad.net/mahara/+download',
+        CURLOPT_URL => $url,
     );
 
     $result = mahara_http_request($request);
 
-    if (!empty($result->errno)) {
-        log_debug('Could not retrieve launchpad download page');
+    if (!empty($result->errno) || $result->info['http_code'] != '200') {
+        log_debug('Could not access Mahara.org for versioning information.');
         return;
     }
+    $data = json_decode($result->data);
+    if ($data->returnCode == 1) {
+        log_debug('Could not retrieve Mahara versions information file from Mahara.org');
+        return;
+    }
+    $versions = $data->message->versions;
 
-    $page = new DOMDocument();
-    libxml_use_internal_errors(true);
-    $success = $page->loadHTML($result->data);
-    libxml_use_internal_errors(false);
-    if (!$success) {
-        log_debug('Error parsing launchpad download page');
-        return;
+    // Lets record the needed info locally as the cron only fetches the info once a day
+    $latestmajorversion = max(array_keys((array)$versions));
+    $latestversion = $latestmajorversion . '.' . $versions->$latestmajorversion->latest;
+    set_config('latest_version', $latestversion);
+    if (preg_match('/^(\d+)\.(\d+)\.(\d+).*?$/', get_config('release'), $match)) {
+        $currentmajorversion = $match[1] . '.' . $match[2];
+        $latestseriesversion = $currentmajorversion . '.' . $versions->$currentmajorversion->latest;
+        set_config('latest_branch_version', $latestseriesversion);
     }
-    $xpath = new DOMXPath($page);
-    $query = '//div[starts-with(@id,"release-information-")]';
-    $elements = $xpath->query($query);
-    $versions = array();
-    foreach ($elements as $e) {
-        if (preg_match('/^release-information-(\d+)-(\d+)-(\d+)$/', $e->getAttribute('id'), $match)) {
-            $versions[] = "$match[1].$match[2].$match[3]";
+    else {
+        set_config('latest_branch_version', '');
+    }
+    $supported = array();
+    foreach ($versions as $k => $v) {
+        $insupport = filter_var($v->supported, FILTER_VALIDATE_BOOLEAN);
+        if ($insupport) {
+            $supported[] = $k;
         }
     }
-    if (!empty($versions)) {
-        usort($versions, 'strnatcmp');
-        set_config('latest_version', end($versions));
-    }
+    set_config('supported_versions', implode(',', $supported));
 }
 
 /**
@@ -4504,6 +4740,40 @@ function cron_event_log_expire() {
     }
 }
 
+function cron_email_reset_rebounce() {
+    $bounces_handle = get_config('bounces_handle');
+    $bounces_resetdays = get_config('bounces_resetdays');
+    if ($bounces_handle && isset($bounces_resetdays) && ($bounces_resetdays > 0)) {
+          // if this is the first time running the cron, initialise the interaction_config value
+          $lastbouncereset = get_field('notification_config', 'value', 'plugin', 'email', 'field', 'lastbouncereset');
+          if ($lastbouncereset) {
+              $newtime = strtotime('+' . $bounces_resetdays . ' days', $lastbouncereset);
+              if ($newtime < time()) {
+                  // get all artefact_internal_profile_email records and set mailsbounced to 0
+                  $sql = "UPDATE {artefact_internal_profile_email}
+                          SET mailssent = 0, mailsbounced = 0";
+                  execute_sql($sql);
+                  $pluginrecord = new stdClass();
+                  $pluginrecord->plugin = 'email';
+                  $pluginrecord->field  = 'lastbouncereset';
+                  $pluginrecord->value  = time();
+                  $whereobj = (object)array(
+                      'plugin' => 'email',
+                      'field'  => 'lastbouncereset',
+                  );
+                  update_record('notification_config',  $pluginrecord, $whereobj);
+              }
+          }
+          else {
+              $pluginrecord = new stdClass();
+              $pluginrecord->plugin = 'email';
+              $pluginrecord->field  = 'lastbouncereset';
+              $pluginrecord->value  = time();
+              insert_record('notification_config', $pluginrecord);
+          }
+    }
+}
+
 function build_portfolio_search_html(&$data) {
     global $THEME;
     $artefacttypes = get_records_assoc('artefact_installed_type');
@@ -4521,14 +4791,38 @@ function build_portfolio_search_html(&$data) {
         else if ($item->type == 'collection') {
             $item->typestr = $item->type;
             $item->typelabel = get_string('Collection', 'collection');
+            // Because our 'views' array clashes with a collection objects 'views' array we need to move it out of the way
+            // before calling the get_url() function
+            $viewarray = $item->views;
+            $dummy = new stdClass();
+            $dummy->id = $item->viewid;
+            $item->views = array('views' => array(0 => $dummy));
             $c = new Collection(0, (array)$item);
             $item->url = $c->get_url();
+            $item->views = $viewarray;
+        }
+        else if ($item->type == 'blocktype') {
+            safe_require('blocktype', $item->artefacttype);
+            $bi = new BlockInstance($item->id);
+            $bi->set('dirty', false);
+            $item->title = $bi->get_title();
+            $item->url = $bi->get_view()->get_url();
+            // Get the correct css icon
+            $namespaced = blocktype_single_to_namespaced($item->artefacttype, $bi->get('artefactplugin'));
+            $classname = generate_class_name('blocktype', $namespaced);
+            $item->typestr = call_static_method($classname, 'get_css_icon', $item->artefacttype);
+            if (in_array($item->artefacttype, array('entireresume', 'resumefield'))) {
+                $item->typelabel = get_string('title', 'blocktype.resume/' . $item->artefacttype);
+            }
+            else {
+                $item->typelabel = get_string('title', 'blocktype.' . $item->artefacttype);
+            }
         }
         else { // artefact
             safe_require('artefact', $artefacttypes[$item->artefacttype]->plugin);
             $links = call_static_method(generate_artefact_class_name($item->artefacttype), 'get_links', $item->id);
             $item->url     = $links['_default'];
-            $item->typestr = $item->artefacttype;
+            $item->typestr = isset($item->specialtype) ? $item->specialtype : $item->artefacttype;
             if ($item->artefacttype == 'task') {
                 $item->typelabel = get_string('Task', 'artefact.plans');
             }
@@ -4538,7 +4832,14 @@ function build_portfolio_search_html(&$data) {
         }
     }
 
-    $data->baseurl = get_config('wwwroot') . 'tags.php' . (is_null($data->tag) ? '' : '?tag=' . urlencode($data->tag));
+    if (isset($data->isrelated) && $data->isrelated) {
+        $data->baseurl = get_config('wwwroot') . 'relatedtags.php' . (is_null($data->tag) ? '' : '?tag=' . urlencode($data->tag) . '&view=' . $data->viewid);
+        $data->basejsonurl = 'json/relatedtagsearch.php';
+    }
+    else {
+        $data->baseurl = get_config('wwwroot') . 'tags.php' . (is_null($data->tag) ? '' : '?tag=' . urlencode($data->tag));
+        $data->basejsonurl = 'json/tagsearch.php';
+    }
 
     if (isset($data->sort) && $data->sort != 'name') {
         $data->baseurl .= (strpos($data->baseurl, '?') ? '&' : '?') . 'sort=' . $data->sort;
@@ -4549,13 +4850,20 @@ function build_portfolio_search_html(&$data) {
 
     $data->sortcols = array('name', 'date');
     $data->filtercols = array(
-        'all'        => get_string('tagfilter_all'),
         'file'       => get_string('tagfilter_file'),
         'image'      => get_string('tagfilter_image'),
         'text'       => get_string('tagfilter_text'),
         'view'       => get_string('tagfilter_view'),
         'collection' => get_string('tagfilter_collection'),
+        'blog'       => get_string('tagfilter_blog'),
+        'blogpost'   => get_string('tagfilter_blogpost'),
+        'plan'       => get_string('tagfilter_plan'),
+        'task'       => get_string('tagfilter_task'),
+        'media'      => get_string('tagfilter_external'),
+        'resume'     => get_string('tagfilter_resume'),
     );
+    asort($data->filtercols, SORT_NATURAL);
+    $data->filtercols = array('all' => get_string('tagfilter_all')) + $data->filtercols;
 
     $smarty = smarty_core();
     $smarty->assign('data', $data->data);
@@ -4565,7 +4873,7 @@ function build_portfolio_search_html(&$data) {
         'id' => 'results_pagination',
         'class' => 'center',
         'url' => $data->baseurl,
-        'jsonscript' => 'json/tagsearch.php',
+        'jsonscript' => $data->basejsonurl,
         'datatable' => 'results',
         'count' => $data->count,
         'limit' => $data->limit,
@@ -4612,8 +4920,7 @@ function is_https() {
 }
 
 function sanitize_email($value) {
-    require_once('phpmailer/class.phpmailer.php');
-    if (!PHPMailer::validateAddress($value)) {
+    if (!PHPMailer\PHPMailer\PHPMailer::validateAddress($value)) {
         return '';
     }
     return $value;
@@ -4675,6 +4982,39 @@ function generate_csv($data, $csvfields, $csvheaders = array()) {
 }
 
 /**
+ *
+ */
+function check_if_institution_tag($tag) {
+    global $USER;
+    $institutions = $USER->get('institutions');
+    if ($USER->get('admin') && $institutiontags = get_records_sql_array("
+        SELECT id FROM {tag}
+        WHERE tag = ?
+        AND resourcetype = ?
+        AND ownertype = ?",
+        array($tag, 'institution', 'institution'))) {
+        $tag = 'tagid_' . $institutiontags[0]->id;
+    }
+    if ($institutions && $institutiontags = get_records_sql_array("
+        SELECT id FROM {tag}
+        WHERE tag = ?
+        AND resourcetype = ?
+        AND ownertype = ?
+        AND ownerid IN ('" . join("','", array_keys($institutions)) . "')
+        UNION
+        SELECT t.id FROM {tag} t
+        JOIN {institution} i ON i.name = t.ownerid
+        WHERE resourcetype = ?
+        AND ownertype = ?
+        AND ownerid IN ('" . join("','", array_keys($institutions)) . "')
+        AND CONCAT(i.displayname, ': ', t.tag) = ?",
+        array($tag, 'institution', 'institution', 'institution', 'institution', $tag))) {
+        $tag = 'tagid_' . $institutiontags[0]->id;  // if same tag in multiple institutions just pick first
+    }
+    return $tag;
+}
+
+/**
  * Check to make sure table is case sensitive (currently only for MySql)
  * If it is not then reduce supplied array to a case insensitive version
  * Preserving the first occurance of any duplicates.
@@ -4686,6 +5026,19 @@ function generate_csv($data, $csvfields, $csvheaders = array()) {
  * @return array    Array of strings
  */
 function check_case_sensitive($a, $table) {
+    // Need to avoid tags that could clash with institution tag format
+    // So we remove or strip anything beginning with tagid/tagid_
+    foreach ($a as $k => $v) {
+        if (preg_match("/^tagid(\_*)(.*)/i", $v, $matches)) {
+            if (empty($matches[2])) {
+                unset($a[$k]);
+            }
+            else {
+                $a[$k] = $matches[2];
+            }
+        }
+    }
+
     if (is_mysql()) {
         $db = get_config('dbname');
         $table = get_config('dbprefix') . $table;
@@ -5183,7 +5536,7 @@ function clear_all_caches($clearsessiondirs = false) {
         bump_cache_version();
         clear_resized_images_cache();
 
-        $dwoo_dir = get_config('dataroot') . 'dwoo';
+        $dwoo_dir = get_dwoo_dir();
         if (check_dir_exists($dwoo_dir) && !rmdirr($dwoo_dir)) {
             throw new SystemException('Can not remove dwoo directory ' . $dwoo_dir);
         }
@@ -5320,8 +5673,9 @@ function get_institutions_to_associate() {
     global $USER;
 
     $institutions = array();
-    if (is_array($USER->institutions) && count($USER->institutions) > 0) {
+    if (is_array($USER->institutions) && count($USER->institutions) > 0 && !$USER->get('admin')) {
         // Get all institutions where user is member
+        // This does not apply for site admins
         foreach ($USER->institutions as $inst) {
             if (empty($inst->suspended)) {
                 $institutions = array_merge($institutions, array($inst->institution => $inst->displayname));
@@ -5378,4 +5732,179 @@ function get_password_policy_description($type = 'generic') {
         $description = get_string('passworddescriptionbase', 'mahara', $numbervalue) . ' ' . get_string('passworddescription.' . $formatvalue, 'mahara');
     }
     return $description;
+}
+
+/**
+ *
+ * Check if this site is using isolated institutions
+ */
+function is_isolated() {
+    global $CFG;
+    // If isolated institutions are turned on in $config.php we need to make sure
+    // that the correct site settings exist in case they don't edit / save the Admin -> Config form
+    // Note: we ned to save 'isolatedinstitutionset' in db as it needs to be different to the one set in $cfg
+    if (isset($CFG->isolatedinstitutions) && $CFG->isolatedinstitutions && !get_field('config', 'value', 'field', 'isolatedinstitutionset')) {
+        // Setting $cfg->isolatedinstitutions to true
+        set_config('loggedinprofileviewaccess', false);
+        set_config('creategroups', 'staff');
+        set_config('createpublicgroups', 'siteadmins');
+        set_config('usersallowedmultipleinstitutions', false);
+        set_config('requireregistrationconfirm', true);
+        set_config('isolatedinstitutionset', true); // set this in Db so we only do this check/update once
+        // Set the institution 'showonlineusers' to institution only if currently all
+        execute_sql('UPDATE {institution} SET showonlineusers = ? WHERE showonlineusers = ?', array(1, 2));
+    }
+    else if ((isset($CFG->isolatedinstitutions) && !$CFG->isolatedinstitutions) && get_field('config', 'value', 'field', 'isolatedinstitutionset')) {
+        // Setting $cfg->isolatedinstitutions to false
+        set_config('owngroupsonly', false);
+        set_config('isolatedinstitutionset', false); // set this in Db so we only do this check/update once
+    }
+    else if (!isset($CFG->isolatedinstitutions) && get_field('config', 'value', 'field', 'isolatedinstitutionset')) {
+        // Removing $cfg->isolatedinstitutions line
+        set_config('owngroupsonly', false);
+        set_config('isolatedinstitutionset', false); // set this in Db so we only do this check/update once
+    }
+    return (bool)get_config('isolatedinstitutions');
+}
+
+function get_homepage_redirect_results($request, $limit, $offset, $type = null, $id = null) {
+    $admins = get_site_admins();
+    $adminids = array();
+    foreach ($admins as $admin) {
+        $adminids[] = $admin->id;
+    }
+    $results = array('count' => 0,
+                     'data' => array());
+    if ($type) {
+        $results['count'] = 1;
+        $results['data'][] = get_record($type, 'id', $id);
+    }
+    else {
+        $countsql = "SELECT COUNT(*) FROM (";
+        $resultsql = "SELECT * FROM (";
+        $fromsql = "SELECT v.id, v.title, v.owner, v.group, v.institution, 'view' AS urltype
+             FROM {view} v
+             JOIN {view_access} va ON va.view = v.id
+             LEFT JOIN {group} g ON g.id = v.group
+             LEFT JOIN {institution} i ON i.name = v.institution
+             WHERE va.accesstype IN ('public', 'loggedin')
+             AND v.type != 'profile'
+             AND (
+                 (v.owner IS NULL AND v.template != 2)
+                  OR
+                 (v.owner IN (" . join(',', array_map('db_quote', $adminids)) . "))
+             )
+             AND (v.title " . db_ilike() . " ? OR g.name " . db_ilike() . " ? OR i.name " . db_ilike() . " ?)
+             UNION
+             SELECT ii.id, ii.title, NULL AS owner, g.id AS \"group\", g.institution, 'forum' AS urltype
+             FROM {interaction_instance} ii
+             JOIN {group} g ON g.id = ii.group
+             WHERE g.public = 1
+             AND ii.deleted = 0
+             AND (ii.title " . db_ilike() . " ?)
+             ) AS foo LIMIT ? OFFSET ? ";
+        $where = array('%' . $request . '%',
+                       '%' . $request . '%',
+                       '%' . $request . '%',
+                       '%' . $request . '%',
+                       $limit, $offset);
+        if ($count = count_records_sql($countsql . $fromsql, $where)) {
+            $results['count'] = $count;
+            $results['data'] = get_records_sql_array($resultsql . $fromsql, $where);
+            foreach ($results['data'] as $key => $value) {
+                if ($value->urltype == 'view') {
+                    $value->url = '/view/view.php?id=' . $value->id;
+                }
+                if ($value->urltype == 'forum') {
+                    $value->url = '/interaction/forum/view.php?id=' . $value->id;
+                }
+            }
+        }
+    }
+
+    return $results;
+}
+
+function translate_landingpage_to_tags(array $ids) {
+    $ids = array_diff($ids, array(''));
+    $results = array();
+    if (!empty($ids)) {
+        foreach ($ids as $id) {
+            if (preg_match('/forum\/view\.php\?id=(\d+)/', $id, $matches)) {
+                $data = get_homepage_redirect_results(null, null, null, 'interaction_instance', $matches[1]);
+                $type = 'forum';
+                $typeid = $matches[1];
+                $result = $data['data'][0];
+                $text = $result->title . ' (' . get_field('group', 'name', 'id', $result->group) . ')';
+            }
+            else if (preg_match('/view\.php\?id=(\d+)/', $id, $matches)) {
+                $data = get_homepage_redirect_results(null, null, null, 'view', $matches[1]);
+                $type = 'view';
+                $typeid = $matches[1];
+                $result = $data['data'][0];
+                $text = $result->title;
+                if ($result->institution) {
+                    if ($result->institution == 'mahara') {
+                        $text .= ' (' . get_string('Site') . ')';
+                    }
+                    else {
+                        $text .= ' (' . get_field('institution', 'displayname', 'name', $result->institution) . ')';
+                    }
+                }
+                else if ($result->group) {
+                    $text .= ' (' . get_field('group', 'name', 'id', $result->group) . ')';
+                }
+                else if ($result->owner) {
+                    $text .= ' (' . display_name($result->owner, null, true) . ')';
+                }
+            }
+            else {
+                $text = $typeid = $id;
+                $type = 'unknown';
+            }
+            $results[] = (object) array('id' => $id, 'text' => $text, 'type' => $type, 'typeid' => $typeid);
+        }
+    }
+    return $results;
+}
+
+function notify_landing_removed($landingpage, $deleted=false) {
+    require_once('activity.php');
+
+    $admins = array();
+    foreach (get_site_admins() as $site_admin) {
+        $admins[] = $site_admin->id;
+    }
+
+    if ($landingpage->type == 'forum') {
+        $forumgroup = get_field('interaction_instance', 'group', 'id', $landingpage->typeid);
+        $admins = array_merge($admins, group_get_admin_ids($forumgroup));
+    }
+    $admins = array_unique($admins);
+    $message = $deleted ? 'landingpagegonemessagedeleted' : 'landingpagegonemessage';
+    $messageargs = $deleted ? array($landingpage->text) : array();
+    if ($deleted) {
+        $url = get_config('wwwroot') . 'admin/site/options.php';
+    }
+    else {
+        $url = preg_replace('/^\//', '', $landingpage->id);
+    }
+    activity_occurred('maharamessage', array(
+        'users'   => $admins,
+        'subject' => '',
+        'message' => '',
+        'strings'       => (object) array(
+            'subject' => (object) array(
+                'key'     => 'landingpagegonesubject',
+                'section' => 'admin',
+                'args'    => array(),
+            ),
+            'message' => (object) array(
+                'key'     => $message,
+                'section' => 'admin',
+                'args'    => $messageargs,
+            ),
+        ),
+        'url'     => $url,
+    ));
 }

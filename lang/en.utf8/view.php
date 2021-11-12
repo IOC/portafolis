@@ -48,6 +48,8 @@ $string['unrecogniseddateformat'] = 'Unrecognised date format';
 $string['allowcommentsonview1']    = 'Allow users to leave comments.';
 $string['ownerformat']            = 'Name display format';
 $string['ownerformatdescription'] = 'How do you want people who look at your page to see your name?';
+$string['createtags']             = 'Create via tags';
+$string['createtagsdesc1']        = 'Search for or enter tags to pull content into your page automatically. If you enter more than one tag, only content that is tagged with all these tags will appear on the page. You can then re-arrange and delete blocks.';
 $string['anonymise']              = 'Anonymise';
 $string['anonymisedescription']   = 'Hide your name as the author of the page from other users. Administrators will still be able to see your name if they so desire.';
 $string['Locked']                 = 'Locked';
@@ -80,6 +82,7 @@ $string['accessuntildate3'] = 'Nobody can see this page after %s.';
 $string['accessbetweendates3'] = 'Nobody can see this page before %s or after %s.';
 $string['artefactsinthisview'] = 'Artefacts in this page';
 $string['whocanseethisview'] = 'Who can see this page';
+$string['pending'] = 'Portfolio under review';
 $string['view'] = 'page';
 $string['panelmenu'] = 'Menu';
 $string['vieworcollection'] = 'page or collection';
@@ -90,10 +93,12 @@ $string['Views'] = 'Pages';
 $string['portfolio'] = 'portfolio';
 $string['portfolios'] = 'portfolios';
 $string['Viewscollections'] = 'Pages and collections';
-$string['viewsubmittedtogroup'] = 'This page has been submitted to <a href="%s">%s</a>.';
-$string['viewsubmittedtogroupon'] = 'This page was submitted to <a href="%s">%s</a> on %s.';
+$string['viewsubmittedtogroup1'] = 'This portfolio has been submitted to <a href="%s">%s</a>.';
+$string['viewsubmittedtogroupon1'] = 'This portfolio was submitted to <a href="%s">%s</a> on %s.';
+$string['viewsubmittedtogroupgrade'] = 'This portfolio was submitted to the assignment <a href="%s">"%s"</a> in "%s" on %s.';
 $string['collectionsubmittedtogroup'] = 'This collection has been submitted to <a href="%s">%s</a>.';
 $string['collectionsubmittedtogroupon'] = 'This collection was submitted to <a href="%s">%s</a> on %s.';
+$string['collectionsubmittedtogroupgrade'] = 'This collection was submitted to the assignment <a href="%s">"%s"</a> in "%s" on %s.';
 $string['submittedpendingrelease'] = 'Pending release after archiving.';
 $string['nobodycanseethisview2'] = 'Only you can see this page.';
 $string['noviews1'] = 'No pages or collections.';
@@ -131,7 +136,14 @@ $string['registeredusers'] = 'Registered users';
 $string['friends'] = 'Friends';
 $string['groups'] = 'Groups';
 $string['users'] = 'Users';
+$string['friend'] = 'Friend';
+$string['group'] = 'Group';
+$string['user'] = 'User';
 $string['everyoneingroup'] = 'Everyone in group';
+$string['nospecialrole'] = 'No special role';
+$string['peer'] = 'Peer';
+$string['manager'] = 'Manager';
+$string['peermanager'] = 'Peer and manager';
 
 // secret url
 $string['token'] = 'Secret URL';
@@ -173,7 +185,6 @@ $string['viewvisitcount'] = array(
 );
 $string['profilenotshared'] = 'Full access to this user profile is restricted.';
 
-$string['friend'] = 'Friend';
 $string['profileicon'] = 'Profile picture';
 $string['Updatedon'] = 'Updated on';
 $string['Createdon'] = 'Created on';
@@ -247,10 +258,18 @@ $string['blocknotinview'] = 'The block with ID "%d" is not in the page.';
 $string['viewcreatedsuccessfully'] = 'Page created successfully';
 $string['viewaccesseditedsuccessfully'] = 'Page access saved successfully';
 $string['viewsavedsuccessfully'] = 'Page saved successfully';
+$string['savedtotimeline'] = 'Saved to timeline';
 $string['updatedaccessfornumviews1'] = array(
     'Access rules were updated for 1 page.',
     'Access rules were updated for %d pages.',
 );
+
+$string['cantversionviewinvalid'] = 'The supplied page identifier is invalid.';
+$string['cantversionvieweditpermissions'] = 'You do not have permission to edit this page.';
+$string['cantversionviewsubmitted'] = 'You cannot edit this page because it has been submitted for assessment. You will have to wait until it is released.';
+$string['cantversionviewgroupeditwindow'] = 'You cannot edit this page. It is outside of the group editability time frame.';
+$string['cantversionoldlayout'] = 'You cannot save a timeline version of a page with an old layout. You need to convert it to the new layout. To do this, edit the page and the layout will be converted.';
+$string['cantaddannotationinoldlayout'] = 'You cannot add an annotation to this page. Please convert the page layout by editing the page first.';
 
 $string['invalidcolumn'] = 'Column %s out of range';
 
@@ -260,10 +279,10 @@ $string['groupviewurltaken'] = 'A page with this URL already exists.';
 
 // view control stuff
 
-$string['editblockspagedescription'] = '<p>Drag and drop content blocks from the tabs below to create your page.</p>';
+$string['editblockspagedescription'] = '<p>Drag and drop content blocks from the buttons below to create your page.</p>';
 $string['displayview'] = 'Display page';
 $string['editthisview'] = 'Edit';
-$string['expandcontract'] = 'Expand /   Contract list of block types';
+$string['expandcontract'] = 'Expand / Contract the list of block types';
 $string['returntoviews'] = 'Return to pages and collections';
 $string['returntoinstitutionportfolios'] = 'Return to institution pages and collections';
 $string['returntositeportfolios'] = 'Return to site pages and collections';
@@ -286,60 +305,45 @@ $string['blockinstanceconfiguredsuccessfully'] = 'Block configured successfully'
 $string['blockconfigurationrenderingerror'] = 'Configuration failed because the block could not be rendered.';
 
 $string['blocksintructionnoajax'] = 'Select a block and choose where to add it to your page. You can position a block using the arrow buttons in its titlebar.';
-$string['blocksinstructionajaxlive'] = 'This area shows a preview of what your page looks like. Changes are saved automatically.<br>Drag blocks onto the page to add them. You can then also drag them around the page to change their position.';
+$string['blocksinstructionajaxlive1'] = 'This area shows a preview of what your page looks like. Changes are saved automatically.<br>Drag \'Add a new block\' onto the page to add one. You can then choose what type of block it will be. You can then also drag blocks around the page to change their position.';
+$string['blockchangedsuccess'] = "Changed the placeholder block to a '%s' block successfully.";
+$string['blockchangederror'] = "Changing the block to a '%s' block failed.";
+$string['blockchangedbacksuccess'] = "Changed the block back to a placeholder block.";
+$string['blockchangedbackerror'] = "Changing the block back to a placeholder block failed.";
 
 $string['addblock'] = 'Add block: %s';
 $string['blockcell'] = 'Cell';
-$string['cellposition'] = 'Row %s Column %s';
 $string['blockorder'] = 'Position';
-$string['blockordertopcell'] = 'Top of cell';
-$string['blockorderafter'] = 'After "%s"';
 $string['rownr'] = 'Row %s';
 $string['nrrows'] = array(
     '%s row',
     '%s rows',
 );
-
+$string['addnewblock'] = 'Drag to add a new block';
+$string['addnewblockaccessibility'] = 'Click to add a new block';
 $string['addnewblockhere'] = 'Add new block here';
 $string['add'] = 'Add';
 $string['addcolumn'] = 'Add column';
 $string['remove'] = 'Remove';
 $string['removecolumn'] = 'Remove this column';
-$string['moveblockleft'] = "Move %s block left";
-$string['movethisblockleft'] = "Move this block left";
-$string['moveblockdown'] = "Move %s block down";
-$string['movethisblockdown'] = "Move this block down";
-$string['moveblockup'] = "Move %s block up";
-$string['movethisblockup'] = "Move this block up";
-$string['moveblockright'] = "Move %s block right";
-$string['movethisblockright'] = "Move this block right";
+$string['moveblock2'] = 'Move block';
 $string['moveblock'] = 'Move %s block';
 $string['movethisblock'] = 'Move this block';
 $string['Configure'] = 'Configure';
+$string['configureblock2'] = 'Configure block';
 $string['configureblock1'] = 'Configure %s block (ID %s)';
 $string['configurethisblock1'] = 'Configure this block (ID %s)';
 $string['closeconfiguration'] = 'Close configuration';
+$string['removeblock2'] = 'Remove block';
 $string['removeblock1'] = 'Remove %s block (ID %s)';
 $string['removethisblock1'] = 'Remove this block (ID %s)';
 $string['blocktitle'] = 'Block title';
 $string['celltitle'] = 'Cell';
 
-$string['changemyviewlayout'] = 'Change my page layout';
-$string['createcustomlayout'] = 'Create custom layout';
-$string['createnewlayout'] = 'Create new layout';
 $string['basicoptions'] = 'Basic options';
 $string['advancedoptions'] = 'Advanced options';
-$string['viewcolumnspagedescription'] = 'First, select the number of columns in your page. In the next step, you will be able to change the widths of the columns.';
-$string['viewlayoutpagedescription'] = 'Select how you would like your page to be laid out.';
-$string['changeviewlayout'] = 'Change my page\'s column layout';
-$string['numberofcolumns'] = 'Number of columns';
-$string['changecolumnlayoutfailed'] = 'Could not change the column layout. Someone else may have been editing the layout at the same time. Please try again later.';
-$string['changerowlayoutfailed'] = 'Could not change the row layout. Someone else may have been editing the layout at the same time. Please try again later.';
 $string['Row'] = 'Row';
-$string['addarow'] = 'Add a row';
-$string['removethisrow'] = 'Remove this row';
-$string['columnlayout'] = 'Column layout';
-$string['layoutpreview'] = 'Layout preview';
+
 $string['layoutpreviewimage'] = 'Layout preview image';
 $string['Help'] = 'Help';
 $string['blockhelp'] = 'Block help';
@@ -355,21 +359,6 @@ $string['column'] = 'column';
 $string['row'] = 'row';
 $string['columns'] = 'columns';
 $string['rows'] = 'rows';
-$string['100'] = '100';
-$string['50,50'] = '50-50';
-$string['33,33,33'] = '33-33-33';
-$string['25,25,25,25'] = '25-25-25-25';
-$string['20,20,20,20,20'] = '20-20-20-20-20';
-$string['67,33'] = '67-33';
-$string['33,67'] = '33-67';
-$string['25,25,50'] = '25-25-50';
-$string['50,25,25'] = '50-25-25';
-$string['25,50,25'] = '25-50-25';
-$string['15,70,15'] = '15-70-15';
-$string['20,30,30,20'] = '20-30-30-20';
-$string['noviewlayouts'] = 'There are no layouts for a %s column page.';
-$string['cantaddcolumn'] = 'You cannot add any more columns to this page.';
-$string['cantremovecolumn'] = 'You cannot remove the last column from this page.';
 
 $string['blocktypecategory.external'] = 'External';
 $string['blocktypecategory.fileimagevideo'] = 'Media';
@@ -391,7 +380,7 @@ $string['noartefactstochoosefrom'] = 'Sorry, no artefacts to choose from';
 
 $string['access'] = 'Access';
 $string['noaccesstoview'] = 'You do not have permission to access this page.';
-
+$string['wrongblocktype'] = 'The ID supplied is not for a valid blocktype.';
 $string['changeviewtheme'] = 'The theme you have chosen for this page is no longer available to you. Please select a different theme.';
 $string['nothemeselected1'] = 'Use institution theme';
 
@@ -422,6 +411,9 @@ $string['confirmadddesc'] = 'Please choose which you would like to create:';
 $string['confirmcopytitle'] = 'Confirm copying';
 $string['confirmcopydesc'] = 'Please choose which you would like to copy:';
 $string['Untitled'] = 'Untitled';
+$string['copyforexistingmembersprogress'] = 'Copying portfolios for existing group members';
+$string['existinggroupmembercopy'] = 'Copy for existing group members';
+$string['existinggroupmembercopydesc1'] = 'Copy the selected pages / collections to the personal portfolio area of all existing group members. The slide switch resets after saving. Group members will only get a copy once.';
 $string['copyfornewusers'] = 'Copy for new users';
 $string['copyfornewusersdescription2'] = 'Whenever a new user is created, automatically make a personal copy of the selected pages / collections in the user\'s account. If you want these users to be able to copy the selected pages / collections later on as well, please allow copying in general.';
 $string['copyfornewmembers'] = 'Copy for new institution members';
@@ -458,9 +450,12 @@ $string['mostcomments1'] = 'Most comments';
 
 // View types
 $string['dashboard'] = 'Dashboard';
-$string['profile'] = 'Profile';
-$string['portfolio'] = 'Portfolio';
-$string['grouphomepage'] = 'Group homepage';
+$string['Profile'] = 'Profile';
+$string['profile'] = 'profile'; // for stats
+$string['Portfolio'] = 'Portfolio';
+$string['Portfolios'] = 'Portfolios';
+$string['Grouphomepage'] = 'Group homepage';
+$string['grouphomepage'] = 'group homepage'; // for stats
 
 $string['grouphomepagedescription'] = 'The group homepage contains the content that appears on the "About" tab for this group';
 $string['pageaccessrules'] = 'Page access rules';
@@ -472,6 +467,8 @@ $string['titleanddescriptionnotags'] = 'Title, description';
 $string['titleanddescriptionandtagsandowner'] = 'Title, description, tags, owner';
 $string['tagsonly'] = 'Tags only'; // for elasticsearch
 $string['tagsonly1'] = 'Tags';
+$string['matchalltags'] = 'Match all tags';
+$string['matchalltagsdesc'] = 'Separate tags with commas, e.g. cats,tabby';
 $string['sharedviewsdescription'] = 'This page lists the most recently modified or commented on pages that have been shared with you. They may have been shared with you directly, shared with friends of the owner, or shared with one of your groups.';
 $string['sharedwith'] = 'Shared with';
 $string['sharewith'] = 'Share with';
@@ -500,3 +497,43 @@ $string['textbox1'] = 'Note';
 $string['image'] = 'Image';
 $string['addcontent'] = 'Add Content';
 $string['theme'] = 'Theme';
+$string['choosethemedesc'] = 'Choose a theme for the page.';
+
+$string['lockblocks'] = "Lock blocks";
+$string['lockblocksdescription'] = "You can lock the blocks on the page and prevent them from being removed when people copy the page.";
+$string['instructions'] = 'Instructions';
+$string['advanced']     = 'Advanced';
+
+// Versioning strings
+$string['timeline'] = 'Timeline';
+$string['timelinespecific'] = 'Timeline for %s';
+$string['savetimeline'] = 'Save to timeline';
+$string['savetimelinespecific'] = 'Save timeline for %s';
+$string['noversionsexist'] = 'There are no saved versions to display for the page "%s"';
+$string['previousversion'] = 'Previous version';
+$string['nextversion'] = 'Next version';
+$string['versionnumber'] = 'Version %s';
+$string['gotonextversion'] = 'Go to the next version ';
+$string['gotopreviousversion'] = 'Go to the previous version';
+$string['loadingtimelinecontent'] = 'Loading timeline for "%s". If the page has many versions, this may take a while.';
+
+// layout strings
+$string['bottom'] = 'Bottom';
+$string['top'] = 'Top';
+$string['blockssizeupdated'] = 'Block sizes were updated successfully';
+$string['dimensionsnotset'] = 'Block dimensions not set';
+$string['dontaskagain'] = 'Accept and remember';
+$string['pleaseconfirmtranslate'] = 'Convert page layout';
+$string['confirmconversionmessage'] = 'As part of Mahara 19.10 we introduced a new way to create a page layout. To be able to edit this page, you will need to convert the old to the new layout.
+If you want to convert only this page, click \'Accept\'. To convert all pages and not see this message again, click \'Accept and remember\'. This option can be changed in your <a href="%s">Preferences</a>. To go back to the page without editing it, click \'Cancel\'.
+';
+$string['accessibleview'] = 'Accessible layout';
+$string['accessibleviewdescription'] = 'To create a one-column page layout and edit it with the keyboard instead of drag-and-drop.';
+$string['itemgrabbed'] = 'Item grabbed: %s';
+$string['itemdropped'] = 'Item dropped: %s';
+$string['itemreorder'] = 'List has been reordered. Item %s is now in position %s of %s';
+$string['reordercancelled'] = 'The reordering was cancelled';
+$string['accessibilitymodedescription'] = 'This page has the accessible layout enabled.
+ In this mode, the page blocks will have full page width and will be displayed one after the other.
+ To change a block position, navigate to it, grab it with the \'Enter\' key, and move it up and down the list of blocks with the arrow keys.';
+$string['blocktypeis'] = ' %s blocktype';

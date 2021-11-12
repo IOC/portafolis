@@ -146,7 +146,7 @@ unset($prefs);
 
 $form = pieform(array(
     'name'       => 'adduser',
-    'class'      => 'panel panel-default panel-body',
+    'class'      => 'card card-body',
     'autofocus'  => false,
     'template'   => 'adduser.php',
     'templatedir' => pieform_template_dir('adduser.php'),
@@ -224,7 +224,7 @@ function adduser_validate(Pieform $form, $values) {
         if (!$values['leap2afile'] && ($_FILES['leap2afile']['error'] == UPLOAD_ERR_INI_SIZE || $_FILES['leap2afile']['error'] == UPLOAD_ERR_FORM_SIZE)) {
             $form->reply(PIEFORM_ERR, array(
                 'message' => get_string('uploadedfiletoobig1', 'mahara', display_size(get_max_upload_size(false))),
-                'goto'    => '/admin/users/add.php'));
+                'goto'    => get_config('wwwroot') . 'admin/users/add.php'));
             $form->set_error('leap2afile', get_string('uploadedfiletoobig1', 'mahara', display_size(get_max_upload_size(false))));
             return;
         }
@@ -274,8 +274,7 @@ function adduser_validate(Pieform $form, $values) {
                 $form->set_error('email', get_string('invalidemailaddress', 'artefact.internal'));
             }
 
-            if (record_exists('usr', 'email', $email)
-                || record_exists('artefact_internal_profile_email', 'email', $email)) {
+            if (check_email_exists($email)) {
                 $form->set_error('email', get_string('emailalreadytaken', 'auth.internal'));
             }
         }

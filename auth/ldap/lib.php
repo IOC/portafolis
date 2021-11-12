@@ -46,6 +46,7 @@ class AuthLdap extends Auth {
         $this->config['starttls'] = 0;
         $this->config['updateuserinfoonlogin'] = 0;
         $this->config['weautocreateusers'] = 1;
+        $this->config['loginlink'] = false;
         $this->config['firstnamefield' ] = '';
         $this->config['surnamefield'] = '';
         $this->config['emailfield'] = '';
@@ -380,7 +381,17 @@ class AuthLdap extends Auth {
         $attributes['preferredname'] = $this->config['preferrednamefield'];
 
         $userinfo = $this->get_userinfo_ldap($username, $attributes);
-
+        // Check if we can link this login to an existing account via email value
+        if ($this->config['loginlink'] === true && !empty($userinfo['email'])) {
+            $user = new User();
+            try {
+                $user->find_by_email_address($userinfo['email']);
+                return $user;
+            }
+            catch (AuthUnknownUserException $e) {
+                // Skip non-existent users
+            }
+        }
         return (object)$userinfo;
     }
 
@@ -963,7 +974,7 @@ class AuthLdap extends Auth {
                             $todb->$dbfield = $ldaprec[$ldapfield][0];
                         }
                         else {
-                            log_warn("Ldap record contained no {$ldapfield} field to map to DB {$dbfield}");
+                            log_warn("Ldap record for {$todb->$columnname} contained no {$ldapfield} field to map to DB {$dbfield}", true, false);
                         }
                     }
 
@@ -1094,7 +1105,7 @@ class AuthLdap extends Auth {
 
         // Create a temp table to store the users, for better performance
         $temptable = new XMLDBTable('auth_ldap_extusers_temp');
-        $temptable->addFieldInfo('extusername', XMLDB_TYPE_CHAR, 64, null, false);
+        $temptable->addFieldInfo('extusername', XMLDB_TYPE_CHAR, 64, null, XMLDB_NOTNULL);
         $temptable->addFieldInfo('firstname', XMLDB_TYPE_TEXT);
         $temptable->addFieldInfo('lastname', XMLDB_TYPE_TEXT);
         $temptable->addFieldInfo('email', XMLDB_TYPE_CHAR, 255);
@@ -1138,6 +1149,9 @@ class AuthLdap extends Auth {
         }
         log_info('LDAP users found : ' . $nbldapusers);
 
+        // Need to check if this LDAP instance is the parent of an authentication that uses the auth_remote_user table.
+        $requires_remote_username = $this->needs_remote_username();
+
         try {
             $nbupdated = $nbcreated = $nbsuspended = $nbdeleted = $nbignored = $nbpresents = $nbunsuspended = $nberrors = 0;
 
@@ -1156,33 +1170,41 @@ class AuthLdap extends Auth {
                 log_info('user auto-update disabled');
             }
             else {
-                // users to update (known both in LDAP and Mahara usr table)
+                // users to update
+                if ($requires_remote_username) {
+                    $joinsql = ' INNER JOIN {auth_remote_user} aru
+                                     ON u.id = aru.localusr
+                                 INNER JOIN {auth_ldap_extusers_temp} e
+                                     ON aru.remoteusername = e.extusername';
+                }
+                else {
+                    $joinsql = ' INNER JOIN {auth_ldap_extusers_temp} e
+                                     ON u.username = e.extusername';
+                }
                 $sql = "
-                    select
-                        u.id as id,
-                        u.username as username,
-                        u.suspendedreason as suspendedreason,
-                        u.firstname as dbfirstname,
-                        u.lastname as dblastname,
-                        u.email as dbemail,
-                        u.studentid as dbstudentid,
-                        u.preferredname as dbpreferredname,
-                        e.firstname as ldapfirstname,
-                        e.lastname as ldaplastname,
-                        e.email as ldapemail,
-                        e.studentid as ldapstudentid,
-                        e.preferredname as ldappreferredname
-                    from
-                        {usr} u
-                        inner join {auth_ldap_extusers_temp} e
-                            on u.username = e.extusername
-                    where
+                    SELECT
+                        u.id AS id,
+                        u.username AS username,
+                        u.suspendedreason AS suspendedreason,
+                        u.firstname AS dbfirstname,
+                        u.lastname AS dblastname,
+                        u.email AS dbemail,
+                        u.studentid AS dbstudentid,
+                        u.preferredname AS dbpreferredname,
+                        e.firstname AS ldapfirstname,
+                        e.lastname AS ldaplastname,
+                        e.email AS ldapemail,
+                        e.studentid AS ldapstudentid,
+                        e.preferredname AS ldappreferredname
+                    FROM
+                        {usr} u " . $joinsql . "
+                    WHERE
                         u.deleted = 0
-                        and u.authinstance = ?
-                    order by u.username
-                ";
+                        AND u.authinstance = ?
+                    ORDER BY u.username";
+                $params = array($this->instanceid);
 
-                $rs = get_recordset_sql($sql, array($this->instanceid));
+                $rs = get_recordset_sql($sql, $params);
                 log_info($rs->RecordCount() . ' users known to Mahara ');
                 while ($record = $rs->FetchRow()) {
                     $nbpresents++;
@@ -1233,19 +1255,28 @@ class AuthLdap extends Auth {
                 log_info('user auto-suspend/delete disabled');
             }
             else {
-                //users to delete /suspend
+                // users to delete / suspend
+                if ($requires_remote_username) {
+                    $joinsql = "INNER JOIN {auth_remote_user} aru
+                                  ON u.id = aru.localusr
+                                LEFT JOIN {auth_ldap_extusers_temp} e
+                                  ON e.extusername = aru.remoteusername";
+                }
+                else {
+                    $joinsql = "LEFT JOIN {auth_ldap_extusers_temp} e
+                                  ON e.extusername = u.username";
+                }
                 $sql = "
                     SELECT u.id, u.username, u.suspendedreason
                     FROM
-                        {usr} u
-                        LEFT JOIN {auth_ldap_extusers_temp} e
-                        ON e.extusername = u.username
+                        {usr} u " . $joinsql . "
                     WHERE
                         u.authinstance = ?
                         AND u.deleted = 0
                         AND e.extusername IS NULL
                     ORDER BY u.username ASC";
-                $rs = get_recordset_sql($sql, array($this->instanceid));
+                $params = array($this->instanceid);
+                $rs = get_recordset_sql($sql, $params);
                 log_info($rs->RecordCount() . ' users no longer in LDAP ');
 
                 while ($record = $rs->FetchRow()) {
@@ -1281,6 +1312,16 @@ class AuthLdap extends Auth {
             }
             else {
                 // users to create
+                if ($requires_remote_username) {
+                    $joinsql = "LEFT JOIN {auth_remote_user} aru
+                                  ON e.extusername = aru.remoteusername
+                                LEFT JOIN {usr} u
+                                  ON u.id = aru.localusr";
+                }
+                else {
+                    $joinsql = "LEFT JOIN {usr} u
+                                  ON e.extusername = u.username";
+                }
                 $sql = '
                         SELECT
                             e.extusername,
@@ -1291,11 +1332,9 @@ class AuthLdap extends Auth {
                             e.preferredname
                         FROM
                             {auth_ldap_extusers_temp} e
-                            LEFT JOIN {usr} u
-                            ON e.extusername = u.username
+                            " . $sjoinsql . "
                         WHERE u.id IS NULL
                         ORDER BY e.extusername';
-
                 $rs = get_recordset_sql($sql);
                 log_info($rs->RecordCount() . ' LDAP users unknown to Mahara  ');
                 while ($record = $rs->FetchRow()) {
@@ -1317,7 +1356,7 @@ class AuthLdap extends Auth {
                     if (
                             ($d1 = get_record('usr', 'email', $todb->email))
                             ||
-                            ($d2 = record_exists('artefact_internal_profile_email', 'email', $todb->email))
+                            ($d2 = get_record('artefact_internal_profile_email', 'email', $todb->email))
                     ) {
                         if (empty($d1)) {
                             $d1 = get_record('usr', 'id', $d2->owner);
@@ -1511,6 +1550,11 @@ class AuthLdap extends Auth {
                     $members[$id] = 'member';
                 }
             }
+            // doublecheck that we have at least 1 admin in the group in case the user = 1 is a member of the group
+            if (!in_array('admin', $members)) {
+                // in no admins then force user = 1 to be the admin
+                $members['1'] = 'admin';
+            }
             if (get_config('auth_ldap_debug_sync_cron')) {
                 log_debug('new members list : '.count($members));
                 var_dump($members);
@@ -1575,6 +1619,7 @@ class PluginAuthLdap extends PluginAuth {
         'starttls'          => 0,
         'updateuserinfoonlogin' => 0,
         'weautocreateusers' => 1,
+        'loginlink'         => 0,
         'firstnamefield'    => '',
         'surnamefield'      => '',
         'emailfield'        => '',
@@ -1672,7 +1717,9 @@ class PluginAuthLdap extends PluginAuth {
         if ($instance > 0) {
             $default = get_record('auth_instance', 'id', $instance);
             if ($default == false) {
-                throw new SystemException('Could not find data for auth instance ' . $instance);
+                return array(
+                    'error' => get_string('nodataforinstance1', 'auth', $instance)
+                );
             }
             $current_config = get_records_menu('auth_instance_config', 'instance', $instance, '', 'field, value');
 
@@ -1804,6 +1851,12 @@ class PluginAuthLdap extends PluginAuth {
                 'type'         => 'switchbox',
                 'title' => get_string('weautocreateusers', 'auth.ldap'),
                 'defaultvalue' => self::$default_config['weautocreateusers'],
+                'help'  => true,
+            ),
+            'loginlink' => array(
+                'type'         => 'switchbox',
+                'title' => get_string('loginlink', 'auth.ldap'),
+                'defaultvalue' => self::$default_config['loginlink'],
                 'help'  => true,
             ),
             'firstnamefield' => array(

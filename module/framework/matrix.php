@@ -37,7 +37,6 @@ if (!$collection->has_framework()) {
         // The collection does have a framework associated but we are not allowed
         // to see the matrix page so show an error page with link to first page of collection.
         $smarty = smarty();
-        $smarty->assign('maintitle', $collection->get('name'));
         $smarty->assign('owner', $collection->get('owner'));
         $smarty->assign('PAGEHEADING', null);
         $smarty->assign('name', get_string('frameworkmissing', 'module.framework'));
@@ -62,8 +61,7 @@ $firstview = $views['views'][0];
 $view = new View($firstview->id);
 
 if (!can_view_view($view->get('id'))) {
-    $errorstr = get_string('accessdenied', 'error');
-    throw new AccessDeniedException($errorstr);
+    throw new AccessDeniedException();
 }
 $frameworkid = $collection->get('framework');
 $framework = new Framework($frameworkid);
@@ -104,7 +102,8 @@ $smarty = smarty(
     $javascript,
     $headers,
     array('View' => 'view',
-          'Collection' => 'collection'),
+        'Collection' => 'collection'
+    ),
     array(
         'sidebars' => false,
         'skin' => $skin
@@ -127,8 +126,8 @@ if (!$evidence) {
 }
 
 $evidencematrix = array();
-$statuscounts = new StdClass();
-$enabled = new StdClass();
+$statuscounts = new stdClass();
+$enabled = new stdClass();
 
 //completed should be always enabled
 $statuscounts->completed = array();
@@ -198,7 +197,7 @@ $inlinejs = <<<EOF
 EOF;
 
 $smarty->assign('INLINEJAVASCRIPT', $inlinejs);
-$smarty->assign('maintitle', $collection->get('name'));
+$smarty->assign('maintitle', hsc($collection->get('name')));
 $smarty->assign('collectionid', $collection->get('id'));
 $smarty->assign('owner', $owner);
 $smarty->assign('PAGEHEADING', null);
@@ -232,7 +231,7 @@ else {
 $smarty->display('module:framework:matrix.tpl');
 
 function get_statuses_to_display($frameworkid) {
-    $statusestodisplay = new StdClass();
+    $statusestodisplay = new stdClass();
     $allstatuses = array(
         Framework::EVIDENCE_COMPLETED,
         Framework::EVIDENCE_BEGUN,

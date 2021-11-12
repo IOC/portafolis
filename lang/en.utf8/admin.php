@@ -59,8 +59,12 @@ $string['clisitename'] = 'The site name';
 $string['cliupdatesitenamefailed'] = 'Updating site name failed.';
 $string['cliinstallerdescription'] = 'Install Mahara and create required data directories';
 $string['cliinstallingmahara'] = 'Installing Mahara';
-$string['cliupgraderdescription'] = 'Upgrade the Mahara database and data to the version of Mahara installed';
-$string['cliupgradingmahara'] = 'Upgrading Mahara';
+// CLI upgrade script
+$string['cli_upgrade_description'] = 'Upgrade the Mahara database and data to the version of Mahara installed.';
+$string['cli_upgrade_title'] = 'Upgrading Mahara';
+$string['cli_upgrade_force'] = 'Force the upgrade to rerun';
+$string['cli_upgrade_flag'] = 'An unfinished upgrade was detected. To try upgrading again, add the "-f" option to the command.';
+
 $string['cliclearingcaches'] = 'Clearing Mahara caches.';
 $string['cliclearcachesdescription'] = 'Clearing caches will delete cached data from the server. There is no danger in clearing caches, but your site may appear slower for a while until the server and clients calculate new information and cache it.';
 $string['clearcachesheading'] = 'Clear caches';
@@ -81,41 +85,45 @@ $string['manageinstitutions'] = 'Manage institutions';
 
 // Admin homepage strings
 $string['siteoptions']    = 'Site options';
-$string['siteoptionsdescription'] = 'Configure basic site options such as the name, language and theme';
+$string['siteoptionsdesc'] = 'Configure basic site options such as the name, language, and theme';
 $string['staticpages']     = 'Static pages';
 $string['institutionstaticpages']     = 'Institution static pages';
 $string['staticpageinstitutionbad'] = "You can't access and/or edit static pages for institution '%s'";
 $string['usedefault'] = 'Use site default';
 $string['usedefaultdescription3'] = 'Use the site\'s default text for the selected page type.';
-$string['staticpagesdescription'] = 'Edit the content of static pages in Mahara (Home, Terms and Conditions, etc.)';
+$string['staticpagesdesc'] = 'Edit the content of the hompage and "About"';
+$string['staticpagesinstdesc'] = 'Edit the content of an institution\'s static pages';
 $string['institutionprivacypagedescription'] = 'Edit the privacy statement for your institution, which is displayed in addition to the site privacy statement. The version you edited last becomes the current privacy statement automatically. You see the current site privacy statement as reference.';
 $string['institutiontermspagedescription'] = 'Edit the terms and conditions for your institution, which are displayed in addition to the site terms and conditions. The version you edited last becomes the current terms and conditions automatically. You see the current site terms and conditions as reference.';
+$string['institutionprivacytermsdesc'] = 'Add or edit an institution\'s privacy statement or terms and conditions';
 $string['noinstitutionprivacy'] = 'There is no privacy statement for this institution yet.';
 $string['noinstitutionterms'] = 'There are no terms and conditions for this institution yet.';
 $string['menus'] = 'Menus';
 $string['menusdescription'] = 'Manage the links and files within the "Links and resources" and footer menus';
+$string['sharesitefilesdesc'] = 'Share site pages and collections';
+$string['shareinstitutionfilesdesc'] = 'Share institution pages and collections';
 $string['sitefiles']          = 'Site files';
 $string['sitefonts'] = 'Fonts';
-$string['sitefontsdescription'] = 'Upload and manage fonts usable in skins by all users on the site';
+$string['sitefontsdesc'] = 'Upload and manage fonts that everyone can use in skins';
 $string['sitelicenses'] = 'Licenses';
 $string['sitelicensesadd'] = 'Add license';
-$string['sitelicensesdescription']     = 'Configure the list of licenses that users can use for content.';
+$string['sitelicensesdesc']     = 'Configure the list of licenses that people can use on their content';
 $string['sitelicensesdisablednote']     = '<b>Note</b>: License metadata is currently disabled. You will need to enable it in the "General settings" section of "<a href="%sadmin/site/options.php">Configure site</a>" before users will be able to specify licenses.';
 $string['sitelicensesedit'] = 'Edit license';
 $string['sitefilesdescription'] = 'Upload and administer files that can be put in the "Links and resources" menu and in site pages';
 $string['siteskins'] = 'Site skins';
-$string['siteskinsdescription'] = 'Create and administer page skins usable by all users on the site';
+$string['siteskinsdesc'] = 'Create and administer page skins that can be used by everyone';
 $string['siteviews']          = 'Site pages';
 $string['siteviewscollections'] = 'Site pages and collections';
-$string['siteviewsdescription'] = 'Create and administer pages and page templates for the entire site';
+$string['siteviewsdesc'] = 'Create and administer pages, page templates, and collections for the entire site';
 $string['networking']          = 'Networking';
-$string['networkingdescription'] = 'Configure networking for Mahara';
+$string['networkingdesc'] = 'Configure networking to another site';
 $string['cookieconsent'] = 'Cookie Consent';
-$string['cookieconsentdescription'] = 'Configure the "Cookie Consent" user privacy system.';
+$string['cookieconsentdesc'] = 'Configure the "Cookie Consent" user privacy system';
 $string['thememissing'] = 'The theme "%s" is missing. The theme has been set to the default theme.';
 $string['parentthememissing'] = 'Theme "%s" has its parent theme "%s" missing and needs to be fixed. The theme has been set to the default theme.';
 $string['staffusers'] = 'Staff users';
-$string['staffusersdescription'] = 'Assign users staff permissions';
+$string['staffusersdesc'] = 'Assign site staff permissions to users';
 $string['adminusers'] = 'Admin users';
 $string['adminusersdescription'] = 'Assign site administrator access rights';
 $string['settings']   = 'Settings';
@@ -124,12 +132,12 @@ $string['institutions']   = 'institutions';
 $string['Institutions']   = 'Institutions';
 $string['institutiondetails']   = 'Institution details';
 $string['institutionauth']   = 'Institution authorities';
-$string['institutionsdescription'] = 'Install and manage installed institutions';
+$string['institutionsettingsdesc'] = 'Set up and manage institutions';
 $string['lastinstitution'] = 'Previous institution';
 $string['adminnotifications'] = 'Admin notifications';
 $string['adminnotificationsdescription'] = 'Overview of how administrators receive system notifications';
 $string['uploadcsv'] = 'Add users by CSV';
-$string['uploadcsvdescription'] = 'Upload a CSV file containing new users';
+$string['uploadcsvdesc'] = 'Upload a CSV file containing new users or update existing ones';
 $string['uploadgroupcsv'] = 'Add groups by CSV';
 $string['uploadgroupmemberscsv'] = 'Update group members by CSV';
 $string['usersearch'] = 'User search';
@@ -140,16 +148,16 @@ $string['inactive'] = 'User not active';
 $string['inactivefor'] = 'User "%s" is currently not active';
 
 $string['administergroups'] = 'Administer groups';
-$string['administergroupsdescription'] = 'Appoint group administrators and delete groups';
+$string['administergroupsdesc'] = 'Manage groups, their administrators, and space available';
 $string['groupcategoriesdescription'] = 'Add and edit group categories';
-$string['uploadgroupcsvdescription'] = 'Upload a CSV file containing new groups';
+$string['uploadgroupcsvdesc'] = 'Upload a CSV file containing new groups or update existing ones';
 $string['uploadgroupmemberscsvdescription'] = 'Upload a CSV file containing members for groups';
 
 $string['institutionmembersdescription'] = 'Associate users with institutions';
-$string['institutionstaffdescription'] = 'Assign users staff permissions';
+$string['institutionstaffdesc'] = 'Assign institution staff permissions to users';
 $string['institutionadminsdescription'] = 'Assign institution administrator access rights';
 $string['institutionviews']          = 'Institution pages';
-$string['institutionviewsdescription'] = 'Create and administer pages and page templates for an institution';
+$string['institutionviewsdesc'] = 'Create and administer pages, page templates, and collections for an institution';
 $string['institutionfiles']          = 'Institution files';
 $string['institutionfilesdescription'] = 'Upload and manage files for use in institution pages';
 $string['pluginsfields'] = 'Plugins settings';
@@ -159,6 +167,7 @@ $string['pluginadmindescription'] = 'Install and configure plugins';
 $string['missingplugindisabled1'] = 'The installed plugin "%s" could not be found and has been disabled';
 $string['installedpluginsmissing'] = 'The following plugins are installed but can no longer be found';
 $string['ensurepluginsexist'] = 'Please make sure all your installed plugins are available under %s and readable by the webserver.';
+$string['plugintypedescription_blocktype'] = 'Move individual blocks to change the order in which they appear in the placeholder block that is put on a page. The numbers indicate how many times a specific block type is already in use on the site.';
 
 $string['htmlfilters'] = 'HTML filters';
 $string['htmlfiltersdescription'] = 'Enable new filters for HTML Purifier';
@@ -167,7 +176,7 @@ $string['filtersinstalled'] = 'Filters installed.';
 $string['nofiltersinstalled'] = 'No HTML filters installed.';
 
 $string['allowediframesites'] = 'Allowed iframe sources';
-$string['allowediframesitesdescriptionshort'] = 'Configure permissions for embedding external iframe content';
+$string['iframesitesdescriptionshort'] = 'Whitelist the embedding of external content available via iframes';
 $string['allowediframesitesdescription'] = 'Users are allowed to embed content from the following external sites on their pages, inside HTML &lt;iframe&gt; elements. Typically this is used to display content hosted elsewhere. The list of allowed sites can be modified on this page.';
 $string['allowediframesitesdescriptiondetail'] = 'The icon and display name will be visible to users when they configure an external media block. All sites with the same display name are grouped together in the configuration form, but iframe source text matching any of the sites will be allowed.';
 $string['iframeurldescription'] = "Text to match at the beginning of the iframe source URL (without the http://). Only letters, digits and the characters '.', '/', '_', and '-' are allowed.";
@@ -217,6 +226,8 @@ $string['addcategories'] = 'Add categories';
 $string['allowgroupcategoriesdescription1'] = 'Allow site administrators to create categories for users to assign their groups';
 $string['groupoptionsset'] = 'Group options have been updated.';
 $string['groupcategorydeleted'] = 'Category deleted';
+$string['groupcategoryupdated'] = 'Category updated';
+$string['groupcategoryadded'] = 'Category added';
 $string['confirmdeletecategory'] = 'Do you really want to delete this category?';
 $string['groupcategoriespagedescription'] = 'The categories listed here can be assigned to groups during group creation and used to filter groups during searches.';
 $string['groupquotas'] = "Group quota for '%s'";
@@ -230,6 +241,7 @@ $string['groupadminsupdated'] = 'Group administrators have been updated';
 $string['groupquotaupdated'] = 'Group quota has been updated';
 $string['addnewgroupcategory'] = 'Enter new group category';
 $string['archivedsubmissions'] = 'Archived submissions';
+$string['archivedsubmissionsdesc'] = 'Administer archived submissions';
 $string['submittedto'] = 'Submitted to';
 $string['ID'] = 'ID';
 $string['filenameleap'] = 'Leap2A file';
@@ -240,25 +252,31 @@ $string['filemissingdesc'] = 'File %s%s is missing from server';
 // Register your Mahara
 $string['Field'] = 'Field';
 $string['Value'] = 'Value';
-$string['datathatwillbesent'] = 'Data that will be sent';
+$string['dataincluded'] = 'Data included';
 $string['datathathavebeensent'] = 'Data that has been sent';
-$string['sendweeklyupdates'] = 'Send weekly updates?';
-$string['sendweeklyupdatesdescription2'] = 'Allow your site to send weekly updates to mahara.org with some statistics about your site.';
+$string['sendweeklyupdates'] = 'Send weekly updates';
+$string['sendweeklyupdatesdescription'] = 'Allow your site to send weekly updates to <a href="https://mahara.org/">mahara.org</a> with some statistics about your site.';
+$string['newregistrationpolicyinfo'] = '<p>We have updated our registration data policy to require registered sites to provide weekly updates of their data. Please follow the link below to confirm or remove your registration.</p>';
+$string['registerwithmahara'] = 'Register with mahara.org';
+$string['registerwithmaharadescription'] = 'Once your site is registered with the Mahara project, you cannot unregister it.';
 $string['Register'] = 'Register';
+$string['Registration'] = 'Registration';
 $string['registrationcancelled'] = 'You can choose to register at any time by going to the <a href="%sadmin/registersite.php">site registration page</a>.';
 $string['registrationfailedtrylater'] = 'Registration failed with error code %s. Please try again later.';
 $string['registrationsuccessfulthanksforregistering'] = 'Registration successful - thanks for registering.';
-$string['registeryourmaharasite'] = 'Register your Mahara site';
-$string['registeryourmaharasitesummary'] = '
-<p>You can choose to register your Mahara site with <a href="https://mahara.org/">mahara.org</a> and help us to build up a picture of the Mahara installations around the world. Registering will remove this notice.</p>
-<p>You can register your site and preview the information that will be sent on the <strong><a href="%sadmin/registersite.php">site registration page.</a></strong></p>';
+$string['registermaharasite'] = 'Site registration';
+$string['registeryoursitesummary'] = '
+<p>Registering your Mahara site with <a href="https://mahara.org/">mahara.org</a> helps us to get a picture of the Mahara installations around the world.</p>';
 $string['registeryourmaharasitedetail'] = '
-<p>You can choose to register your Mahara site with <a href="https://mahara.org/">mahara.org</a>. Registration is free and helps us build up a picture of the Mahara installations around the world.</p>
-<p>You can see the information that will be sent to mahara.org - nothing that can personally identify any of your users will be sent.</p>
-<p>If you tick &quot;send weekly updates&quot;, Mahara will automatically send an update to mahara.org once a week with your updated information.</p>
-<p>Registering will remove this notice. You will be able to change whether you send weekly updates on the <a href="%sadmin/site/options.php">site options</a> page.</p>';
-$string['siteregistered'] = 'Your site has been registered. You can turn weekly updates on and off on the <a href="%sadmin/site/options.php">site options</a> page.</p>';
-$string['newsiteregistrationpolicy'] = '<p>In Mahara 15.10, we have updated the policy to send data to mahara.org. Please confirm your registration.</p>';
+<p>You can register your Mahara site with the Mahara project. Registration is free and helps us get a picture of the Mahara installations around the world.</p>
+<p>If you decide to send weekly updates, you can see the information that will be sent to the Mahara project. Nothing that can personally identify any of your users will be sent.</p>';
+$string['sendingweeklyupdates1'] = 'You are sending weekly updates.';
+$string['notsendingweeklyupdates'] = 'You are not sending weekly updates.';
+$string['siteisregisteredsince'] = 'Your site has been registered with <a href="https://mahara.org/">mahara.org</a> since %s.';
+$string['siteisregistered'] = 'Your site is registered with <a href="https://mahara.org/">mahara.org</a>.';
+$string['siteregistrationpolicy'] = '<p>To ensure our statistics show accurately how Mahara is being used, registration now includes sending us weekly updates. Please review and confirm your registration by clicking &quot;Save&quot; below.</p>';
+$string['startsendingdata'] = 'Your site is sending weekly updates to <a href="https://mahara.org/">mahara.org</a>';
+$string['stoppedsendingdata'] = 'The weekly updates have been stopped';
 
 // Close site
 $string['Close'] = 'Close';
@@ -305,8 +323,11 @@ $string['statsmaxquotaused1'] = 'Has used about %s of disk quota<br>(<a href="%s
 $string['groupcountsbytype'] = 'Number of groups by group type';
 $string['groupcountsbyjointype'] = 'Number of groups by access type';
 $string['blockcountsbytype'] = 'Most frequently used blocks in portfolio pages';
-$string['uptodate'] = 'up to date';
-$string['latestversionis'] = 'latest version is <a href="%s">%s</a>';
+$string['uptodate'] = 'Your local codebase is up to date with Mahara core.';
+$string['latestversionis'] = 'Most recent major release: <a href="%s">%s</a>';
+$string['latestbranchversionis'] = 'Latest minor version of this release: <a href="%s">%s</a>';
+$string['versionnotinsupport'] = '%s is out of support.';
+$string['versionnotinsupportdev'] = 'Development version not in support';
 $string['viewsbytype'] = 'Pages by type';
 $string['institutionloginstabletitle'] = 'Active institutions';
 $string['institutionloginstablesubtitle'] = 'For %s - %s';
@@ -332,6 +353,7 @@ $string['configurereport'] = 'Configure report';
 $string['Columns'] = 'Columns';
 
 // Site options
+$string['siteadminsonly'] = 'Site administrators only';
 $string['adminsonly'] = 'Administrators only';
 $string['adminsandstaffonly'] = 'Administrators and staff only';
 $string['advanced'] = 'Advanced';
@@ -384,6 +406,15 @@ $string['generatesitemap1'] = 'Sitemap';
 $string['generatesitemapdescription'] = 'Generate sitemap files from publicly accessible pages, groups and forum topics';
 $string['homepageinfo1'] = 'Show homepage / dashboard information';
 $string['homepageinfodescription3'] = 'Show information about Mahara and how it is used on the Mahara homepage. Registered users will have the option to disable it for their dashboard.';
+$string['homepageredirect'] = 'Custom landing page';
+$string['homepageredirectdescription'] = 'If you want the first page a user sees after logging in to be something other than the dashboard page. Note: If a link was clicked that requires the user to log in, that redirect will take priority.';
+$string['homepageredirecturl'] = 'Landing page';
+$string['homepageredirecturldescription'] = 'For this to work, the page needs to be accessible to all registered users.';
+$string['islandingpage'] = 'This page is used as custom landing page for the site.';
+$string['landingpagegone'] = 'The page "%s" was the custom landing page for the site before you made the permission change. It has been removed as the custom landing page from the site settings.';
+$string['landingpagegonesubject'] = 'Custom landing page removed';
+$string['landingpagegonemessage'] = 'Please log in and choose a new custom landing page in the site settings.';
+$string['landingpagegonemessagedeleted'] = 'The page "%s" was removed as the custom landing page for the site because the page was deleted. Please log in and choose a new custom landing page in the site settings.';
 $string['institutionautosuspend'] = 'Auto-suspend expired institutions';
 $string['institutionautosuspenddescription1'] = 'Automatically suspend expired institutions.';
 $string['institutionexpirynotification'] = 'Warning time for institution expiry';
@@ -407,7 +438,7 @@ $string['licenseallowcustomdescription'] = "For license metadata, allow users to
 $string['recaptchakeysmissing1'] = 'reCAPTCHA is turned on, but it will not function until you also provide a site key and secret key.';
 $string['recaptchanotpassed'] = 'The reCAPTCHA wasn\'t entered correctly. Please try it again.';
 $string['recaptchaonregisterform1'] = 'reCAPTCHA on user registration / contact us forms';
-$string['recaptchaonregisterformdesc2'] = 'Users self-registering a new account or using the contact us form will have to prove themselves human by passing a <a href="http://recaptcha.org/">reCAPTCHA</a> test.';
+$string['recaptchaonregisterformdesc3'] = 'Users self-registering a new account or using the contact us form will have to prove themselves human by passing a <a href="https://www.google.com/recaptcha/">reCAPTCHA</a> test.';
 $string['recaptchaprivatekey1'] = 'reCAPTCHA secret key';
 $string['recaptchaprivatekeydesc1'] = 'The secret key for your site\'s reCAPTCHA account.';
 $string['recaptchapublickey1'] = 'reCAPTCHA site key';
@@ -497,7 +528,9 @@ $string['reviewsselfdeletiondescription'] = 'An institution administrator must a
 $string['mathjax'] = 'Enable MathJax';
 $string['mathjaxdescription'] = 'MathJax renders LaTeX markup into properly formatted math and science equations on portfolio pages.';
 $string['mathjaxconfig'] = 'MathJax configuration';
-
+$string['timezone'] = 'Time zone';
+$string['sitetimezonedescription'] = 'The default time zone for the site. If none is selected, one will be chosen based on the selected country. This can be innaccurate if the country has multiple time zones.';
+$string['notimezoneselected'] = 'No time zone selected';
 // Site content
 $string['about']               = 'About';
 $string['discardpageedits']    = 'Discard your changes to this page?';
@@ -517,6 +550,10 @@ $string['termsandconditions']  = 'Terms and conditions';
 $string['uploadcopyright']     = 'Upload copyright statement';
 $string['privacypagedescription'] = 'Edit the privacy statement for the entire site. The version you edited last becomes the current privacy statement automatically.';
 $string['termspagedescription'] = 'Edit the terms and conditions for the entire site. The version you edited last becomes the current terms and conditions automatically.';
+
+// Isolated institutions
+$string['owngroupsonly'] = 'See own groups only';
+$string['owngroupsonlydescription'] = 'Allow users to see only groups that they own or that they are members of. They can also only search for other users who are in these groups. This setting requires that isolated institutions are turned on in the config.php file.';
 
 // Links and resources menu editor
 $string['sitefile']            = 'Site file';
@@ -646,6 +683,8 @@ $string['uploadcsverrorduplicateremoteuser'] = 'Line %s of the file specifies a 
 $string['uploadcsverrorremoteusertaken'] = 'Line %s of the file specifies a remote username "%s" that is already taken by the user "%s".';
 $string['uploadcsverrorusernotininstitution'] = 'Error on line %s: The user "%s" is not a member of the institution %s.';
 $string['uploadcsverroruserinaninstitution'] = 'Error on line %s: The user "%s" is a member of the following institutions: %s. You cannot update this user\'s authentication method to "No Institution".';
+$string['uploadcsverrorinvalidexpirydate'] = 'Error on line %s: The expiry "%s" is invalid. Please use a valid date format.';
+$string['uploadcsverrorexpirydateinpast'] = 'Error on line %s: The expiry "%s" cannot be in the past.';
 $string['uploadcsvpagedescription6'] = '<p>Here you can upload new users via a <acronym title="Comma Separated Values">CSV</acronym> file.</p>
 
 <p>The first row of your CSV file should specify the format of your CSV data. For example, it should look like this:</p>
@@ -667,6 +706,7 @@ $string['uploadcsvpagedescription6'] = '<p>Here you can upload new users via a <
 
 %s';
 $string['uploadcsverrortoomanyusers'] = 'You have too many lines in your CSV file. Your file should not contain more than %s.';
+$string['uploadcsverrordatamustbenumeric'] = 'Line %s: The value for category must be numeric';
 $string['uploadgroupcsverrordisplaynamealreadyexists'] = 'Error on line %s of your file: The displayname "%s" already exists.';
 $string['uploadgroupcsverrorinvalidshortname'] = 'Error on line %s of your file: The shortname "%s" is invalid.';
 $string['uploadgroupcsverrorshortnamemissing'] = 'Error on line %s of your file: The group with the shortname "%s" does not exist.';
@@ -676,6 +716,9 @@ $string['uploadgroupcsverrorshortnamealreadytaken1'] = 'Error on line %s of your
 $string['uploadgroupcsverrorusernamesnotlastfield'] = 'The "usernames" field must be the last field in the header.';
 $string['uploadgroupcsverroropencontrolled'] = 'Line %s: Groups cannot have both open and controlled membership.';
 $string['uploadgroupcsverroropenrequest'] = 'Line %s: Groups with open membership cannot allow membership requests.';
+$string['uploadgroupcsverrorviewnotifyrequest'] = 'Line %s: The value for viewnotify must be numerical in the range of %s-%s.';
+$string['uploadgroupcsverrordoesnotallowgroupcategory1'] = 'Line %s: This site does not allow for group categories. If you want to use them, a site administrator can turn them on in the administration area → Groups → Group categories.';
+$string['uploadgroupcsverrorcategorydoesnotexist'] = 'Line %s: The category "%s" does not exist.';
 $string['uploadgroupcsvpagedescription2'] = '<p>You may use this facility to upload new groups via a <acronym title="Comma Separated Values">CSV</acronym> file.</p>
 
 <p>The first row of your CSV file should specify the format of your CSV data. For example, it should look like this:</p>
@@ -729,20 +772,28 @@ $string['showupdatedetails'] = 'Show update details';
 
 // Bulk Leap2A import
 $string['bulkleap2aimport'] = 'Import users from Leap2A files';
-$string['bulkleap2aimportdescription'] = '<p>You can import users in bulk from a collection of Leap2A files on your server. You must specify a ZIP file on the server file system, which contains all the Leap2A ZIP files and a single CSV file called usernames.csv mapping usernames to filenames.</p>
+$string['bulkleap2aimportdescription1'] = '<p>You can import users in bulk from a collection of Leap2A files on your server. You must specify a ZIP file on the server file system, which contains all the Leap2A ZIP files and a single CSV file called usernames.csv mapping usernames to filenames.</p>
 <p>usernames.csv will look something like this:</p>
 <pre>
 &nbsp;&nbsp;bob,mahara-export-leap-user8-1265165366.zip<br>
 &nbsp;&nbsp;nigel,mahara-export-leap-user1-1266458159.zip
 </pre>
 <p>where mahara-export-leap-user8-1265165366.zip and mahara-export-leap-user1-1266458159.zip are files in a subdirectory called users.</p>
+<p>The structure of your ZIP file, e.g. "import.zip" file will be:</p>
+<pre>
+import.zip<br>
+<span class="icon icon-file icon-regular"></span> usernames.csv<br>
+<span class="icon icon-folder-open icon-regular"></span> users<br>
+    <span class="icon icon-file icon-regular"></span> mahara-export-leap-user8-1265165366.zip<br>
+    <span class="icon icon-file icon-regular"></span> mahara-export-leap-user1-1266458159.zip<br>
+</pre>
 <p>This ZIP file should normally be generated using the bulk export built into Mahara.</p>
 <p>If you are importing a lot of users, please be patient. The import process can take a long time.</p>';
 $string['importfile'] = 'Bulk export file';
 $string['importfilemissinglisting'] = 'The bulk export file is missing a file named usernames.csv. Did you use the Mahara bulk exporter to export these users?';
 $string['importfilenotafile'] = 'Error during form submission: file was not recognised.';
 $string['importfilenotreadable'] = 'Error during form submission: file was not readable.';
-$string['bulkleap2aimportfiledescription'] = 'The ZIP file on your server containing all exported users (in Leap2A format) along with a CSV listing of usernames';
+$string['bulkleap2aimportfiledescription1'] = 'Enter the path to the ZIP file on your server that contains all exported users (in Leap2A format) along with a CSV listing of usernames, e.g. "/home/example/data/import.zip"';
 $string['importednuserssuccessfully'] = 'Imported %d of %d users successfully.';
 $string['Import'] = 'Import';
 $string['bulkimportdirdoesntexist'] = 'The directory %s does not exist.';
@@ -785,7 +836,7 @@ $string['suspendeduserstitle'] = 'Suspended and expired users';
 $string['suspendedusers'] = 'Suspended users';
 $string['suspensionreason'] = 'Suspension reason';
 $string['errorwhilesuspending'] = 'An error occurred while trying to suspend';
-$string['suspendedusersdescription'] = 'Suspend or reactivate users from using the site.';
+$string['suspendedusersdesc'] = 'View suspended and expired users and reactivate or delete them';
 $string['unsuspendusers'] = 'Unsuspend users';
 $string['usersdeletedsuccessfully'] = 'Users deleted successfully';
 $string['usersunsuspendedsuccessfully'] = 'Users unsuspended successfully';
@@ -794,6 +845,7 @@ $string['usersuspended'] = 'User suspended';
 $string['userunsuspended'] = 'User unsuspended';
 $string['expiredusers'] = 'Expired users';
 $string['expired'] = 'Expired';
+$string['expires'] = 'Expires';
 $string['unexpireusers'] = 'Reactivate expired users';
 $string['usersreactivated'] = 'Users reactivated';
 
@@ -855,6 +907,7 @@ $string['disableemail'] = 'Disable email';
 
 // Export queue
 $string['exportqueue'] = 'Export queue';
+$string['exportqueuedesc'] = 'View pending content exports';
 $string['exportcontentname'] = 'Export content';
 $string['selectuserexport'] = 'Select content "%s" to export';
 $string['selectuserexportdelete'] = 'Select content "%s" to delete from export queue';
@@ -951,13 +1004,13 @@ $string['licensedefaultdescription'] = 'The default license for content created 
 $string['licensedefaultmandatory'] = 'If users are required to choose a license, you need to choose a default license here. If you do not want to choose a default license, do not make it required for users.';
 
 $string['Logo'] = 'Logo';
-$string['Logosmall'] = 'Small logo';
+$string['Logomobile'] = 'Mobile logo';
 $string['logodescription1'] = 'You can upload an image here that will be displayed to your institution\'s members as logo for your theme. The logo will be resized to fit the space available.';
 $string['logoxsdescription'] = 'You can upload a second logo that is to be used on small devices when there is not much space. The logo should be square for best results.';
 $string['deletelogo'] = 'Delete logo';
-$string['deletelogoxs'] = 'Delete small logo';
+$string['deletelogoxsmobile'] = 'Delete mobile logo';
 $string['deletelogodescription2'] = 'Revert to the standard header logo for your institution\'s theme.';
-$string['deletelogoxsdescription2'] = 'Revert to the standard header small logo for your institution\'s theme.';
+$string['deletelogoxsdescription3'] = 'Revert to the standard header mobile logo for your institution\'s theme.';
 $string['customtheme'] = 'Custom theme configuration';
 $string['customtheme.background'] = 'Header background';
 $string['customtheme.backgroundfg'] = 'Text on header background';
@@ -983,8 +1036,8 @@ $string['institutionsettings'] = 'Institution settings';
 $string['institutionsettingsdescription'] = 'Here you can change settings regarding this user\'s membership for institutions you are an administrator of.';
 $string['changeinstitution'] = 'Change institution';
 $string['institutionstaff'] = 'Institution staff';
-$string['institutionadmins'] = 'Institution administrators';
 $string['institutionadmin'] = 'Institution administrator';
+$string['institutionadmins'] = 'Institution administrators';
 $string['institutionadministrator'] = 'Institution administrator';
 $string['institutionadmindescription1'] = 'Allow the user to administer all users in this institution.';
 $string['settingsfor'] = 'Settings for:';
@@ -1075,6 +1128,7 @@ $string['disabledlockedfieldhelp1'] = 'Note: If you cannot change one of the opt
 
 $string['defaultinstitutionquotadescription'] = 'You can set the amount of disk space new users in this institution will have as their quota.';
 $string['updateinstitutionuserquotasdesc2'] = 'Apply the default quota you choose above to all existing members.';
+$string['institutiontagsdesc'] = 'If institution tags are enabled, set up tags that members can use';
 
 // pending institution registrations
 $string['approve'] = 'Approve';
@@ -1086,11 +1140,16 @@ $string['denyregistrationmessage'] = 'This will deny the registration for the us
 $string['nopendingregistrations'] = 'No pending registrations were found for this institution.';
 $string['pendingregistration'] = 'Pending registration';
 $string['pendingregistrations'] = 'Pending registrations';
-$string['pendingregistrationspagedescription'] = '<p>On this page you can see users who have self-registered and requested membership of your institution and approve or deny their registration.<p>
-
-<p>On approving their registration, you are also adding them as members of the institution, and they will be notified with further instructions about activating their account. On denying their registration, they will be notified that their application was denied by an automated response email.</p>';
+$string['pendingregistrationspagedescription2'] = '<p>On this page you can see users who have self-registered and requested membership in your institution. You can approve or deny their registration request.<p>
+<p>On approving their registration, they are notified with further instructions about activating their account. When they follow the activation link supplied, they are added as a member of the institution. The activation link expires after 24 hours and their details are removed. If they still want to register, they will need to begin the process again.</p>
+<p>On denying their registration, they will be notified of that automatically.</p>';
+$string['pendingregistrationdesc'] = 'Approve or deny membership in your institution to self-registering users';
+$string['pendingdeletiondesc'] = 'Approve or deny the deletion of users who wish to remove their accounts';
+$string['pendingusercompletion'] = 'Approval sent, waiting on user completion';
 $string['nosuchinstitution'] = 'No such institution.';
 $string['registrationapprovedsuccessfully'] = 'Registration approved successfully.';
+$string['registrationapprovedmessage'] = 'Registration message:';
+$string['registrationapproveddesc'] = 'Additional information for newly registered users.';
 $string['registrationdeniedreason'] = 'Denial reason';
 $string['registrationdeniedreasondesc'] = 'Information as to why the application was denied that might help the user.';
 $string['registrationdeniedsuccessful'] = 'Registration denied successfully.';
@@ -1112,8 +1171,8 @@ $string['suspendinstitutiondescription'] = 'Here you may suspend an institution.
 $string['suspendedinstitutionmessage'] = 'This institution has been suspended.';
 $string['unsuspendinstitution'] = 'Unsuspend institution';
 $string['unsuspendinstitutiondescription'] = 'Here you may unsuspend an institution. Users of suspended institutions will be unable to log in until the institution is unsuspended.<br /><strong>Beware:</strong> Unsuspending an institution without resetting or turning off its expiry date may result in a daily re-suspension.';
-$string['unsuspendinstitutiondescription_top'] = '<em>Beware:</em> Unsuspending an institution without resetting or turning off its expiry date may result in a daily re-suspension.';
-$string['unsuspendinstitutiondescription_top_instadmin'] = 'Users of suspended institutions are unable to log in. Contact the site administrator to unsuspend the institution.';
+$string['unsuspendinstitutiondescription_warning'] = '<em>Beware:</em> Unsuspending an institution without resetting or turning off its expiry date may result in a daily re-suspension.';
+$string['unsuspendinstitutiondescription_instadmin'] = 'Users of suspended institutions are unable to log in. Contact the site administrator to unsuspend the institution.';
 
 // Bulk Leap2A User export
 $string['bulkexport'] = 'Export users';
@@ -1169,6 +1228,7 @@ $string['selectednusers'] = array(
     1 => '%s users selected',
 );
 $string['remoteuser'] = 'Remote username';
+$string['quotapercent'] = 'Quota used';
 $string['userreports'] = 'User reports';
 $string['userreportsdescription'] = 'View or download information about the users you selected on the search page.';
 $string['unabletodeleteself1'] = 'You are not allowed to delete yourself.';
@@ -1227,6 +1287,10 @@ $string['usershavenotloggedinsince'] = 'Users have not logged in since';
 // Admin user search duplicate email filter
 $string['duplicateemailfilter1'] = 'Duplicate email addresses';
 
+// Admin user search objectionable content filter
+$string['objectionable'] = 'Objectionable content';
+$string['objectionablefilter'] = 'People with objectionable content';
+
 $string['noemailfound'] = 'No email address found';
 
 $string['lastlogin'] = 'Last login';
@@ -1258,7 +1322,7 @@ $string['showprogressbar'] = 'Show profile completion';
 $string['progressbarsaved'] = 'Progress bar saved successfully.';
 $string['showprogressbardescription1'] = 'Display a progress bar with tips about what to complete in the user profile as a sidebar to users. They have the option to disable it.';
 $string['progressbardisablednote'] = '<b>Note</b>: Profile completion is currently disabled. You will need to enable it in the "User settings" section of "<a href="%sadmin/site/options.php">Configure site</a>" before users will be able to track their progress towards completing their profile.';
-
+$string['profilecompletiondesc'] = 'If profile completion is enabled, select content that counts towards a completed profile';
 $string['profilecompletenessdesc1'] = 'The profile completion allows your users to have a visual indicator in the sidebar showing them how complete their profile already is. You can choose the artefacts that will count towards the profile completion. All other artefacts can be used, but do not factor into the completion count.';
 $string['profilecompletenesspreview'] = 'You can preview what the profile completion looks like in the "Profile completion preview" side block.';
 
@@ -1300,6 +1364,7 @@ $string['cli_langpack_backup_failed'] = '*** WARNING *** Unable to make backup o
 $string['cli_langpack_en'] = 'You do not need to update the English langpack as the strings are defined in Mahara itself. You can set special lang strings in local/lang/.';
 $string['cli_langpack_extract_done'] = 'Copied new "%s" langpack into place';
 $string['cli_langpack_extract_failed'] = '*** WARNING *** Unable to extract files from "%s". Reason: %s';
+$string['cli_langpack_ignore'] = 'The language pack "%s" is already current so will skip updating';
 $string['cli_langpack_info'] = 'To update your language packs via the command line.
 You can:
 1) Install or update langpacks by listing the languages by their code, e.g. de = German, fr = French:
@@ -1332,6 +1397,45 @@ $string['cli_fast_index'] = 'Elasticsearch fast indexer allows quicker indexing 
 $string['cli_unabletoupdatecron'] = 'Unable to update the search cron database record';
 $string['cli_problemindexing'] = 'A problem occurred while indexing';
 $string['cli_done'] = 'Indexing finished';
+
+// Clean up old users
+$string['cli_param_dryrun'] = 'Dry run to indicate what will happen. Set to "true" by default. Need to set -d=false to actually update database.';
+$string['cli_deleteinactiveusers_beforedate'] = 'Delete users where their last login date is earlier than this date. Date can be any datetime string, e.g. "2018-02-25" or "-6 months".';
+$string['cli_deleteinactiveusers_limit'] = 'Limit of users to work with for each delete run.';
+$string['cli_deleteinactiveusers_cleanusers'] = 'Try to delete users from the "usr" table as well.';
+$string['cli_deleteinactiveusers_info'] = 'This command-line PHP script allows you to delete old users. This will only work for users who either have not logged in or have never made a forum post.';
+$string['cli_deleteinactiveusers_neverloggedin'] = 'Delete users that have never logged in (were set up by an admin).';
+$string['cli_param_baddate'] = 'The supplied date "%s" is not valid.';
+$string['cli_deleteinactiveusers_usercount'] = 'There are "%s" users to delete.';
+$string['cli_deleteinactiveusers_userunabletoclean'] = 'Unable to delete user "%s" (ID %s) fully.';
+$string['cli_deleteinactiveusers_userunabletodelete'] = 'Unable to delete user "%s" (ID %s).';
+$string['cli_deleteinactiveusers_nouserstodelete'] = 'There are no users to delete.';
+$string['cli_deleteinactiveusers_onlydryrun1'] = 'This is only a dry run with the following settings:
+Institution: %s
+Group: %s
+Before date: %s
+Delete users from "usr" table: %s
+Never logged in: %s';
+
+// Clean up old groups
+$string['cli_deleteinactivegroups_info'] = 'This command-line PHP script allows you to delete old groups. This will only work for groups that do not have any members. This will also include groups with only one owner / administrator if the "onlyadmins" flag is set.';
+$string['cli_deleteinactivegroups_beforedate'] = 'Delete groups where their last modification date is earlier than this date. Date can be any datetime string, e.g. "2018-02-25" or "-6 months".';
+$string['cli_deleteinactivegroups_limit'] = 'Limit of groups to work with for each delete run.';
+$string['cli_deleteinactivegroups_cleangroups'] = 'Try to delete groups from the "group" table as well.';
+$string['cli_deleteinactivegroups_onlyadmins'] = 'Also include groups that only have owner / administrator as members.';
+$string['cli_deleteinactivegroups_onlydryrun'] = 'This is only a dry run with the following settings:
+Institution: %s
+Before date: %s
+Delete groups from "group" table: %s
+Also delete groups that only contain owner/admin: %s
+%s';
+$string['cli_deleteinactivegroups_danger'] = '
+*** The settings chosen will delete all groups ***
+If this is what you desire, then set the --beforedate to a date in the future.';
+$string['cli_deleteinactivegroups_groupcount'] = 'There are "%s" groups to delete.';
+$string['cli_deleteinactivegroups_nogroupstodelete'] = 'There are no groups to delete.';
+$string['cli_deleteinactivegroups_emptygroups'] = 'Only delete groups that do not have any members.';
+$string['cli_deleteinactivegroups_groupunabletoclean'] = 'Unable to fully delete group "%s" (ID %s).';
 
 $string['withselectedcontentexport'] = 'Re-queue items into the export queue';
 $string['withselectedcontentdelete'] = 'Delete selected items from the export queue';
@@ -1385,12 +1489,14 @@ $string['hasrefused'] = 'has refused the privacy statement';
 $string['privacylowcase'] = 'privacy statement';
 $string['termsandconditionslowcase'] = 'terms and conditions';
 $string['hasrefused'] = 'has refused the %s';
+$string['suspendaccount'] = 'Suspend account';
 $string['privacyandtotheterms'] = 'privacy statement and to the terms and conditions';
 $string['privacyandtheterms'] = 'privacy statement and the terms and conditions';
 $string['consentdate'] = 'Date of consent / rejection';
 $string['legalconsent'] = 'Legal consent';
 $string['userprivacyagreements'] = 'Displayed below are all the privacy statements the user has agreed to.';
 $string['usertermsagreements'] = 'Displayed below are all the terms and conditions the user has agreed to.';
+$string['privacytermsdesc'] = 'Edit the privacy statement or terms and conditions for your site';
 
 // pending user account deletions
 $string['approveuserdeletionfor'] = 'Approve user account deletion for %s %s <%s>';
@@ -1410,3 +1516,6 @@ $string['pendingdeletionspagedescription'] = '<p>On this page you can see users 
 $string['userdeletiondeniedsuccessful'] = 'Request denied successfully.';
 $string['userdeletiondeniedunsuccessful'] = 'The attempted user account deletion denial failed.';
 $string['consented'] = 'Consented';
+$string['groupid'] = 'Group ID';
+
+$string['blocktypeupdatedsuccess'] = 'Updated blocktype sort order';

@@ -61,7 +61,7 @@ jQuery(function($) {
      */
     function focusOnOpen() {
         $('[data-action~="focus-on-open"]').on('shown.bs.collapse', function() {
-            $(this).find('form input').first().focus();
+            $(this).find('form input').first().trigger("focus");
         });
     }
 
@@ -69,7 +69,7 @@ jQuery(function($) {
      * Clear form when a form is collapsed
      */
     function resetOnCollapse() {
-        $('[data-action~="reset-on-collapse"]').on('hidden.bs.collapse', function () {
+        $('[data-action~="reset-on-collapse"]').on('d-none.bs.collapse', function () {
             var i,
                 forms = $(this).find('form');
             for (i = 0; i < forms.length; i = i + 1) {
@@ -165,19 +165,15 @@ jQuery(function($) {
          * Custom dropdown creates a fake select box that can have items of an
          * arbitrary length (unlike attachInputDropdown which uses a select).
          * For screenreaders, it works like a UL of links.
-         * Keyboard nav doesn't work for sighted users though.
          */
 
-        // open the dropdown when it is clicked
-        $('.custom-dropdown > .picker').click(function() {
-            $(this).parent().children('ul').toggleClass('hidden');
-        });
-
-        // close the dropdown when there is a click anywhere outside it
-        $(document).on('click', function(event) {
-            if (!$(event.target).closest('.custom-dropdown').length) {
-                $('.custom-dropdown').children('ul').addClass('hidden');
-              }
+         /* Utilize bootstrap functions for showing/ hiding the list when
+         *  user presses the 'Enter' key (keyCode 13)
+         */
+        $('.custom-dropdown > .picker').keydown(function(e){
+            if (e.keyCode == 13) {
+                $(this).parent().children('ul').collapse('toggle');
+            }
         });
     }
 
@@ -216,7 +212,7 @@ jQuery(function($) {
     /*
      * Display appropriate Mahara logo depending on the header background.
      *
-     * Return if user uploaded custom logo as we assume that the colour
+     * Return if user uploaded custom logo as we assume that's the colour
      */
     function displayCorrectLogo() {
         var headerBgColour = $('.navbar-default.navbar-main').css("background-color");
@@ -231,6 +227,24 @@ jQuery(function($) {
         }
         else {
             headerLogo.attr('src', config.wwwroot + 'theme/raw/images/site-logo-dark.svg');
+        }
+    }
+
+    /*
+     * Display appropriate Mahara mobile logo depending on the header background.
+     * Displays the default only if a custom logo hasn't been uploaded.
+     */
+    function displayCorrectSmallLogo() {
+        var headerBgColour = $('.navbar-default.navbar-main').css("background-color");
+        var headerLogo = $('.header .logoxs > img');
+
+        if ($('.change-to-small-default').length > 0) {
+            if (isDark(headerBgColour)) {
+                headerLogo.attr('src', config.wwwroot + 'theme/raw/images/site-logo-small-light.svg');
+            }
+            else {
+                headerLogo.attr('src', config.wwwroot + 'theme/raw/images/site-logo-small-dark.svg');
+            }
         }
     }
 
@@ -261,12 +275,12 @@ jQuery(function($) {
 
     $('.navbar-main .navbar-collapse.collapse').on('show.bs.collapse', function(event) {
         event.stopPropagation();
-        $('.navbar-collapse.collapse.in').collapse('hide');
+        $('.navbar-collapse.collapse.show').collapse('hide');
     });
 
     $('.navbar-main .child-nav.collapse').on('show.bs.collapse', function(event) {
         event.stopPropagation();
-        $('.child-nav.collapse.in').collapse('hide');
+        $('.child-nav.collapse.show').collapse('hide');
     });
 
     affixSize();
@@ -277,6 +291,7 @@ jQuery(function($) {
     calculateObjectVideoAspectRatio();
     responsiveObjectVideo();
     displayCorrectLogo();
+    displayCorrectSmallLogo();
 
     if ($('.js-dropdown-group').length > 0) {
         attachInputDropdown();
@@ -295,10 +310,10 @@ jQuery(function($) {
         // keyESCAPE constant is used since jQuerty.ui is not loaded on all pages
         var keyESCAPE = 27;
         if (
-            (event.type=='click' && !$(event.target).closest('.navbar-toggle').length) ||
+            (event.type == 'click' && !($(event.target).closest('.navbar-toggle, .navbar-form').length || event.which == 3)) ||
             (event.type == 'keyup' && event.keyCode == keyESCAPE)
         ) {
-            $('.navbar-collapse.collapse.in').collapse('hide');
+            $('.navbar-collapse.collapse.show').collapse('hide');
         }
     });
 

@@ -15,6 +15,10 @@ require_once('file.php');
 
 class PluginArtefactFile extends PluginArtefact {
 
+    public static function is_active() {
+        return get_field('artefact_installed', 'active', 'name', 'file');
+    }
+
     public static function get_artefact_types() {
         return array(
             'file',
@@ -37,32 +41,43 @@ class PluginArtefactFile extends PluginArtefact {
 
     public static function menu_items() {
         return array(
-            'content/files' => array(
-                'path' => 'content/files',
+            'create/files' => array(
+                'path' => 'create/files',
                 'url' => 'artefact/file/index.php',
                 'title' => get_string('Files', 'artefact.file'),
-                'weight' => 30,
-            ),
-            'content/profileicons' => array(
-                'path' => 'content/profileicons',
-                'url' => 'artefact/file/profileicons.php',
-                'title' => get_string('profileicons', 'artefact.file'),
                 'weight' => 20,
             ),
         );
     }
 
-    public static function group_tabs($groupid) {
+    public static function right_nav_menu_items() {
         return array(
-            'files' => array(
-                'path' => 'groups/files',
-                'url' => 'artefact/file/groupfiles.php?group='.$groupid,
-                //PATCH IOC002
-                'title' => get_string('Files', 'group'),
-                'weight' => 70,
-                //fi
+            'profileicons' => array(
+                'path' => 'profileicons',
+                'url' => 'artefact/file/profileicons.php',
+                'title' => get_string('profileicons', 'artefact.file'),
+                'weight' => 15,
+                'iconclass' => 'portrait',
             ),
         );
+    }
+
+    public static function group_tabs($groupid, $role) {
+        if ($role) {
+            return array(
+                'files' => array(
+                    'path' => 'groups/files',
+                    'url' => 'artefact/file/groupfiles.php?group='.$groupid,
+                    //PATCH IOC002
+                    'title' => get_string('Files', 'group'),
+                    'weight' => 70,
+                    //fi
+                ),
+            );
+        }
+        else {
+            return array();
+        }
     }
 
     public static function get_event_subscriptions() {
@@ -113,39 +128,13 @@ class PluginArtefactFile extends PluginArtefact {
     public static function set_quota_triggers() {
         set_config_plugin('artefact', 'file', 'quotanotifylimit', 80);
         set_config_plugin('artefact', 'file', 'quotanotifyadmin', false);
-
-        // Create triggers to reset the quota notification flag
         if (is_postgres()) {
             $sql = "DROP FUNCTION IF EXISTS {unmark_quota_exeed_upd_set}() CASCADE;";
             execute_sql($sql);
-
-            db_create_trigger(
-                'unmark_quota_exceed_upd_usr_set',
-                'AFTER', 'UPDATE', 'usr', "
-                UPDATE {usr_account_preference}
-                SET value = 0 FROM {artefact_config}
-                WHERE {usr_account_preference}.field = 'quota_exceeded_notified'
-                AND {usr_account_preference}.usr = NEW.id
-                AND {artefact_config}.plugin = 'file'
-                AND {artefact_config}.field = 'quotanotifylimit'
-                AND CAST(NEW.quotaused AS float)/CAST(NEW.quota AS float) < CAST({artefact_config}.value AS float)/100;"
-            );
         }
         else {
             $sql = "DROP TRIGGER IF EXISTS {unmark_quota_exceed_upd_set}";
             execute_sql($sql);
-
-            db_create_trigger(
-                'unmark_quota_exceed_upd_usr_set',
-                'AFTER', 'UPDATE', 'usr', "
-                UPDATE {usr_account_preference}, {artefact_config}
-                SET {usr_account_preference}.value = 0
-                WHERE {usr_account_preference}.field = 'quota_exceeded_notified'
-                AND {usr_account_preference}.usr = NEW.id
-                AND {artefact_config}.plugin = 'file'
-                AND {artefact_config}.field = 'quotanotifylimit'
-                AND NEW.quotaused/NEW.quota < {artefact_config}.value/100;"
-            );
         }
     }
 
@@ -179,10 +168,12 @@ class PluginArtefactFile extends PluginArtefact {
                     'confirmdeletefile',
                     'confirmdeletefolder',
                     'confirmdeletefolderandcontents',
+                    'createfoldersuccess',
                     'defaultprofileicon',
                     'editfile',
                     'editfolder',
                     'fileappearsinviews',
+                    'fileappearsinposts',
                     'fileattachedtoportfolioitems',
                     'fileappearsinskins',
                     'filewithnameexists',
@@ -281,8 +272,8 @@ class PluginArtefactFile extends PluginArtefact {
     public static function get_artefact_type_content_types() {
         return array(
             'file'        => array('file'),
-            'image'       => array('file', 'image'),
-            'profileicon' => array('file', 'image'),
+            'image'       => array('image'),
+            'profileicon' => array('image'),
             'archive'     => array('file'),
             'video'       => array('file'),
             'audio'       => array('file'),
@@ -308,7 +299,7 @@ class PluginArtefactFile extends PluginArtefact {
             GROUP BY a.owner", array()
         );
         if ($data) {
-            return array_map(create_function('$a', 'return $a->bytes;'), $data);
+            return array_map(function($a) { return $a->bytes; }, $data);
         }
         return array();
     }
@@ -323,7 +314,7 @@ class PluginArtefactFile extends PluginArtefact {
             GROUP BY a.group", array()
         );
         if ($data) {
-            return array_map(create_function('$a', 'return $a->bytes;'), $data);
+            return array_map(function($a) { return $a->bytes; }, $data);
         }
         return array();
     }
@@ -539,9 +530,9 @@ abstract class ArtefactTypeFileBase extends ArtefactType {
         global $USER;
         $select = '
             SELECT
-                a.id, a.artefacttype, a.mtime, f.size, fi.orientation, a.title, a.description, a.license, a.licensor, a.licensorurl, a.locked, a.allowcomments, u.profileicon AS defaultprofileicon,
+                a.id, a.artefacttype, a.mtime, f.size, fi.orientation, a.title, a.description, a.license, a.licensor, a.licensorurl, a.locked, a.allowcomments, u.profileicon AS defaultprofileicon, a.author,
                 COUNT(DISTINCT c.id) AS childcount, COUNT (DISTINCT aa.artefact) AS attachcount, COUNT(DISTINCT va.view) AS viewcount, COUNT(DISTINCT s.id) AS skincount,
-                COUNT(DISTINCT api.id) AS profileiconcount';
+                COUNT(DISTINCT api.id) AS profileiconcount, COUNT(DISTINCT fpa.id) AS postcount';
         $from = '
             FROM {artefact} a
                 LEFT OUTER JOIN {artefact_file_files} f ON f.artefact = a.id
@@ -550,7 +541,8 @@ abstract class ArtefactTypeFileBase extends ArtefactType {
                 LEFT OUTER JOIN {artefact} api ON api.parent = a.id AND api.artefacttype = \'profileicon\'
                 LEFT OUTER JOIN {view_artefact} va ON va.artefact = a.id
                 LEFT OUTER JOIN {artefact_attachment} aa ON aa.attachment = a.id
-                LEFT OUTER JOIN {skin} s ON (s.bodybgimg = a.id OR s.viewbgimg = a.id)
+                LEFT OUTER JOIN {skin} s ON (s.bodybgimg = a.id OR s.headingbgimg = a.id)
+                LEFT OUTER JOIN {interaction_forum_post_attachment} fpa ON fpa.attachment = a.id
                 LEFT OUTER JOIN {usr} u ON a.id = u.profileicon AND a.owner = u.id';
 
         if (!empty($filters['artefacttype'])) {
@@ -596,7 +588,7 @@ abstract class ArtefactTypeFileBase extends ArtefactType {
         }
         else if ($group) {
             $select .= ',
-                r.can_edit, r.can_view, r.can_republish, a.author';
+                r.can_edit, r.can_view, r.can_republish';
             $from .= '
                 LEFT OUTER JOIN (
                     SELECT ar.artefact, ar.can_edit, ar.can_view, ar.can_republish
@@ -677,6 +669,11 @@ abstract class ArtefactTypeFileBase extends ArtefactType {
                     if ($group && $item->author == $USER->get('id')) {
                         $item->can_edit = 1;    // This will show the delete, edit buttons in filelist, but doesn't change the actual permissions in the checkbox
                     }
+                    if ($group || $institution || ($USER->get('id') != $item->author)) {
+                        $userobj = new User();
+                        $userobj->find_by_id($item->author);
+                        $item->uploadedby = display_name($userobj, null, true);
+                    }
                 }
                 if ($item->artefacttype == 'folder') {
                     if ($item->childcount > 0 && defined('FOLDER_SIZE')) {
@@ -690,13 +687,27 @@ abstract class ArtefactTypeFileBase extends ArtefactType {
                     }
                 }
             }
-            $where = 'artefact IN (' . join(',', array_keys($filedata)) . ')';
-            $tags = get_records_select_array('artefact_tag', $where);
+            $tagwhere = "'" . join("','", array_keys($filedata)) . "'";
+            $typecast = is_postgres() ? '::varchar' : '';
+            $tags = get_records_sql_array("
+                SELECT
+                    (CASE
+                        WHEN t.tag LIKE 'tagid_%' THEN CONCAT(i.displayname, ': ', t2.tag)
+                        ELSE t.tag
+                    END) AS tag, t.resourceid
+                FROM {tag} t
+                LEFT JOIN {tag} t2 ON t2.id" . $typecast . " = SUBSTRING(t.tag, 7)
+                LEFT JOIN {institution} i ON i.name = t2.ownerid
+                WHERE t.resourcetype = 'artefact' AND t.resourceid IN (" . $tagwhere . ")");
             if ($tags) {
+                require_once(get_config('docroot') . 'lib/form/elements/tags.php');
+                $alltags = get_all_tags_for_user();
                 foreach ($tags as $t) {
-                    $filedata[$t->artefact]->tags[] = $t->tag;
+                    $tagname = remove_prefix($t->tag);
+                    $filedata[$t->resourceid]->tags[$tagname] = display_tag($tagname, $alltags['tags']);
                 }
             }
+            $where = 'artefact IN (' . join(',', array_keys($filedata)) . ')';
             if ($group) {  // Fetch permissions for each artefact
                 $perms = get_records_select_array('artefact_access_role', $where);
                 if ($perms) {
@@ -785,6 +796,7 @@ abstract class ArtefactTypeFileBase extends ArtefactType {
                         'createfolder'    => $editfilesfolders,
                         'edit'            => $editfilesfolders,
                         'select'          => false,
+                        'tag'             => true,
                     ),
                 ),
             ),
@@ -1110,7 +1122,9 @@ class ArtefactTypeFile extends ArtefactTypeFileBase {
     }
 
     protected function save_content_hash() {
-        $this->contenthash = self::generate_content_hash($this->get_local_path());
+        // We set generateifpossible = false because if we dont have a hash, then the file must be local or missing.
+        // This also avoids calling ensure_local for images, which would call this infinitely.
+        $this->contenthash = self::generate_content_hash($this->get_local_path(array(), false));
 
         if (!empty($this->contenthash)) {
             $this->dirty = true;
@@ -1140,7 +1154,7 @@ class ArtefactTypeFile extends ArtefactTypeFileBase {
         }
     }
 
-    public function get_local_path($data = array()) {
+    public function get_local_path($data = array(), $generateifpossible = true) {
         return get_config('dataroot') . self::get_file_directory($this->fileid) . '/' .  $this->fileid;
     }
 
@@ -1350,13 +1364,26 @@ class ArtefactTypeFile extends ArtefactTypeFileBase {
             $filetype = $this->get('oldextension') . ' ' . get_string('file', 'artefact.file');
         }
 
+        $uploadedby = null;
+        if ($this->group || $this->institution || ($USER->get('id') != $this->author)) {
+            $uploader = new User();
+            $uploader->find_by_id($this->author);
+            $uploadedby = display_name($uploader, null, true);
+        }
+
         $smarty = smarty_core();
         // $smarty->assign('iconpath', $this->get_icon($options));
         $smarty->assign('downloadpath', $downloadpath);
         $smarty->assign('filetype', $filetype);
-        if ($USER->is_logged_in()) {
+        if ($this->group) {
+            $group =  get_group_by_id($this->group);
+            $smarty->assign('ownername', 'Group "' . $group->name .'"');
+        }
+        else if ($USER->is_logged_in()) {
             $smarty->assign('ownername', $this->display_owner());
         }
+        $smarty->assign('uploadedby', $uploadedby);
+        $smarty->assign('view', (isset($options['viewid']) ? $options['viewid'] : null));
         $smarty->assign('created', strftime(get_string('strftimedaydatetime'), $this->get('ctime')));
         $smarty->assign('modified', strftime(get_string('strftimedaydatetime'), $this->get('mtime')));
         $smarty->assign('size', $this->describe_size() . ' (' . $this->get('size') . ' ' . get_string('bytes', 'artefact.file') . ')');
@@ -1673,7 +1700,7 @@ class ArtefactTypeFile extends ArtefactTypeFileBase {
                     'rows'         => 10,
                     'cols'         => 80,
                     'defaultvalue' => get_field('site_content', 'content', 'name', 'uploadcopyright', 'institution', 'mahara'),
-                    'rules'        => array('maxlength' => 65536),
+                    'rules'        => array('maxlength' => 1000000),
                 ),
             ),
             'collapsible' => true,
@@ -1894,7 +1921,7 @@ class ArtefactTypeFile extends ArtefactTypeFileBase {
                 }
             }
         }
-        $data = new StdClass;
+        $data = new stdClass();
         $data->name    = 'uploadcopyright';
         $data->content = $values['customagreement'];
         $data->mtime   = db_format_timestamp(time());
@@ -1972,7 +1999,7 @@ class ArtefactTypeFile extends ArtefactTypeFileBase {
         safe_require('notification', 'internal');
         foreach ($groups as $group) {
             // find the group admins and notify them - there should be at least 1 admin for a group
-            if ($admins = group_get_admin_ids(array($group->id))) {
+            if ($admins = group_get_admin_ids($group->id)) {
                 $data = array(
                     'subject'   => get_string('adm_group_notificationsubject', 'artefact.file'),
                     'message'   => get_string('adm_group_notificationmessage', 'artefact.file', $group->name, ceil((int)$group->quotausedpercent), display_size($group->quota)),
@@ -2119,8 +2146,20 @@ class ArtefactTypeFolder extends ArtefactTypeFileBase {
         $smarty->assign('simpledisplay', isset($options['simpledisplay']) ? $options['simpledisplay'] : false);
         $smarty->assign('folderid', $this->get('id'));
         $smarty->assign('downloadfolderzip', get_config_plugin('blocktype', 'folder', 'folderdownloadzip') ? !empty($options['folderdownloadzip']) : false);
+        if (isset($options['editing'])) {
+            $smarty->assign('editing', $options['editing']);
+        }
 
-        if ($childrecords = $this->folder_contents()) {
+        $childrecords = false;
+        if (!empty($options['existing_artefacts'])) {
+            $childrecords = get_records_sql_array("SELECT * FROM {artefact} WHERE id IN (" . join(',', (array)$options['existing_artefacts']) . ")");
+        }
+        else {
+            $childrecords = $this->folder_contents();
+        }
+
+        if ($childrecords) {
+            safe_require('artefact', 'comment');
             $sortorder = (isset($options['sortorder']) && $options['sortorder'] == 'desc') ? 'my_files_cmp_desc' : 'my_files_cmp';
             usort($childrecords, array('ArtefactTypeFileBase', $sortorder));
             $children = array();
@@ -2129,10 +2168,25 @@ class ArtefactTypeFolder extends ArtefactTypeFileBase {
                 $child->title = $child->hovertitle = $c->get('title');
                 $child->date = format_date(strtotime($child->mtime), 'strftimedaydatetime');
                 $child->iconsrc = call_static_method(generate_artefact_class_name($child->artefacttype), 'get_icon', array('id' => $child->id, 'viewid' => isset($options['viewid']) ? $options['viewid'] : 0));
+                $count = ArtefactTypeComment::count_comments(null, array($child->id));
+                if ($count) {
+                    $child->commentcount = $count[$child->id]->comments;
+                }
+                else {
+                    $child->commentcount = 0;
+                }
             }
             $smarty->assign('children', $childrecords);
         }
-        return array('html' => $smarty->fetch('artefact:file:folder_render_self.tpl'),
+        if (isset($options['blockid'])) {
+            $smarty->assign('blockid', $options['blockid']);
+        }
+        $template = 'artefact:file:folder_render_self.tpl';
+        if (isset($options['modal'])) {
+            $smarty->assign('modal', $options['modal']);
+            $template = 'artefact:file:folder_render_in_modal.tpl';
+        }
+        return array('html' => $smarty->fetch($template),
                      'javascript' => null);
     }
 
@@ -2237,7 +2291,7 @@ class ArtefactTypeFolder extends ArtefactTypeFileBase {
             if (!$create) {
                 return false;
             }
-            $data = new StdClass;
+            $data = new stdClass();
             $data->title = $name;
             $data->description = $description;
             $data->owner = $userid;
@@ -2253,8 +2307,8 @@ class ArtefactTypeFolder extends ArtefactTypeFileBase {
 
     // append the view id to to the end of image and anchor urls so they are visible to logged out users also
     public static function append_view_url($postcontent, $view_id) {
-        $postcontent = preg_replace('#(<a[^>]+href="[^>]+artefact/file/download\.php\?file=\d+)#', '\1&amp;view=' . $view_id , $postcontent);
-        $postcontent = preg_replace('#(<img[^>]+src="[^>]+artefact/file/download\.php\?file=\d+)#', '\1&amp;view=' . $view_id, $postcontent);
+        $postcontent = preg_replace('#(<a[^>]+href="(/|' . get_config('wwwroot') . ')artefact/file/download\.php\?file=\d+)#', '\1&amp;view=' . $view_id , $postcontent);
+        $postcontent = preg_replace('#(<img[^>]+src="(/|' . get_config('wwwroot') . ')artefact/file/download\.php\?file=\d+)#', '\1&amp;view=' . $view_id, $postcontent);
 
         // Find images inside <a> tags and temporarily draft them out of the
         // content. This is so we can link up unlinked images to open to
@@ -2378,6 +2432,9 @@ class ArtefactTypeImage extends ArtefactTypeFile {
         if (isset($options['viewid'])) {
             $url .= '&view=' . $options['viewid'];
         }
+        if (isset($options['post'])) {
+            $url .= '&post=' . $options['post'];
+        }
         if (isset($options['size'])) {
             $url .= '&size=' . $options['size'];
         }
@@ -2388,9 +2445,9 @@ class ArtefactTypeImage extends ArtefactTypeFile {
         return $url;
     }
 
-    public function get_local_path($data=array()) {
+    public function get_local_path($data=array(), $generateifpossible = true) {
         require_once('file.php');
-        $result = get_dataroot_image_path('artefact/file/', $this->fileid, $data, $this->orientation);
+        $result = get_dataroot_image_path('artefact/file/', $this->fileid, $data, $this->orientation, $generateifpossible);
         return $result;
     }
 
@@ -2414,19 +2471,22 @@ class ArtefactTypeImage extends ArtefactTypeFile {
 
     public function render_self($options) {
         $downloadpath = get_config('wwwroot') . 'artefact/file/download.php?file=' . $this->id;
-        $url = get_config('wwwroot') . 'artefact/artefact.php?artefact=' . $this->id;
         if (isset($options['viewid'])) {
             $downloadpath .= '&view=' . $options['viewid'];
-            $url .= '&view=' . $options['viewid'];
         }
-        $metadataurl = $url . '&details=1';
+        if (isset($options['viewid'])) {
+            $metadataurl = get_config('wwwroot') . 'view/view.php?id=' . $options['viewid'] . '&modal=1&artefact=' . $this->id;
+        }
+        else {
+            $metadataurl = null;
+        }
         if (empty($options['metadata'])) {
             $smarty = smarty_core();
             $smarty->assign('id', $this->id);
             $smarty->assign('title', $this->get('title'));
             $smarty->assign('description', $this->get('description'));
             $smarty->assign('downloadpath', $downloadpath);
-            $smarty->assign('metadataurl', $metadataurl);
+            // $smarty->assign('metadataurl', $metadataurl);
             return array('html' => $smarty->fetch('artefact:file:image_render_self.tpl'), 'javascript' => '');
         }
         $result = parent::render_self($options);
@@ -2490,9 +2550,9 @@ class ArtefactTypeProfileIcon extends ArtefactTypeImage {
         return $url;
     }
 
-    public function get_local_path($data=array()) {
+    public function get_local_path($data=array(), $generateifpossible = true) {
         require_once('file.php');
-        $result = get_dataroot_image_path('artefact/file/profileicons/', $this->fileid, $data, $this->orientation);
+        $result = get_dataroot_image_path('artefact/file/profileicons/', $this->fileid, $data, $this->orientation, $generateifpossible);
         return $result;
     }
 
@@ -2536,8 +2596,8 @@ class ArtefactTypeProfileIcon extends ArtefactTypeImage {
         }
 
         // No profile icon file selected. Go through fallback icons.
-        // Look for an appropriate image on gravatar.com
-        $useremail = !empty($data) ? $data->email : false;
+        // Look for an appropriate image on gravatar.com if not 'root' user
+        $useremail = (!empty($data) && $userid !== 0) ? $data->email : false;
         if ($useremail and $gravatarurl = remote_avatar_url($useremail, $size)) {
             redirect($gravatarurl);
         }
