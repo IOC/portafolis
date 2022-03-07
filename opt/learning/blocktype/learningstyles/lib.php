@@ -48,7 +48,9 @@ class PluginBlocktypeLearningStyles extends PluginBlocktype {
         return array('portfolio', 'profile');
     }
 
+
     public static function render_instance(BlockInstance $instance, $editing=false, $versioning=false) {
+
         $smarty = smarty_core();
         $configdata = $instance->get('configdata');
 		$artefacttype = $instance->get('blocktype');
