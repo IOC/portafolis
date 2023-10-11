@@ -157,7 +157,7 @@ class ArtefactTypeEuropass extends ArtefactType {
     /**
      * Default render method for Europass fields - show their description
      */
-    public function render_self() {
+    public function render_self($options) {
         return clean_html($this->get('description'));
     }
 
@@ -353,7 +353,7 @@ class ArtefactTypeOtherlanguage extends ArtefactTypeEuropassComposite {
         );
     }
 
-    public static function bulk_delete($artefactids) {
+    public static function bulk_delete($artefactids, $log = false) {
         parent::bulk_delete_composite($artefactids, 'otherlanguage');
     }
 }
@@ -407,7 +407,7 @@ class ArtefactTypeLanguagediploma extends ArtefactTypeEuropassComposite {
         );
     }
 
-    public static function bulk_delete($artefactids) {
+    public static function bulk_delete($artefactids, $log = false) {
         parent::bulk_delete_composite($artefactids, 'languagediploma');
     }
 }
@@ -447,7 +447,7 @@ class ArtefactTypeLanguageexperience extends ArtefactTypeEuropassComposite {
         );
     }
 
-    public static function bulk_delete($artefactids) {
+    public static function bulk_delete($artefactids, $log = false) {
         parent::bulk_delete_composite($artefactids, 'languageexperience');
     }
 }
@@ -519,7 +519,7 @@ class ArtefactTypeDigitalcompetence extends ArtefactTypeEuropassComposite {
         );
     }
 
-    public static function bulk_delete($artefactids) {
+    public static function bulk_delete($artefactids, $log = false) {
         parent::bulk_delete_composite($artefactids, 'digitalcompetence');
     }
 }
@@ -573,7 +573,7 @@ class ArtefactTypeDigitaldiploma extends ArtefactTypeEuropassComposite {
         );
     }
 
-    public static function bulk_delete($artefactids) {
+    public static function bulk_delete($artefactids, $log = false) {
         parent::bulk_delete_composite($artefactids, 'digitaldiploma');
     }
 }
@@ -771,7 +771,7 @@ class ArtefactTypeDrivinglicence extends ArtefactTypeEuropassElement {
     /**
      * Render method for Driving licence(s) Europass field
      */
-    public function render_self() {
+    public function render_self($options) {
         $licences = unserialize($this->description);
         $renderhtml = '';
         foreach ($licences as $licence => $value) {

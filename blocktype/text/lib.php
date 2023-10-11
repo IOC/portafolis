@@ -60,7 +60,7 @@ class PluginBlocktypeText extends MaharaCoreBlocktype {
         return true;
     }
 
-    public static function instance_config_form(BlockInstance $instance) {
+    public static function instance_config_form(BlockInstance $instance, $istemplate) {
         require_once('license.php');
         $configdata = $instance->get('configdata');
         if (!$height = get_config('blockeditorheight')) {

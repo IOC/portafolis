@@ -343,7 +343,7 @@ class PluginBlocktypeOpenbadgedisplayer extends SystemBlocktype {
         return true;
     }
 
-    public static function instance_config_form(BlockInstance $instance) {
+    public static function instance_config_form(BlockInstance $instance, $istemplate) {
         global $USER;
         $owner = $instance->get_view()->get('owner');
         $sources = self::get_backpack_source();

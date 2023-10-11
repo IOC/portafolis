@@ -59,7 +59,7 @@ class PluginBlocktypeEuropassCV extends MaharaCoreBlocktype {
         return true;
     }
 
-    public static function instance_config_form($instance) {
+    public static function instance_config_form(BlockInstance $instance, $istemplate) {
         $configdata = $instance->get('configdata');
         $locale = (isset($configdata['locale']) ? $configdata['locale'] : get_config('lang'));
         $profilepic = (isset($configdata['profilepic']) ? $configdata['profilepic'] : false);

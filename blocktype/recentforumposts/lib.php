@@ -138,7 +138,7 @@ class PluginBlocktypeRecentForumPosts extends MaharaCoreBlocktype {
         return true;
     }
 
-    public static function instance_config_form(BlockInstance $instance) {
+    public static function instance_config_form(BlockInstance $instance, $istemplate) {
         global $USER;
 
         $elements   = array();

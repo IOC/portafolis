@@ -196,7 +196,7 @@ class PluginBlocktypeGroupViews extends MaharaCoreBlocktype {
         return true;
     }
 
-    public static function instance_config_form(BlockInstance $instance) {
+    public static function instance_config_form(BlockInstance $instance, $istemplate) {
         $configdata = $instance->get('configdata');
         return array(
             'showgroupviews' => array(

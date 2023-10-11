@@ -372,7 +372,7 @@ EOF;
     /**
     * This function must be implemented in the subclass if it has config
     */
-    public static function instance_config_form(BlockInstance $instance) {
+    public static function instance_config_form(BlockInstance $instance, $istemplate) {
         throw new SystemException(get_string('blocktypemissingconfigform', 'error', $instance->get('blocktype')));
     }
 

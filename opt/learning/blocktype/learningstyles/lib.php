@@ -80,7 +80,7 @@ class PluginBlocktypeLearningStyles extends PluginBlocktype {
         return true;
     }
 
-    public static function instance_config_form($instance, $istemplate) {
+    public static function instance_config_form(BlockInstance $instance, $istemplate) {
 		//log_debug($userid);
 
         if ($istemplate) {

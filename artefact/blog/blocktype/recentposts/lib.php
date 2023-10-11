@@ -163,7 +163,7 @@ class PluginBlocktypeRecentposts extends MaharaCoreBlocktype {
         return true;
     }
 
-    public static function instance_config_form(BlockInstance $instance) {
+    public static function instance_config_form(BlockInstance $instance, $istemplate) {
         safe_require('artefact', 'blog');
         $configdata = $instance->get('configdata');
         $elements = array(self::artefactchooser_element((isset($configdata['artefactids'])) ? $configdata['artefactids'] : null),

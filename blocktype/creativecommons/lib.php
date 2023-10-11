@@ -108,7 +108,7 @@ class PluginBlocktypeCreativecommons extends MaharaCoreBlocktype {
         return $values;
     }
 
-    public static function instance_config_form(BlockInstance $instance) {
+    public static function instance_config_form(BlockInstance $instance, $istemplate) {
         global $THEME;
         $configdata = $instance->get('configdata');
         $noderivatives = 1;

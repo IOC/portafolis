@@ -154,7 +154,7 @@ class PluginBlocktypePlans extends MaharaCoreBlocktype {
         return true;
     }
 
-    public static function instance_config_form(BlockInstance $instance) {
+    public static function instance_config_form(BlockInstance $instance, $istemplate) {
         $instance->set('artefactplugin', 'plans');
         $configdata = $instance->get('configdata');
         $owner = $instance->get_view()->get('owner');
