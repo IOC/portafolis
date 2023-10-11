@@ -190,7 +190,7 @@ class PluginBlocktypeWatchlist extends MaharaCoreBlocktype {
         return array('js/configform.js');
     }
 
-    public static function instance_config_form(BlockInstance $instance) {
+    public static function instance_config_form(BlockInstance $instance, $istemplate) {
         $configdata = $instance->get('configdata');
         $classes = 'first last';
         if (!isset($configdata) || (isset($configdata['mode']) && $configdata['mode'] == 'watchlist')) {
