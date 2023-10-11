@@ -676,7 +676,7 @@ class ArtefactTypeComment extends ArtefactType {
             WHERE c.private = 0 AND c.hidden = 0 AND ' . $where . '
             ORDER BY a.ctime DESC', $values, 0, 1
         );
-        return $newest[0];
+        return is_array($newest) ? $newest[0] : null;
     }
 
     /**

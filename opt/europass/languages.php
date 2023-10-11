@@ -83,6 +83,7 @@ $addform = pieform(array(
 
 // Delete mother tongue(s) form
 $elements = array();
+$mothertongue_data = is_array($mothertongue_data) ? $mothertongue_data : array();
 foreach ($mothertongue_data as $lang) {
     $elements[$lang->description] = array(
         'type' => 'checkbox',
