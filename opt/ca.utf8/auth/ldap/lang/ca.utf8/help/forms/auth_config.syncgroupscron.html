@@ -1,0 +1,13 @@
+<!-- @license http://www.gnu.org/copyleft/gpl.html GNU GPL version 3 or later -->
+<!-- @copyright For copyright information on Mahara, please see the README file distributed with this software. -->
+<h3>Sincronitza els grups automàticament via cron</h3>
+<p>Activeu aquesta opció per activar una tasca del cron que crearà i/o actualitzarà automàticament
+els grups i llurs membres basats en registres del servidor LDAP. Per defecte aquesta tasca s'executarà
+un cop al dia a mitjanit (hora del servidor). Editeu el registre a la taula  "auth_cron" o utilitzeu els scripts de línia de comandaments
+opcional que es troba a  htdocs/auth/ldap/cli/ per programar que l'acció es produeixi en altres hores o amb altres opcions.</p>
+<p><b>Nota:</b> Perquè també se sincronitzin els grups també heureu d'activar les opcions 
+"Sincronitza els grups emmagatzemats com a objectes LDAP" i/o "Sinronitza els grups emmagatzemats com atributs d'usuari".</p>
+<p>Amb aquesta opció es poden truere o afegir els membres d'un grup. Si un grup ja no es troba als registres  LDAP
+s'eliminaran tots els seus membres.</p>
+<p>Aquesta opció no tindrà efecte si el cron no està funcionant. Vegeu
+<a href="http://wiki.mahara.org/System_Administrator's_Guide/Installing_Mahara">la Guia d'instal·lació</a> amb instruccions sobre com configurar-ho.</p>

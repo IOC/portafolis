@@ -1,0 +1,11 @@
+<!-- @license http://www.gnu.org/copyleft/gpl.html GNU GPL version 3 or later -->
+<!-- @copyright For copyright information on Mahara, please see the README file distributed with this software. -->
+<h3>Nom de l'índex</h3>
+
+<p>Aquest és el nom de l'índex Elasticsearch que s'utilitzarà per a la funcionalitat de cerca del lloc. És poc probable que hagueu de canviar el seu valor per defecte a no ser que feu servir el mateix clúster Elasticsearch com un índex
+per a diversos llocs Mahara, o si heu fet una re-indexació usant l'opció "Índex de Bypass".</p>
+<p>Si voleu canviar-ho per un nou valor val més que utilitzeu el botó "reinicia TOTS els índexs"
+per iniciar la creació del nou índex.</p>
+<p>Aquesta opció no es pot canviar a través de la interfície web. Podeu canviar-la tot posant un valor al fitxer de configuració 
+config.php per a la següent variable:</p>
+<p><code>$cfg->plugin->search->elasticsearch->indexname</code>.</p>

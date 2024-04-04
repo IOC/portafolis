@@ -1,0 +1,73 @@
+<?php
+
+defined('INTERNAL') || die();
+
+$string['attributename'] = 'Nom de l\'atribut LDAP que s\'utilitza per sincronitzar grups basats en llurs valors (camp obligatori i que ha de respectar majúscules i minúscules)';
+$string['cannotconnect'] = 'No es pot connectar a cap host LDAP';
+$string['cannotdeleteandsuspend'] = 'No podeu especificar alhora -d i -s';
+$string['cli_info_sync_groups'] = 'Aquest script de PHP provarà de sincronitzar una llista de grups de la institució amb un directori LDAP.
+Es crearan els grups perduts i se\'ls anomenarà com: \'NomDeLaInstitució : NomGrupLDAP\'.';
+$string['cli_info_sync_groups_attribute'] = 'Aquest script de PHP provarà de sincronitzar una llista de grups de la institució amb un directori LDAP.
+basat en diferents  valors d\'un atribut LDAP.
+Es crearan els grups perduts i se\'ls anomenarà com: \'NomDeLaInstitució : ValorAtributLDAP\'.';
+$string['cli_info_sync_users'] = 'Aquest script de PHP provarà de sincronitzar una llista de comptes de Mahara d\'una institució amb un directori LDAP.';
+$string['contexts'] = 'Contexts';
+$string['description'] = 'Us autentica contra un servidor LDAP';
+$string['distinguishedname'] = 'Nom distingit';
+$string['dodelete'] = 'Elimina els comptes que ja no són a l\'LDAP.';
+$string['dosuspend'] = 'Suspèn els comptes que ja no són a l\'LDAP.';
+$string['doupdate'] = 'Actualitza els comptes existents amb dades d\'LDAP (llarg)';
+$string['dryrun'] = 'Execució banal. No s\'executarà cap operació a la base de dades.';
+$string['excludelist'] = 'Exclou els grups LADP que contenen aquestes expressions regulars a llurs noms';
+$string['extrafilterattribute'] = 'Filtre LDAP addicional per restringir la cerca d\'usuaris';
+$string['grouptype'] = 'Tipus de grup de Mahara que s\'ha de crear; per defecte és "estàndard"';
+$string['hosturl'] = 'URL del Host';
+$string['includelist'] = 'Processa només el grups LDAP que contenen aquestes expressions regulars a llurs noms';
+$string['institutionname'] = 'Nom de la institució que s\'ha de processar (obligatori)';
+$string['ldapfieldforemail'] = 'Camp LDAP per l\'Email';
+$string['ldapfieldforfirstname'] = 'Camp LDAP pel Nom';
+$string['ldapfieldforpreferredname'] = 'Camp LADP pel Nom a mostrar';
+$string['ldapfieldforstudentid'] = 'Camp LADP per l\'ID d\'estudiant';
+$string['ldapfieldforsurname'] = 'Camp LDAP pel Cognom';
+$string['ldapversion'] = 'Versió LDAP';
+$string['nocreate'] = 'No creïs comptes nous';
+$string['nocreatemissinggroups'] = 'No creis grups LDAP si no estan configurats ja a la institució.';
+$string['nomatchingauths'] = 'No s\'ha trobat cap connector d\'autenticació LDAP per aquesta institució.';
+$string['notusable'] = 'Cal que instal·leu l\'extensió de PHP LDAP';
+$string['password'] = 'Contrasenya';
+$string['searchcontexts'] = 'Restringeix la cerca a aquests contexts (sobreescriu els valors configurats al connector d\'autenticació)';
+$string['searchsubcontexts'] = 'Cerca subcontexts';
+$string['searchsubcontextscliparam'] = 'Cerca (1) o no (0) als subcontexts (sobreescriu els valors configurats al connector d\'autenticació)';
+$string['starttls'] = 'Encriptació TLS';
+$string['syncgroupsautocreate'] = 'Crea automàticament els grups perduts';
+$string['syncgroupsbyclass'] = 'Sincronitza els grups emmagatzemats com a objectes LDAP';
+$string['syncgroupsbyuserfield'] = 'Sincronitza els grups emmagatzemats com a atributs d\'usuari';
+$string['syncgroupscontexts'] = 'Sincronitza eñls grups només en aquests contexts';
+$string['syncgroupscontextsdesc'] = 'Deixeu-ho en blanc pels contexts d\'autenticació d\'usuaris per defecte';
+$string['syncgroupscron'] = 'Sincronitza automàticament els grups via cron';
+$string['syncgroupsexcludelist'] = 'Exclou els grups LDAP amb aquests noms';
+$string['syncgroupsgroupattribute'] = 'Atribut del grup';
+$string['syncgroupsgroupclass'] = 'Classe del grup';
+$string['syncgroupsgrouptype'] = 'Tipus de rols als grups creats automàticament';
+$string['syncgroupsincludelist'] = 'Inclou només els grups LDAP amb aquests noms';
+$string['syncgroupsmemberattribute'] = 'Atribut del membre del grup';
+$string['syncgroupsmemberattributeisdn'] = 'L\'atribut del membre és un dn?';
+$string['syncgroupsnestedgroups'] = 'Processa els grups niuats';
+$string['syncgroupssettings'] = 'Sincronització del grup';
+$string['syncgroupsuserattribute'] = 'El nom del grup de l\'atribut d\'usuari està emmagatzemat a';
+$string['syncgroupsusergroupnames'] = 'Només aquests noms de grup';
+$string['syncgroupsusergroupnamesdesc'] = 'Deixeu-ho en blanc per acceptar qualsevol valor. Separeu els noms dels grups per una coma.';
+$string['syncuserscreate'] = 'Crea automàticament els usuaris amb el cron';
+$string['syncuserscron'] = 'Sincronitza automàticament els usuaris amb el cron';
+$string['syncusersextrafilterattribute'] = 'Filtre addicional LDAP per la sincronització';
+$string['syncusersgonefromldap'] = 'Si un usuari ja no torna a estar present a l\'LDAP';
+$string['syncusersgonefromldapdelete'] = 'Elimina el compte de l\'usuari i tot el contingut';
+$string['syncusersgonefromldapdonothing'] = 'No facis res';
+$string['syncusersgonefromldapsuspend'] = 'Suspèn el compte de l\'usuari';
+$string['syncuserssettings'] = 'Sincronització d\'usuari';
+$string['syncusersupdate'] = 'Actualitza la informació de l\'usuari amb el cron';
+$string['title'] = 'LDAP';
+$string['updateuserinfoonlogin'] = 'Actualitza la informació de l\'usuari quan s\'identifiqui';
+$string['userattribute'] = 'Atribut de l\'usuari';
+$string['usertype'] = 'Tipus d\'usuari';
+$string['weautocreateusers'] = 'Es crearan els usuaris automàticament';
