@@ -1,0 +1,132 @@
+/*
+ * Modification to bootstraps default navbar components
+ */
+// Login link and language form
+.topright-menu {
+    float: right;
+    padding-top: 10px;
+
+    li {
+        display: inline-block;
+        float: right;
+    }
+
+    .login-link a {
+        display: inline-block;
+        margin: 0 15px;
+        padding: 7px 15px;
+        color: $navbar-toggle-color;
+        border-radius: $border-radius;
+        font-weight: $font-weight-bold;
+
+        &:focus,
+        &:hover {
+          color: $navbar-toggle-hover-color;
+          background-color: $navbar-toggle-hover-bg;
+          text-decoration: none;
+        }
+    }
+}
+
+// Header search form
+.navbar-form.navbar-collapse {
+    padding: 15px 0;
+    margin-bottom: 0;
+    border: 0;
+    height: 65px;
+    @include media-breakpoint-up(md) {
+        position: absolute;
+        display: block;
+        max-width: none;
+        visibility: visible;
+        top: 10px;
+        right: 240px;
+        margin: 0 30px 0 0;
+        padding: 0;
+        box-shadow: none;
+        height: auto !important;
+    }
+
+    .header-search-form {
+        input[type=text] {
+            width: calc(100% - 75px);
+            float: left;
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+            margin-left: 15px;
+            @include media-breakpoint-up(md) {
+                width: auto;
+                margin-left: 0;
+            }
+        }
+        .input-group-append {
+            display: block !important;
+            float: left;
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+            border-left: 1px solid $btn-secondary-border;
+            margin-left: -1px;
+            @include media-breakpoint-up(md) {
+                float: right;
+            }
+        }
+    }
+}
+// Allowing the public search to sit in right place
+// when lang selector exists or not
+.loggedout .navbar-form.navbar-collapse {
+    @include media-breakpoint-up(md) {
+        right: 0;
+        margin-right: 15px;
+
+        &.with-langform {
+            right: 270px;
+        }
+        &.with-langform-login {
+            right: 370px;
+        }
+    }
+}
+
+.navbar {
+    border: 1px solid transparent;
+    padding: 0;
+    > .container {
+        display: block;
+    }
+}
+
+.navbar-default {
+    border-left: 0;
+    border-right: 0;
+    border-top: 0;
+    background-color: $navbar-default-bg;
+    border-color: $navbar-default-border;
+}
+
+// Header messagebox form
+.navbar-messages {
+    &:hover,
+    &:focus {
+        color: $navbar-default-link-hover-color;
+        text-decoration: none;
+    }
+
+    .navbar-messages-count {
+      position: absolute;
+      top: -3px;
+      right: 5px;
+      background-color: $navbar-messages-count-bg;
+      border-radius: $border-radius;
+      padding: 0 3px;
+      color: $navbar-messages-count-color;
+      font-size: $font-size-sm;
+    }
+}
+
+// Header language toggle
+.navbar-toggle.lang-toggle {
+    span.icon-language {
+        font-size: 1.5em;
+    }
+}

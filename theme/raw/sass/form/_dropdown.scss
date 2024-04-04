@@ -1,0 +1,245 @@
+.pieform,
+.dropdown {
+    .picker {
+        position: relative;
+        background: $body-bg;
+        display: inline-block;
+        min-width: 20px;
+        max-width: 100%;
+        &.input-short {
+            max-width: 200px;
+            .select2 {
+                width: auto !important; // js is doing some weird calculations and getting the width wrong. Override inline js
+                min-width:150px;
+                display:block;
+            }
+            .select2-selection {
+                border-color: $input-border-color;
+            }
+            .select2-selection:focus {
+                border-color: $input-focus-border-color;
+                outline: none;
+            }
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow b {
+            display:none;
+        }
+        &:before {
+            @include fonttype(solid);
+            content: fa-content($fa-var-caret-down);
+            margin-top: 9px;
+            position: absolute;
+            right: 0%;
+            top: 0;
+            z-index: 0;
+            height: 17px;
+            padding-left: 10px;
+            padding-right: 10px;
+            line-height: 16px;
+            z-index: 2;
+        }
+        select.form-control {
+            @include appearance(none);
+            position: relative;
+            padding-right: 30px;
+            background: transparent;
+            height: $input-height;
+            left: 0;
+            margin: 0;
+            outline: none;
+            cursor: pointer;
+            top: 0;
+            width: 100%;
+            max-width: 100%;
+            z-index: 5;
+            &:disabled {
+                background: rgba(0,0,0,0.03);
+            }
+        }
+        &.date {
+            margin-left: 4px !important;
+        }
+
+        & + button.icon {
+            margin-left: 5px;
+            height: $input-height;
+        }
+    }
+
+    &.theme-dropdown {
+        margin-top: 30px;
+    }
+
+    &.form-condensed {
+        .picker {
+            max-width: 67%;
+        }
+    }
+
+    .input-sm {
+        padding: 2.3px 10px;
+        font-size: $font-size-sm;
+        &.picker {
+            padding: 0;
+        }
+        &.picker,
+        .picker {
+            &:before {
+                margin-top: 6px;
+            }
+            select.form-control {
+                height: $input-height-sm;
+                line-height: $input-height-sm / 2 + 2;
+            }
+        }
+    }
+
+    .input-lg {
+        &:before {
+            margin-top: 12px;
+        }
+        &.picker select.form-control,
+        .picker select.form-control {
+            padding-top: 5px;
+            padding-bottom: 5px;
+            height: $input-height-lg;
+            line-height: $input-height-lg / 2 + 3;
+        }
+    }
+
+    .select-group  {
+        .input-group-addon {
+            display: inline-block;
+            float: left;
+            height: $input-height;
+            line-height: $input-height / 2;
+        }
+    }
+    .input-short-error {
+        max-width: 205px;
+        display: inline-block;
+        width: 230px;
+    }
+}
+
+
+.last-updated-offset {
+    margin-top: 30px;
+}
+
+.dropdown-single-option {
+    .picker {
+        select.form-control:disabled {
+            cursor: default;
+            background: $body-bg;
+            border: 0;
+            box-shadow: none;
+            color: $theme-text-midtone-color;
+            padding-right: 0;
+        }
+        &.input-short {
+            margin-top: 5px;
+        }
+    }
+}
+
+.dropdown-menu {
+    z-index: 10;
+    padding: 0;
+    > li {
+        padding: 3px 0;
+        > a {
+            padding: 3px 20px;
+            color: $theme-text-color;
+        }
+        &:active > a {
+            color: $dropdown-link-active-color;
+        }
+    }
+    > .active {
+        background-color: $theme-primary-color;
+        > a {
+            color: $white;
+            text-decoration: none;
+            outline: 0;
+            background-color: $theme-primary-color;
+            &:hover,
+            &:focus {
+                text-decoration: none;
+            }
+        }
+    }
+}
+
+.dropdown-item {
+    padding: 0;
+    a {
+      padding: $dropdown-item-padding-y $dropdown-item-padding-x;
+      display: block;
+
+      &:hover,
+      &:focus {
+          text-decoration: none;
+      }
+    }
+}
+
+.card-footer {
+    .dropdown-menu {
+        .dropdown-item {
+            padding: 0;
+            a {
+                display: block;
+                text-decoration: none;
+                &.seperator {
+                    border: 0;
+                }
+            }
+        }
+    }
+}
+
+// Pages pageaction btn dropdown-menu
+.pageactions .dropdown-menu {
+    margin: 0;
+    padding: 0;
+
+    > li {
+      padding: 0;
+
+        > a {
+            padding: $dropdown-item-padding-y $dropdown-item-padding-x;
+            display: block;
+
+            &:hover,
+            &:focus {
+                text-decoration: none;
+            }
+        }
+        > span.nolink {
+            padding: $dropdown-item-padding-y $dropdown-item-padding-x;
+            display: block;
+            white-space: nowrap;
+        }
+    }
+}
+
+// override bootstrap select2 default bg color "success"
+.select2-container--default .select2-dropdown .select2-results__option--highlighted[aria-selected] {
+    background-color: $dropdown-link-hover-bg !important;
+    color: $dropdown-link-hover-color !important;
+}
+
+// dropdowns on Share
+.search-user-dropdown {
+  .select2-results ul li > div {
+    margin-left: 50px;
+    margin-right: 20px; // needed so it doesn't horizontally scroll for some long ones
+    color: $theme-text-midtone-color;
+    font-size: $font-size-sm;
+    &.name {
+      color: $theme-text-color;
+      font-size: $font-size-base;
+    }
+  }
+}

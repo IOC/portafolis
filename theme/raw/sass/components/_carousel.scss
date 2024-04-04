@@ -1,0 +1,88 @@
+.carousel {
+    width: 82%;
+    margin: 0 auto;
+    .carousel-inner {
+        overflow: visible;
+    }
+    .carousel-item {
+        display: block;
+    }
+
+    &.carousel-ready {
+        .carousel-item {
+            display: none;
+            &.active,
+            &.next {
+                display: block;
+            }
+            img {
+                vertical-align: middle;
+            }
+        }
+    }
+    // Overriding bootstrap carousel styles
+    .carousel-caption {
+        text-align: left;
+        position: relative;
+        color: $theme-text-color;
+        background-color: transparent;
+        text-shadow: none;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 10px 0 0 0;
+    }
+    .carousel-control {
+        width: auto;
+        opacity: 1;
+        top: 0;
+        bottom: 100%;
+        position: absolute;
+        ~ .icon {
+            vertical-align: middle;
+        }
+        &.left {
+            left: -25px;
+        }
+        &.right {
+            right: -25px;
+        }
+        &:hover,
+        &:focus {
+            opacity: 1;
+        }
+        .icon-lg {
+            font-size: $font-size-base * 2.15;
+        }
+        .carousel-control-first,
+        .carousel-control-last {
+            margin-top: 35px;
+        }
+        .carousel-control-last {
+            text-align: right;
+        }
+        .carousel-control-prev,
+        .carousel-control-next {
+            .icon {
+                margin-right: 0;
+                margin-left: 0;
+            }
+        }
+        a {
+            display: block;
+            color: $theme-text-color;
+            opacity: .5;
+            width: 20px;
+            &:hover,
+            &:focus {
+                outline: 0;
+                text-decoration: none;
+                opacity: .9;
+            }
+            .icon {
+                width: 100%;
+                text-align: center;
+            }
+        }
+    }
+}

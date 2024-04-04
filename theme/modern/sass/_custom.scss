@@ -1,0 +1,13 @@
+// Makes the label red when a form error is shown
+.has-error {
+  label {
+    color: $state-danger-text;
+  }
+}
+
+// logged out login box help icon needs the right colour
+.loggedout {
+    .help .icon-info-circle {
+        color: inherit;
+    }
+}

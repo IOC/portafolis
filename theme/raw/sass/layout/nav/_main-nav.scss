@@ -1,0 +1,160 @@
+/*
+ * Primary navigation menu
+ * with collapsible
+ */
+.fixed-top {
+    position:relative;
+    border: 0;
+
+    @include media-breakpoint-up(md) {
+        position:fixed;
+    }
+}
+
+.navbar-main {
+    margin-bottom: 0;
+
+    > .container {
+        position: relative;
+    }
+
+    .nav-toggle-area {
+        float: right;
+        padding: 10px 0;
+    }
+
+    .navbar-collapse {
+        margin-right: -15px;
+        margin-left: -15px;
+        padding: 0;
+        position: static;
+        clear: both;
+        max-height: none;
+
+        @include media-breakpoint-up(md) {
+            position: absolute;
+            right: 15px;
+            top: $navbar-height - 2px;
+            max-width: 300px;
+
+            .header.no-site-messages & {
+                max-height: calc(100vh - (#{$navbar-height} + 20px));
+            }
+            z-index: 5;
+            @for $i from 1 through 5 {
+                .header.message-count-#{$i} & {
+                    max-height: calc(100vh - (#{$navbar-height} + (#{$i} * 33px) + 20px));
+                }
+            }
+            overflow-y: hidden;
+            overflow-x: hidden;
+            margin-right: 0;
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
+            &.show {
+                overflow-y: auto;
+            }
+        }
+
+        @include media-breakpoint-down(sm) {
+            border-width: 1px 0 0 0;
+        }
+
+        &.collapsing {
+            overflow-y: hidden;
+        }
+    }
+
+    // Top level navigation items use colour variables from "navbar-default"
+    .navbar-nav {
+        margin: 0;
+        flex-grow: 1;
+
+        @include media-breakpoint-up(md) {
+            width: 300px;
+        }
+
+        li {
+            float: none;
+            display: block;
+            position: relative;
+        }
+
+        // Styles for all links inside navbar-nav
+        a  {
+            @include text-overflow;
+            display: block;
+            width: 100%;
+        }
+
+        > li > a {
+            color: $navbar-default-link-color;
+            background-color: $navbar-default-link-bg;
+            padding: 10px 15px;
+            font-weight: normal;
+            border-top: 1px solid $navbar-default-link-border;
+            border-bottom: 1px solid $navbar-default-link-border;
+            margin-top: -1px;
+            &:hover,
+            &:focus {
+                background-color: $navbar-default-link-hover-bg;
+                text-decoration:none;
+                color: $navbar-default-link-hover-color;
+            }
+            &.disabled {
+                color: $btn-link-disabled-color;
+                cursor: not-allowed;
+            }
+            @include media-breakpoint-up(md) {
+                border: 1px solid $navbar-default-link-border;
+            }
+            .icon {
+                margin-right: 5px;
+                width: 1.5em;
+                text-align: center;
+            }
+        }
+
+        > .active > a {
+            background-color: $navbar-default-active-bg;
+            color: $navbar-default-active-color;
+            &:hover,
+            &:focus {
+                background-color: $navbar-default-active-bg;
+                color: $navbar-default-active-color;
+            }
+        }
+    }
+
+    // Child navigation items
+    .child-nav {
+        border-top:0;
+        max-width: 100%;
+        overflow: hidden;
+        padding: 0;
+
+        li > a {
+            color: $navbar-inverse-link-color;
+            background-color: $navbar-inverse-bg;
+            padding: 9px 2.5em 9px;
+            margin-top: -1px;
+            font-weight: normal;
+            &:hover,
+            &:focus {
+                text-decoration: none;
+                background-color: $navbar-inverse-link-hover-bg;
+                color: $navbar-inverse-link-hover-color;
+            }
+        }
+
+        .active > a {
+            font-weight: bold;
+            background-color: $navbar-inverse-link-active-bg;
+            color: $navbar-inverse-link-active-color;
+            &:hover,
+            &:focus {
+                background-color: $navbar-inverse-link-hover-bg;
+                color: $navbar-inverse-link-hover-color;
+            }
+        }
+    }
+}

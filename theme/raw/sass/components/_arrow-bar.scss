@@ -1,0 +1,78 @@
+.arrow-bar {
+    border-radius: $border-radius;
+    overflow: hidden;
+    margin-bottom: $grid-gutter-width;
+    line-height: 46px;
+    display: block;
+    width: 100%;
+    background-color: $arrow-bar-bg;
+
+    .right-text,
+    .arrow {
+      padding: 5px 15px;
+      position: relative;
+      display: block;
+    }
+
+    .arrow {
+        float: left;
+        background-color: $arrow-color;
+        width: auto;
+        &:after {
+            border-bottom: 29px solid transparent;
+            border-left: 14px solid $arrow-color;
+            border-top: 30px solid transparent;
+            content: "";
+            height: 40px;
+            position: absolute;
+            right: -40px;
+            top: -2px;
+            width: 40px;
+        }
+        .text {
+            @include ellipsis(true);
+            display: block;
+            color: $arrow-text-color;
+            font-weight: bold;
+        }
+    }
+
+    .right-text {
+        float: right;
+        text-align: right;
+    }
+}
+
+.nav-inpage {
+    &.nav > li {
+        > a, button {
+            @include transition-duration(0.3s);
+            border-radius: $border-radius;
+            padding: 0 8px;
+            line-height: 2em;
+            margin-top: 9px;
+            margin-bottom: 9px;
+            display: block;
+            color: $arrow-link-color;
+            &:hover,
+            &:focus {
+                @include transition-duration(0.3s);
+                background: $arrow-link-background-color;
+                color: $arrow-link-hover-color;
+                text-decoration: none;
+            }
+        }
+        &.active > a,
+        &.active > button  {
+            color: $theme-text-color;
+            background: $arrow-link-background-color;
+            &:hover,
+            &:focus {
+                color: $arrow-link-active-color;
+            }
+        }
+        + li {
+            margin-left: 2px;
+        }
+    }
+}

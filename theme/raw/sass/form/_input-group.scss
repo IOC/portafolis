@@ -1,0 +1,114 @@
+//
+// Extenstion to input groups so we can use them in pieforms
+// --------------------------------------------------
+.form-inline  {
+    // if one item in an input group has a label, push others down
+    .no-label {
+        margin-top: 17px;
+    }
+}
+
+.pieform .input-group {
+    max-width:100%;
+
+    // Chrome bug - flex container doesn't work on fieldset tag
+    fieldset.input-group {
+      display: block;
+      .input-group-append {
+        display: inline-block;
+        height: $input-height;
+        width: auto;
+      }
+    }
+    .pieform-fieldset > .form-group {
+        border: none;
+        padding: 0;
+        box-shadow: none;
+        float: left;
+        .form-control {
+            border-top-left-radius: $border-radius;
+            border-bottom-left-radius: $border-radius;
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+            &.submitonchange {
+                @include border-right-radius($border-radius);
+            }
+            max-width: 100%;
+            &.text {
+                height: $input-height;
+            }
+        }
+        ~ .form-group {
+            .form-control {
+                @include border-left-radius(0);
+                margin-left: -1px;
+                @include media-breakpoint-up(sm) {
+                    border-left:0;
+                }
+            }
+            &:last-child {
+                .form-control {
+                    @include border-right-radius($border-radius);
+                }
+            }
+        }
+    }
+    .pieform-fieldset > .input-group-append.submitonchange {
+        & input[type="submit"],
+        & button[type="submit"] {
+            display: none !important;
+        }
+    }
+    label {
+        display: block;
+    }
+    // if one item in an input group has a label, push others down
+    .no-label {
+        margin-top: 5px;
+        // For screen size smaller than xs
+        @media (min-width: 321px) {
+            margin-top: 10.5px;
+        }
+        @include media-breakpoint-up(md) {
+            margin-top: 10.5px;
+        }
+        @include media-breakpoint-down(xs) {
+            margin-top: 14.5px;
+        }
+    }
+
+    .form-group,
+    .form-control {
+        display: inline-block;
+        width: auto;
+        flex: 0 1 auto;
+    }
+
+    .input-group-prepend {
+        padding: 9px 14px;
+        text-align: center;
+        background-color: $gray-100;
+        border: 1px solid $input-border-color;
+        border-radius: $border-radius-sm;
+        border-bottom-right-radius: 0;
+        border-top-right-radius: 0;
+        border-right: 0;
+        + .select select {
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+        }
+    }
+}
+.pieform .input-group-append {
+    font-size: inherit;
+    float:left;
+    &.form-group {
+        display: block;
+    }
+}
+
+
+// Fixes the buttons overlapping the input
+button.input-group-append {
+    margin-left: 0;
+}

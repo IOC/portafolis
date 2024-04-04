@@ -1,0 +1,171 @@
+.fileupload {
+    padding: 20px;
+    border: 1px solid $gray-100;
+    background-color: $body-bg;
+    .intro {
+        font-weight: bold;
+    }
+    .description {
+        color: $gray-300;
+        font-size: $font-size-base * 0.9285;
+    }
+    .title {
+        padding: 0;
+        margin: 0 0 15px 0;
+    }
+}
+
+.card-fake {
+    margin-bottom: 15px;
+    .title {
+        padding: 0;
+        margin: 15 0 15px 0;
+    }
+}
+
+.resize-image {
+    .help,
+    label {
+        display: table-cell;
+    }
+    .help {
+        float: none;
+        margin-top: 0;
+    }
+}
+
+// reset margin and padding for upload file forms
+.filelist.table,
+.fileuploadlicense {
+    .form-group {
+        padding: 10px 0 !important;
+        border-bottom-width: 0 !important;
+    }
+}
+
+.uploadform + .fileuploadlicense {
+    margin-top: 15px;
+}
+
+.fileuploadlicense {
+    input, .picker {
+        max-width: 200px;
+    }
+    @include media-breakpoint-between(lg, lg) {
+        label {
+            min-width: 100%;
+        }
+    }
+}
+
+// reset padding and margin inside collapsible
+.filelist.table,
+.filelist-wrapper.card {
+    margin-bottom: 0;
+    padding: 0 !important;
+}
+.filebrowser.form-group {
+    margin-bottom: 0;
+    border-bottom: 1px solid $list-group-border-color;
+}
+#files .filebrowser.form-group {
+    border-bottom: 0;
+}
+
+.uploadform.userfile {
+    margin-bottom: 20px;
+    .fileupload-container.col-md-12 & {
+        width: 50%;
+        float: left;
+        margin-bottom: 20px;
+    }
+    .file {
+        display: block;
+    }
+}
+
+.filelist {
+    .file-move-list {
+        list-style-type: none;
+        margin-top: 10px;
+        padding-left: 15px;
+
+        li .icon {
+            color: $theme-secondary-color;
+        }
+    }
+}
+
+.filelist-wrapper {
+    border: 0;
+}
+.table .fileedittablewrap {
+    background-color: $table-accent-bg;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+// file browser inside modal screen
+.modal-filebrowser {
+    margin-top: 50px;
+    padding: 10px 20px 20px;
+
+    .close {
+        width: 100%;
+        text-align: right;
+        float: none;
+        margin-bottom: 10px;
+    }
+}
+
+.folderhover td{
+    background-color: $state-warning-bg;
+}
+
+// .filedownload-item {
+//     .list-group-item-heading {
+//         display: inline-block;
+//         max-width: 80%;
+//     }
+//     .file-icon {
+//         width: 20px;
+//         vertical-align: top;
+//     }
+//     .icon-lg {
+//         width: 24px;
+//     }
+//     a {
+//         word-break: break-all;
+//     }
+//     .file-description {
+//         padding-left: 30px;
+//     }
+//     .text-small {
+//         margin-left: 28px;
+//     }
+// }
+
+.filelist-wrapper {
+    .card-header {
+        padding: 10px 0 10px 20px;
+        margin-bottom: 10px;
+    }
+}
+
+.file-wrapper {
+    margin-bottom: 8px;
+}
+
+.filedata-icon {
+    float: left;
+    margin-right: 60px;
+    padding-bottom: 30px;
+}
+
+.icon-drag:hover {
+    cursor: move;
+}
+
+table.filelist .filename {
+    word-break: break-all;
+}

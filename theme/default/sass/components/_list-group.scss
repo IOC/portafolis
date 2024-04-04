@@ -1,0 +1,9 @@
+.list-group-item-heading {
+  font-weight: 700;
+}
+
+.list-group-item {
+    &.published {
+        background-color: $white;
+    }
+}

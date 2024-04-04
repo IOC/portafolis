@@ -1,0 +1,176 @@
+.move-indicator {
+    @extend .text-muted;
+    font-size: $font-size-base * 0.785;
+    vertical-align: middle;
+    margin-left: -4px;
+    opacity: 0.7;
+
+    a:hover &,
+    .card-header:hover & {
+        opacity: 1;
+    }
+    .card-secondary & {
+        float: left;
+        margin-top: 5px;
+        margin-left: 0;
+        margin-right: 4px;
+    }
+}
+
+//dash
+.collapse-indicator {
+    color: $collapse-indicator-color;
+    font-size: $font-size-base * 0.9285;
+    display: block;
+    transition-duration: 0.3s;
+    &.float-right {
+        margin: 2px 0 0;
+    }
+    &.text-small {
+        font-size: $font-size-base * 0.785;
+    }
+    .collapsed & {
+        color: $collapse-indicator-color;
+    }
+    a:hover &,
+    a:focus & {
+        color: $collapse-indicator-hover-color;
+    }
+    .collapsed ~ & {
+        transform: rotate(180deg);
+        transition-duration: 0.3s;
+        margin-top: 5px;
+    }
+}
+
+tr[data-toggle="collapse"],
+a[data-toggle="collapse"] {
+    &:hover,
+    &:focus {
+      outline: none;
+    }
+    &:hover .collapse-indicator,
+    &:focus .collapse-indicator{
+        color: $collapse-indicator-hover-color;
+    }
+    .collapse-indicator {
+        transform: rotate(-180deg);
+        transition-duration: 0.3s;
+        color: $collapse-indicator-color;
+        margin-top: 5px;
+        line-height: 13px;
+        height: auto;
+    }
+    &.collapsed .collapse-indicator {
+        transform: rotate(0deg);
+        transition-duration: 0.3s;
+    }
+}
+
+.expand-indicator {
+    @extend .text-muted;
+    font-size: $font-size-sm;
+    padding-right: 5px;
+    + .icon {
+        color: $collapse-indicator-color;
+        &:hover, &:focus {
+            color: $collapse-indicator-hover-color;
+        }
+    }
+}
+
+// syntax change if link is an outer-link
+[data-toggle="collapse"].outer-link {
+    &.collapsed {
+        ~ .collapse-indicator {
+            color: $collapse-indicator-color;
+        }
+    }
+    &:hover,
+    &:focus {
+        ~ .collapse-indicator {
+            color: $collapse-indicator-hover-color;
+        }
+    }
+}
+
+// Align text and chevron across multiple layouts
+.collapse-inline {
+    display: inline-block;
+    width: 90%;
+}
+
+.columns5 .collapse-inline {
+    width: 80%;
+}
+
+@include media-breakpoint-up(md) {
+    .columns3.col-width-15 .collapse-inline {
+        width: 70%;
+    }
+}
+
+// Align in edit mode
+.editing {
+    .icon-chevron-down {
+        padding-right: 5px;
+    }
+    .columns1,
+    .columns2,
+    .columns3,
+    .columns4,
+    .columns5 {
+        .collapse-inline {
+            width: 65%;
+        }
+    }
+    @include media-breakpoint-up(md) {
+        .columns1 .collapse-inline {
+            width: 85%;
+        }
+        .columns2.col-width-33,
+        .columns3.col-width-33 {
+            .collapse-inline {
+                width: 50%;
+            }
+        }
+    }
+    @include media-breakpoint-up(lg) {
+        .columns4.col-width-25,
+        .columns3.col-width-25 {
+            .collapse-inline {
+                width: 50%;
+            }
+        }
+    }
+    @include media-breakpoint-up(xl) {
+        .columns3.col-width-25 {
+            width: 60%;
+        }
+        .columns1,
+        .columns2.col-width-33,
+        .columns3.col-width-33,
+        .columns4 {
+            .collapse-inline {
+                width: 70%;
+            }
+        }
+        .columns5 {
+            .collapse-inline {
+                width: 50%;
+            }
+        }
+    }
+}
+
+.secreturls .list-group-item,
+.iframesources .buttonscell {
+    .collapse-indicator.open .icon-chevron-down {
+        transform: rotate(-180deg);
+        transition-duration: 0.3s;
+    }
+    .collapse-indicator.closed .icon-chevron-down {
+        transform: rotate(0deg);
+        transition-duration: 0.3s;
+    }
+}
