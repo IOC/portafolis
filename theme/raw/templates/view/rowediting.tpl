@@ -1,2 +1,0 @@
-
-    {$rowcontent|safe}
