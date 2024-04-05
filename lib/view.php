@@ -3030,12 +3030,22 @@ class View {
         }
 
         // get all valid possible layout records
+        // PATCH IOC009
+        // MODIFIED
+        $validlayouts = get_records_sql_assoc('
+                SELECT * FROM {view_layout} vl
+                JOIN {usr_custom_layout} ucl
+                ON ((vl.id = ucl.layout) AND ' . $andclause . ')
+                WHERE vl.rows = ?', $queryarray);
+        // ORIGINAL
+        /*
         $validlayouts = get_records_sql_assoc('
                 SELECT * FROM {view_layout} vl
                 JOIN {usr_custom_layout} ucl
                 ON ((vl.id = ucl.layout) AND ' . $andclause . ')
                 WHERE "rows" = ?', $queryarray);
-
+        */
+        // FI PATCH
         if ($layoutid) {
             $layout->id = $layoutid;
             if ($layoutsrowscols = get_records_select_array('view_layout_rows_columns', 'viewlayout = ?', array($layoutid))) {
