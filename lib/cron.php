@@ -43,6 +43,12 @@ if (!is_cli() && get_config('urlsecret') !== null) {
         die_info(get_string('accessdeniednourlsecret', 'error'));
     }
 }
+// PATCH IOC006
+// ADDED
+if (ini_get('max_execution_time')) {
+    set_time_limit(3600);
+}
+// FI PATCH
 // This is here for debugging purposes, it allows us to fake the time to test
 // cron behaviour
 $realstart = time();
