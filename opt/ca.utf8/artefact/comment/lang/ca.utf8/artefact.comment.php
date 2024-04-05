@@ -88,10 +88,6 @@ $string['moderatecomments'] = 'Modera comentaris';
 $string['newcommentnotificationsubject'] = 'Comentari nou sobre %s';
 $string['ok'] = 'Marca';
 $string['pluginname'] = 'Comentari';
-$string['progress_feedback'] = array(
-    0 => 'Comentari a la pàgina d\'un altre usuari',
-    1 => 'Comentaris a les pàgines d\'un altre usuari',
-);
 $string['rating'] = 'Puntuacions';
 $string['ratingcolour'] = 'Color';
 $string['ratingcolourdesc'] = 'El color amb què es mostraran les opcions de puntuació. Un cop marcada la puntuació  les icones es mostraran plenes de color, mentre que quan no estigui marcada només es veurà la silueta de la icona.';

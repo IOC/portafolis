@@ -3,7 +3,6 @@
 defined('INTERNAL') || die();
 
 $string['addtowatchlist'] = 'Afegeix a la llista de seguiment';
-$string['adminnotificationerror'] = 'L\'error de notificació probablement ha estat causat per la configuració del vostre servidor.';
 $string['alltypes'] = 'Tots els tipus';
 $string['artefacts'] = 'Artefactes';
 $string['attime'] = 'a';

@@ -63,7 +63,7 @@ $string['sortby'] = 'Ordena per';
 $string['tags'] = 'Etiquetes';
 $string['tagsonly'] = 'Només etiquetes';
 $string['types'] = 'Tipus Elasticsearch';
-$string['typesdescription'] = 'Llista separada per comes dels elements de l\'índex. Per defecte és:\r
+$string['typesdescription'] = 'Llista separada per comes dels elements de l\'índex. Per defecte és:\\r
 usr,interaction_instance,interaction_forum_post,group,view,artefact.';
 $string['usedonpage'] = 'Utilitzat a la pàgina';
 $string['usedonpages'] = 'Utilitzat a les pàgines';

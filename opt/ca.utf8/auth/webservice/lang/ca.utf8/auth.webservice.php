@@ -130,7 +130,7 @@ $string['invaliduserselectedinstitution'] = 'Usuari no vàlid pel testimoni de l
 $string['iprestriction'] = 'Restricció IP';
 $string['key'] = 'Clau';
 $string['last_access'] = 'Darrer accés';
-$string['manage_certificates'] = 'Aquests són els Certificats generats com a part dels serveis  <a href="%s">de Xarxa</a>. \r
+$string['manage_certificates'] = 'Aquests són els Certificats generats com a part dels serveis  <a href="%s">de Xarxa</a>. \\r
 Aquests valors els utilitza Mahara quan estan activats WS-Security Signatures i Encryption per a un  wstoken o usuari de servei particular (Només XML-RPC i  MNet heretat).';
 $string['manageserviceusers'] = 'Usuaris del servei de gestió';
 $string['md5fingerprint'] = 'empremta MD5: %s';

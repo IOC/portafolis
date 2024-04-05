@@ -9,7 +9,6 @@ $string['element.bytes.kilobytes'] = 'Kilobytes';
 $string['element.bytes.megabytes'] = 'Megabytes';
 $string['element.calendar.invalidvalue'] = 'La data o el temps especificats no són vàlids';
 $string['element.calendar.opendatepicker'] = 'Obre el selector de dates';
-$string['element.color.transparent'] = 'Transparent o ';
 $string['element.date.at'] = 'a';
 $string['element.date.monthnames'] = 'Gener,Febrer,Març,Abril,Maig,Juny,Juliol,Agost,Setembre,Octubre,Novembre,Desembre';
 $string['element.date.specify'] = 'Selecciona la data';

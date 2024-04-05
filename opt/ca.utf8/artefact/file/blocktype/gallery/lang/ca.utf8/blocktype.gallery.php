@@ -2,8 +2,6 @@
 
 defined('INTERNAL') || die();
 
-$string['Photo'] = 'Foto';
-$string['by'] = 'de';
 $string['cannotdisplayslideshow'] = 'No es pot mostrar la presentació de diapositives';
 $string['description1'] = 'Una col·lecció d\'imatges de la vostra àrea de fitxers o una galeria externa.';
 $string['externalgalleryurl'] = 'URL o RSS de la galeria';
@@ -13,8 +11,6 @@ $string['flickrapikey'] = 'Clau Flickr API (Flickr API key)';
 $string['flickrsets'] = 'Configura Flickr';
 $string['flickrsettings'] = 'Configuració de Flickr';
 $string['gallerysettings'] = 'Configuració de la galeria';
-$string['panoramiocopyright'] = 'Les fotos de Panoramio estan sota el copyright dels seus propietaris.';
-$string['panoramiouserphotos'] = 'Fotos de l\'usuari de Panoramio';
 $string['pbapikey'] = 'Clau Photobucket API (Photobucket API key)';
 $string['pbapiprivatekey'] = 'Clau privada Photobucket API (Photobucket API private key)';
 $string['pbsettings'] = 'Configuració de Photobucket';
@@ -35,7 +31,6 @@ $string['styleslideshow'] = 'Presentació de diapositives';
 $string['stylesquares'] = 'Miniatures (quadrades)';
 $string['stylethumbs'] = 'Miniatures';
 $string['title'] = 'Galeria d\'imatges';
-$string['useslimbox2'] = 'Voleu usar Slimbox 2?';
 $string['width'] = 'Amplada';
 $string['widthdescription'] = 'Especifiqueu l\'amplada de les imatges (en píxels). Les imatges s\'escalaran a aquesta amplada.';
 $string['windowslivephotoalbums'] = 'àlbums de Windows Live Photo Gallery';

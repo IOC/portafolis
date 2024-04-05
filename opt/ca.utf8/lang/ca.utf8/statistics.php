@@ -3,7 +3,6 @@
 defined('INTERNAL') || die();
 
 $string['allowpublicprofiles'] = 'Permet els perfils públics';
-$string['allowpublicviews'] = 'Permet pàgines públiques';
 $string['artefact_type_academicgoal'] = 'Artefacte: Objectius acadèmics';
 $string['artefact_type_academicskill'] = 'Artefacte: Competències acadèmiques';
 $string['artefact_type_address'] = 'Artefacte: Adreça postal';

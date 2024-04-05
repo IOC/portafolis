@@ -36,26 +36,13 @@ $string['noplans'] = 'No hi ha cap pla per mostrar';
 $string['noplansaddone'] = 'Encara no hi ha plans. %sAfegiu-ne un%s!';
 $string['notasks'] = 'No hi ha cap tasca per mostrar.';
 $string['notasksaddone'] = 'Encara no hi ha tasques. %sAfegiu-ne una%s!';
-$string['ntasks'] = array(
-    0 => '1 tasca',
-    1 => '%s tasques',
-);
 $string['overdue'] = 'Endarrerit';
 $string['plandeletedsuccessfully'] = 'S\'ha esborrat correctament el pla.';
 $string['plannotdeletedsuccessfully'] = 'S\'ha produït un error a l\'esborrar el pla.';
 $string['plannotsavedsuccessfully'] = 'S\'ha produït un error a l\'enviar el formulari. Comproveu el camps destacats i torneu-ho a provar.';
 $string['plansavedsuccessfully'] = 'S\'ha desat correctament el pla .';
-$string['planstasks'] = 'Tasques del pla \'%s\'';
 $string['planstasksdescription'] = 'Afegiu tasques a sota o bé utilitzeu el botó "% s" per començar a construir el vostre pla.';
 $string['pluginname'] = 'Plans';
-$string['progress_plan'] = array(
-    0 => 'Afegiu un pla',
-    1 => 'Afegiu %s plans',
-);
-$string['progress_task'] = array(
-    0 => 'Afegiu una tasca al pla',
-    1 => 'Afegiu %s tasques al pla',
-);
 $string['saveplan'] = 'Desa el pla';
 $string['savetask'] = 'Desa la tasca';
 $string['task'] = 'tasca';

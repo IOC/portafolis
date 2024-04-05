@@ -3,7 +3,7 @@
 defined('INTERNAL') || die();
 
 $string['locales'] = 'ca_utf8,en_US.utf8,en_GB.utf8,en,es_utf8';
-$string['pieform_calendar_dateformat'] = '%%d/%%m/%%Y';
+$string['pieform_calendar_dateformat'] = '%%A/%%m/%%d';
 $string['pieform_calendar_timeformat'] = '%%H:%%M';
 $string['strfdateofbirth'] = '%%A/%%m/%%d';
 $string['strfdaymonthyearshort'] = '%%d/%%m/%%Y';

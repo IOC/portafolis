@@ -44,7 +44,6 @@ $string['showhomeinfo2'] = 'Informació de la consola';
 $string['showhomeinfodescription1'] = 'Mostra informació sobre l\'ús de %s a la consola.';
 $string['showprogressbar'] = 'Barra de progrés de la compleció del perfil';
 $string['showprogressbardescription'] = 'Mostra la barra de progrés i consells sobre com completar el vostre perfil de %s.';
-$string['showviewcolumns'] = 'Quan editi un Pàgina mostra els controls per afegir o treure columnes';
 $string['tagssideblockmaxtags'] = 'Nombre màxim d\'etiquetes al núvol';
 $string['tagssideblockmaxtagsdescription'] = 'Nombre màxim d\'etiquetes per mostrar al vostre Núvol d\'etiquetes';
 $string['updatedfriendcontrolsetting'] = 'Actualitza el control d\'amics';

@@ -64,10 +64,6 @@ $string['progress_annotation'] = array(
     0 => 'Afegeix 1 anotació a la pàgina',
     1 => 'Afegeix %s anotacions a les pàgines',
 );
-$string['progress_annotationfeedback'] = array(
-    0 => 'Fes una retraocció a l\'anotació d\'un altre usuari.',
-    1 => 'Fes %s retraoccions a les anotacions d\'altres usuaris.',
-);
 $string['public'] = 'Públic';
 $string['reallydeletethisannotationfeedback'] = 'Esteu segur que voleu esborrar aquesta retroacció?';
 $string['typeannotationfeedback'] = 'Retroacció a les anotacions';

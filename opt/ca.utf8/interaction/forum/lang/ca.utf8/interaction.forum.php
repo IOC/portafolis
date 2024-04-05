@@ -162,7 +162,6 @@ $string['strftimerecentfullrelative'] = '%%v, %%l:%%M %%p';
 $string['strftimerecentrelative'] = '%%v, %%k:%%M';
 $string['subscribetoforum'] = 'Subscriu-me al fòrum';
 $string['subscribetotopic'] = 'Subscriu-me al tema';
-$string['timeleftnotice'] = 'Us queden  %s minuts per acabar d\'editar.';
 $string['today'] = 'Avui';
 $string['topicclosedsuccess'] = 'S\'han tancat correctament els temes';
 $string['topicisclosed'] = 'Aquest tema està tancat. Només els moderadors i el propietari del grup poden donar noves respostes.';

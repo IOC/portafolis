@@ -29,7 +29,7 @@ $string['homedefaultcontent'] = '<h2>Welcome to Mahara</h2>
 <p>For more information you can read <a href="about.php">About</a> Mahara or alternatively please feel free to <a href="contact.php">Contact Us</a>.</p>';
 $string['licensedisplaynameby'] = 'Creative Commons Attribution 3.0 (Reconeixement  CC BY)';
 $string['licensedisplaynamebync'] = 'Creative Commons Attribution Non Commercial 3.0 (Reconeixement-NoComercial  CC BY-NC)';
-$string['licensedisplaynamebyncnd'] = 'Creative Commons Attribution Non Commercial No Derivatives 3.0 (Reconeixement-NoComercial-SenseObraDerivada \r
+$string['licensedisplaynamebyncnd'] = 'Creative Commons Attribution Non Commercial No Derivatives 3.0 (Reconeixement-NoComercial-SenseObraDerivada \\r
 CC BY-NC-ND)';
 $string['licensedisplaynamebyncsa'] = 'Creative Commons Attribution Non Commercial Share Alike 3.0 (Reconeixement-NoComercial-CompartirIgual  CC BY-NC-SA)';
 $string['licensedisplaynamebynd'] = 'Creative Commons Attribution No Derivatives 3.0 (Reconeixement-SenseObraDerivada  CC BY-ND)';

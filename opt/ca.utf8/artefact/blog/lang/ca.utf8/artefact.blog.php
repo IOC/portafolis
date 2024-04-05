@@ -160,3 +160,4 @@ $string['youarenotasiteadmin'] = 'No sou administrador del lloc';
 $string['youarenottheownerofthisblog'] = 'No sou el creador d\'aquest diari';
 $string['youarenottheownerofthisblogpost'] = 'No sou el creador d\'aquesta entrada de diari';
 $string['youhavenoblogs'] = 'No teniu cap diari.';
+$string['youhavenogroupblogs'] = 'No hi ha cap diari en aquest grup';

@@ -58,7 +58,6 @@ $string['syncgroupsuserattribute'] = 'El nom del grup de l\'atribut d\'usuari es
 $string['syncgroupsusergroupnames'] = 'Només aquests noms de grup';
 $string['syncgroupsusergroupnamesdesc'] = 'Deixeu-ho en blanc per acceptar qualsevol valor. Separeu els noms dels grups per una coma.';
 $string['syncuserscreate'] = 'Crea automàticament els usuaris amb el cron';
-$string['syncuserscron'] = 'Sincronitza automàticament els usuaris amb el cron';
 $string['syncusersextrafilterattribute'] = 'Filtre addicional LDAP per la sincronització';
 $string['syncusersgonefromldap'] = 'Si un usuari ja no torna a estar present a l\'LDAP';
 $string['syncusersgonefromldapdelete'] = 'Elimina el compte de l\'usuari i tot el contingut';
