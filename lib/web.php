@@ -169,7 +169,12 @@ function smarty($javascript = array(), $headers = array(), $pagestrings = array(
     $sideblock_menu = array();
     if (get_config('installed')) {
         // Fetch all the core side blocks now to avoid any 'set headdata' before smarty_core() problems
-        $isloginblockvisible = !$USER->is_logged_in() && !get_config('siteclosedforupgrade') && get_config('showloginsideblock');
+        // PATCH IOC010
+        // MODIFIED
+        $isloginblockvisible = !$USER->is_logged_in() && !get_config('siteclosedforupgrade') && get_config('showloginsideblock') && ($_SERVER['SCRIPT_FILENAME'] === get_config('docroot') . 'about.php');
+        // ORIGINAL
+        // $isloginblockvisible = !$USER->is_logged_in() && !get_config('siteclosedforupgrade') && get_config('showloginsideblock');
+        // FI PATCH
         if ($isloginblockvisible) {
             $authgenerateloginform = auth_generate_login_form();
             $loginsideblock = array(
