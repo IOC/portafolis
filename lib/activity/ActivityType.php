@@ -413,7 +413,12 @@ abstract class ActivityType {
               // go into the activity log as 'unread'.
               $changes->read = 0;
               update_record('notification_internal_activity', $changes);
-              if (!$badnotification && !($e instanceof EmailDisabledException || $e instanceof InvalidEmailException)) {
+              // PATCH IOC005
+              // MODIFIED
+              if (!$badnotification && !($e instanceof EmailDisabledException || $e instanceof InvalidEmailException || $e instanceof EmailException)) {
+              // ORIGINAL
+              //if (!$badnotification && !($e instanceof EmailDisabledException || $e instanceof InvalidEmailException)) {
+              // FI PATCH
                   // Admins should probably know about the error, but to avoid
                   // sending too many similar notifications, save an initial
                   // prefix of the message being sent and throw away subsequent
