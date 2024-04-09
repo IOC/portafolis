@@ -1,0 +1,50 @@
+// Generic custom css (anything longer than a screen view should have its own component file)
+
+// link hover color
+// override bootstrap's lighten() as it looks a bit odd with the blue used for $brand-primary
+a,
+.text-link,
+.list-group a.text-link,
+.list-group-item-heading a,
+.collapsible legend h3 .secondary-link,
+.collapsible legend h4 .secondary-link,
+.panel-heading .secondary-link,
+.pagination > li > a,
+.pagination > li > span {
+    &:hover,
+    &:focus {
+        color: $brand-primary-dark;
+        background: #fff none repeat scroll 0 0;
+    }
+}
+.pagination > li.active {
+    span,
+    span:hover {
+        color: $mahara-dark-grey;
+        border: 1px solid #ddd;
+    }
+}
+.list-group-item-heading a:hover .metadata,
+.list-group-item-heading a:focus .metadata {
+    color: $brand-primary-dark;
+}
+
+.list-group {
+    .sidebar-content {
+        padding: 10px 15px;
+    }
+}
+
+// panels
+.panel-secondary .panel-heading-nested,
+.panel-secondary >.panel-heading {
+    border-left: 0;
+    background-color: transparent;
+}
+
+.loading-inner {
+    background: transparent;
+    .icon-spinner {
+        color: #fff;
+    }
+}

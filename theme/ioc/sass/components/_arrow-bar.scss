@@ -1,0 +1,33 @@
+.arrow-bar {
+    background-color: $ioc-arrow-bg;
+
+    .nav-inpage.nav > li {
+         > a, > button {
+            color: $ioc-arrow-link-color;
+            &:hover,
+            &:focus {
+                color: $ioc-arrow-link-hover-color;
+            }
+        }
+        &.active {
+            a, > button  {
+                color: $ioc-arrow-link-active-color;
+            }
+        }
+    }
+
+    .arrow {
+        background-color: $ioc-arrow-color;
+
+        &:after {
+            border-left: 14px solid $ioc-arrow-left-text-bg;
+        }
+        .text {
+            color: $ioc-arrow-link-active-color;
+        }
+    }
+    .arrow,
+    .right-text {
+        padding: 5px 10px;
+    }
+}
