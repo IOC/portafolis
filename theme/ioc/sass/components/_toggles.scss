@@ -1,0 +1,20 @@
+// overriding/additional styles for theme
+
+.search-toggle {
+    color: $ioc-link;
+}
+
+@media (max-width: $screen-xs-max) {
+    .navbar-toggle.navbar-showchildren,
+    .navbar-toggle.navbar-showchildren:hover,
+    .navbar-toggle.navbar-showchildren:focus {
+        background-color: $brand-primary-faint;
+        @include border-top-radius(4px);
+    }
+}
+
+.menu-toggle {
+    &:before {
+        z-index: 1;
+    }
+}
