@@ -1,18 +1,15 @@
-<h3>Nom d'usuari per autenticació externa</h3>
-<p>Quan un usuari s'autentica amb un servei extern a Mahara
-aquest camp conté l'identificador de l'usuari al servei remot.
-És possible que un usuari tingui diferents noms d'usuari remots 
-emmagatzemats a Mahara però cadascun ha d'estar associat a un
-mètode d'autenticació extern diferent.</p>
-<p>Les normes actuals per a l'actualització d'aquest camp són les següents:</p>
+<!-- @llicència http://www.gnu.org/copyleft/gpl.html GNU GPL versió 3 o posterior -->
+<!-- @copyright Per obtenir informació sobre els drets d'autor sobre Mahara, consulta el fitxer README distribuït amb aquest programari. -->
+<h1>Nom d'usuari per a l'autenticació externa</h1>
+<p>Quan algú s'autentica mitjançant un servei extern al lloc,
+aquest camp conté l'identificador del compte del servei remot.
+És possible que una persona tingui diversos noms d'usuari remots emmagatzemats
+Mahara, però cadascú ha d'estar associat amb un extern diferent
+mètode d'autenticació.</p>
+<p>Les regles actuals per a l'actualització d'aquest camp són les següents:</p>
 <ul>
-  <li>Si elimineu el contingut d'aquest camp i deseu els canvis, s'esborrarà
-qualsevol nom d'usuari extern associat a aquest usuari i el mètode d'autenticació.</li>
-  <li>Si actualitzeu el contingut d'aquest camp a qualsevol valor diferent del
-valor per defecte, es reinicialitzarà el nom d'usuari extern o se'n crearà un de nou si encara no existís.</li>
-  <li>Si deixeu el contingut d'aquest camp en el valor predeterminat i
-deseu, es crearà un nom d'usuari extern si no existís
-   encara. No obstant això, si l'usuari ja té un nom d'usuari extern per al
-   mètode d'autenticació triat, i és diferent del predeterminat,
-   no se sobreescriurà.</li>
+  <li>Si esborres el contingut d'aquest camp i envies els teus canvis,
+  el nom d'usuari extern associat a l'autenticació seleccionada
+  el mètode es restablirà al nom d'usuari predeterminat.</li>
+  <li>Si actualitzes el contingut d'aquest camp, el nom d'usuari extern es restablirà per a aquest mètode d'autenticació o se'n farà un de nou creat si encara no existeix.</li>
 </ul>

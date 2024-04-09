@@ -2,5 +2,5 @@
 
 defined('INTERNAL') || die();
 
-$string['description1'] = 'Aquesta opció us donarà una exportació <a href="https://web.archive.org/web/20140912151415/http://wiki.leapspecs.org/2A/specification"> en format Leap2A estàndard</a>. Més endavant el podreu utilitzar per importar el vostre portafolis en altres <a href="https://wiki.mahara.org/wiki/Developer_Area/Import//Export/Interoperability">sistemes que usen el format Leap2A</a>, tot i que aquest format és difícil de llegir pels humans.';
-$string['title'] = 'LEAP2A';
+$string['description1'] = 'Això t’ofereix una exportació al <a href="https://web.archive.org/web/20140912151415/http://wiki.leapspecs.org/2A/specification">format estàndard Leap2A</a>. Pots utilitzar-lo més tard per importar les teves dades a <a href="https://wiki.mahara.org/wiki/Developer_Area/Import//Export/Interoperability">altres sistemes compatibles amb Leap2A</a>, tot i que l\'exportació és difícil de llegir per als humans.';
+$string['title'] = 'Leap2A';

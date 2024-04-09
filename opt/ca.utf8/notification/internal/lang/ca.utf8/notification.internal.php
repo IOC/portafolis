@@ -2,4 +2,4 @@
 
 defined('INTERNAL') || die();
 
-$string['name'] = 'Registre d\'activitat';
+$string['name'] = 'Safata d’entrada';

@@ -1,0 +1,18 @@
+<!-- @llicència http://www.gnu.org/copyleft/gpl.html GNU GPL versió 3 o posterior --> 
+<!-- @copyright Per a la informació de copyright sobre Mahara, consulta el fitxer README distribuït amb aquest programari. --> 
+<h1>Camp SAML 2.0 per al delimitador de rols d'afiliació</h1>
+<p>El proveïdor d'identitat (IdP) pot transmetre informació sobre la funció d'afiliació als titulars del compte. Aquest camp funciona conjuntament amb</p>
+  <ul>
+    <li>Camp SSO per als identificadors d'afiliació</li>
+    <li>Camp SSO per a correus electrònics d'afiliació</li>
+    <li>Camp SSO per a rols d'afiliació</li>
+  </ul>
+
+<p>Si configures aquests camps d'assignació de rols, al titular del compte se li concediran els rols associats a les institucions indicades a la matriu de rols d'afiliació que es transmetin.</p>
+<p>El valor del delímetre s'utilitza per dividir la cadena en el rol i
+components de la institució. Per exemple, si el delimitador és '@', dividirà 'staffmember@institute_a' en rol = personal, institució = institut_a.</p>
+<p>Això vol dir, si les associacions de rols que es transmeten des de l'IdP són 'staffmember@institute_a' i 'administrator@institute_b', es fan els mapes de rols següents:</p>
+  <ul>
+    <li>staffmember@institution_a: personal de la institució a la institució "institució_a"</li>
+    <li>administrator@institution_b: administrador de la institució a la institució "institució_b"</li>
+  </ul>

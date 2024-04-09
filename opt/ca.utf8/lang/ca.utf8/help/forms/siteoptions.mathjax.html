@@ -1,0 +1,12 @@
+<!-- @llicència http://www.gnu.org/copyleft/gpl.html GNU GPL versió 3 o posterior -->
+<!-- @copyright Per obtenir informació sobre els drets d'autor sobre Mahara, consulta el fitxer README distribuït amb aquest programari. -->
+<h1>MathJax</h1>
+MathJax és un motor de visualització de JavaScript per a la notació TeX, LaTeX, AsciiMath i MathMl que permet mostrar equacions de matemàtiques i ciències a les pàgines Mahara.
+<p>MathJax permet la visualització d'equacions a tota la instal·lació de Mahara.</p>
+<h2>URL de MathJax</h2>
+<p>La configuració predeterminada utilitza la darrera versió estable a la xarxa de distribució de contingut (CDN) de MathJax. Els protocols http i https es poden utilitzar segons correspongui.</p>
+<p>Com a alternativa, $cfg->mathjaxpath pot utilitzar una instal·lació de servidor local de MathJax. Consulta <a href="http://docs.mathjax.org/en/latest/installation.html">la documentació</a> per obtenir més informació.</p>
+<p>El valor predeterminat inclou una configuració que s'utilitza habitualment que permet l'entrada de MathML, AsciiMath, TeX o LaTeX i el processament a MathML o HTML-CSS.</p>
+<h2>Configuració addicional de MathJax</h2>
+<p>Es pot afegir una configuració addicional de MathJax a $cfg->mathjaxconfig. La configuració predeterminada de MathJax hauria de ser adequada per a la majoria de la gent, però MathJax és altament configurable i aquí es pot afegir qualsevol de les opcions de configuració estàndard de MathJax.</p>
+<p>Per defecte, s'inclou l'extensió mhchem que afegeix la macro \\ce per a fórmules químiques. Consulta <a href="http://docs.mathjax.org/en/latest/tex.html#tex-and-latex-extensions">la documentació</a> per obtenir més informació.</p>

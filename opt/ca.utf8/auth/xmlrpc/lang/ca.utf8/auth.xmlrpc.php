@@ -2,9 +2,11 @@
 
 defined('INTERNAL') || die();
 
+$string['authloginmsgtitle'] = 'Missatge d\'inici de sessió incorrecte';
 $string['description'] = 'Autenticació per SSO des d\'una aplicació externa';
-$string['networkingdisabledonthissite'] = 'No està activada la Xarxa en aquest lloc';
-$string['networkservers'] = 'Servidors en Xarxa';
-$string['notusable'] = 'Cal que instal·leu les extensions de PHP XMLRPC, Curl i OpenSSL';
-$string['title'] = 'XMLRPC';
-$string['youhaveloggedinfrom1'] = 'Torneu a <a href="%s">%s</a>';
+$string['networkingdisabledonthissite'] = 'La Xarxa no està activada en aquest lloc.';
+$string['networkservers'] = 'Servidors de Xarxa';
+$string['notusable'] = 'Cal que instal·lis les extensions de PHP XMLRPC, Curl i OpenSSL';
+$string['title'] = 'XML-RPC';
+$string['xmlrpcconfig'] = 'Configuració XML-RPC';
+$string['youhaveloggedinfrom1'] = 'Torna a <a href="%s">%s</a>';

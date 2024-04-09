@@ -1,9 +1,8 @@
-<!-- @license http://www.gnu.org/copyleft/gpl.html GNU GPL version 3 or later -->
-<!-- @copyright For copyright information on Mahara, please see the README file distributed with this software. -->
-<h3>Tipus de cerca Elasticsearch</h3>
+<!-- @llicència http://www.gnu.org/copyleft/gpl.html GNU GPL versió 3 o posterior -->
+<!-- @copyright Per obtenir informació sobre els drets d'autor sobre Mahara, consulta el fitxer README distribuït amb aquest programari. -->
+<h1>Tipus de cerca d'Elasticsearch</h1>
 
-<p>Llista d'elements a indexar separats per comes. Cadascun ha de coincidir amb una subclasse ElasticsearchType de search/elasticsearch/type.</p>
-<p>No caldrà que ho canvieu a no ser que hagueu implementat un nou tipus de cerca o vulgueu desactivar algun tipus de cerca en particular.</p>
-<p>Aquesta opció no es pot canviar a través de la interfície web. Podeu canviar-la tot posant un valor al fitxer de configuració 
-config.php per a la següent variable:</p>
-<p><code>$cfg->plugin->search->elasticsearch->types</code>.</p>
+<p>Aquesta és una llista separada per comes dels elements a indexar. Cadascun d'ells ha de coincidir amb una subclasse ElasticsearchType a search/elasticsearch/type.</p>
+<p>No hauries de canviar-ho tret que hagis implementat un tipus de cerca nou o vulguis desactivar un tipus de cerca concret.</p>
+<p>Aquesta configuració no es pot canviar mitjançant la interfície web. Pots canviar-lo establint un valor al fitxer config.php per a la següent variable de configuració:</p>
+<p><code>$cfg->plugin_search_elasticsearch_types</code>.</p>

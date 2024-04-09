@@ -2,6 +2,6 @@
 
 defined('INTERNAL') || die();
 
-$string['description'] = 'Un bloc on mostrar la retroacció';
-$string['ineditordescription1'] = 'La retroacció d\'aquesta pàgina es mostrarà aquí i també a la part de baix de la pàgina.';
-$string['title'] = 'Retroacció';
+$string['description'] = 'Un bloc per mostrar comentaris';
+$string['ineditordescription1'] = 'Els comentaris d\'aquesta pàgina es mostraran aquí en lloc de la part inferior de la pàgina.';
+$string['title'] = 'Comentaris';

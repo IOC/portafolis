@@ -2,13 +2,14 @@
 
 defined('INTERNAL') || die();
 
-$string['description'] = 'Trieu quins medis socials voleu mostrar';
-$string['displayaddressesas'] = 'Mostra els comptes als medis socials com:';
-$string['displaydefaultemail'] = 'Voleu mostrar el correu per defecte com a botó?';
-$string['displaymsgservices'] = 'Voleu mostrar els serveis de missatgeria com a botons?';
-$string['displaysettings'] = 'Configuració';
+$string['description'] = 'Tria els comptes de xarxes socials per mostrar';
+$string['displayaddressesas'] = 'Mostra els comptes de xarxes socials com:';
+$string['displaydefaultemail'] = 'Vols mostrar l\'enllaç per defecte del correu electrònic com a botó?';
+$string['displaymsgservices'] = 'Vols mostrar els serveis de missatgeria com a botons?';
+$string['displaysettings'] = 'Paràmetres de visualització';
+$string['noitemsselectone'] = 'No s\'ha seleccionat cap xarxa social';
 $string['optionicononly'] = 'només botons amb icones';
 $string['optiontexticon'] = 'botons amb icones i text';
 $string['optiontextonly'] = 'botons només amb text';
-$string['profilestoshow'] = 'Comptes dels medis socials que es mostraran';
-$string['title'] = 'Medis socials';
+$string['profilestoshow'] = 'Comptes de xarxes socials per mostraran';
+$string['title'] = 'Mitjans socials';

@@ -1,0 +1,21 @@
+<!-- @license http://www.gnu.org/copyleft/gpl.html GNU GPL versió 3 o posterior -->
+<!-- @copyright Per a la informació de copyright sobre Mahara, si us plau, consulta el fitxer README distribuït amb aquest programari. -->
+<h1>Si un compte ja no està present a LDAP</h1>
+<p>Aquest paràmetre determina què farà el cron si hi ha una persona a la teva
+institució no té cap registre coincident al servidor LDAP.</p>
+<p><strong>Nota:</strong> Aquest paràmetre només s'aplica a les persones que tenen aquesta autenticació
+instància com a mètode d'autenticació.</p>
+<dl>
+<dt>No facis res</dt>
+<dd>No es prendrà cap acció. (Aquest és el paràmetre recomanat.)</dd>
+<dt>Suspèn el compte</dt>
+<dd>El compte serà suspès. El titular del compte ja no podrà
+  inicia la sessió, i el seu contingut i els seus portaoflis no seran visibles. No obstant això, cap de
+  les seves dades seran eliminades, i la persona pot ser dessustada pel cron
+  quan el seu registre LDAP reaparegui, o manualment per un administrador.</dd>
+<dt>Suprimeix el compte i tot el contingut</dt>
+<dd><strong>Usa amb precaució!</strong> El compte se suprimirà juntament amb tot el
+  Contingut i carteres que hi ha dins. Les dades s'han suprimit completament de
+  servidor. Si encara cal alguna cosa d'aquest compte, una còpia de seguretat completa del
+  la instància és necessària per recuperar el compte.</dd>
+</dl>

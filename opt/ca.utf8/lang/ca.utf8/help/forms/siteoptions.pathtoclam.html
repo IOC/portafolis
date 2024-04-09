@@ -1,3 +1,10 @@
-<h3>Camí del clam</h3>
-<p>El camí del sistema de fitxers de  <code>clamscan</code> o <code>clamdscan</code> per comprovar l'existència de virus 
-Se suposa que una errada en l'execució de clam significa que un arxiu ha de ser entès com un virus, aleshores es crea automàticament dins la instal·lació de Mahara un directori de quarantena.</p>
+<!-- @llicència http://www.gnu.org/copyleft/gpl.html GNU GPL versió 3 o posterior -->
+<!-- @copyright Per obtenir informació sobre els drets d'autor sobre Mahara, consulta el fitxer README distribuït amb aquest programari. -->
+<h1>Camí de la cloïssa</h1>
+<p>La ruta del sistema de fitxers a <code>clamscan</code> o <code>clamdscan</code> per a
+verificació de virus. Se suposa que un error d'execució de la cloïssa significarà que un fitxer
+s'ha de tractar com un virus i s'establirà automàticament un directori de quarantena
+per la teva instal·lació Mahara.</p>
+<p>Per motius de seguretat, aquesta configuració no es pot canviar a través del web. Necessitaràs
+establir-lo al teu fitxer <tt>config.php</tt>, com segueix:<p>
+<p><tt>$cfg->pathtoclam = '/path/to/your/clamscan';</tt></p>

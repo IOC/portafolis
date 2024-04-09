@@ -1,0 +1,7 @@
+<!-- @llicència http://www.gnu.org/copyleft/gpl.html GNU GPL versió 3 o posterior -->
+<!-- @copyright Per obtenir informació sobre els drets d'autor sobre Mahara, consulta el fitxer README distribuït amb aquest programari. -->
+<h1>Nom d'usuari d'autenticació per escriure a l'índex</h1>
+
+<p>Si el teu servidor Elasticsearch requereix un nom d'usuari i una contrasenya d'autenticació bàsica HTTP diferents per escriure a l'índex, pots proporcionar el <strong>nom d'usuari d'indexació</strong> aquí. <strong>Nota:</strong> el programari bàsic d'Elasticsearch en si no ofereix funcions de nom d'usuari o contrasenya, però pots aconseguir aquesta funcionalitat utilitzant un connector, com ara Search Guard, o accedint-hi mitjançant un servidor intermediari.</p>
+<p>Aquesta configuració no es pot canviar mitjançant la interfície web. Pots canviar-lo establint un valor al fitxer config.php per a la següent variable de configuració:</p>
+<p><code>$cfg->plugin_search_elasticsearch_indexingusername</code>.</p>

@@ -1,8 +1,10 @@
-<h3>Sincronitza usuaris via automàticament via cron</h3>
-<p>Seleccioneu aquesta opció per activar una tasca del cron que automàticament crearà i/o actualitzarà
-els comptes d'usuari basats en registres del servidor LDAP. Per defecte aquesta tasca del cron s'executarà 
-un cop al dia a mitjanit (hora del servidor). Editeu el registre a la taula  "auth_cron" o useu opcionalment l'script de la línia de comandaments
-que trobareu a htdocs/auth/ldap/cli/sync_users.php si voleu programar altres moments per fer-lo córrer o amb altres paràmetres.</p>
-<p>Aquesta activació no tindrà efecte si el cron no funciona. Vegeu la 
+<!-- @license http://www.gnu.org/copyleft/gpl.html GNU GPL versió 3 o posterior -->
+<!-- @copyright Per a la informació de copyright sobre Mahara, si us plau, consulta el fitxer README distribuït amb aquest programari. -->
+<h1>Sincronitza els comptes automàticament mitjançant el treball cron</h1>
+<p>Activa aquest paràmetre per activar una tasca al cron que crearà/o actualitzarà automàticament
+comptes basats en registres al servidor LDAP. Per defecte, aquesta tasca cron s'executarà una vegada
+diàriament a mitjanit (hora del servidor). Editea el registre a la taula «auth thecron» o utilitza l'script opcional de línia d'ordres
+subministrat a htdocs/auth/ldap/cli/sync.users.php si voleu programar-lo per a executar-lo en altres moments o amb altres opcions de configuració.</p>
+<p>Aquest paràmetre no tindrà efecte si el cron no s'està executant. Vegeu el
 <a href="http://wiki.mahara.org/System_Administrator's_Guide/Installing_Mahara">guia d'instal·lació </a> per
 trobar les instruccions sobre com configurar-lo.</p>

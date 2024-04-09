@@ -2,7 +2,7 @@
 
 defined('INTERNAL') || die();
 
-$string['choosepublishedblogpostsdescription'] = 'Seleccioneu una de les entrades publicades al vostre diari';
-$string['defaulttitledescription'] = 'Si ho deixeu en blanc es mostrarà el títol de l\'entrada del diari';
-$string['description'] = 'Mostra una entrada al diari';
+$string['choosepublishedblogpostsdescription'] = 'Selecciona una de les entrades publicades al teu diari';
+$string['defaulttitledescription'] = 'Si ho deixes en blanc, es mostrarà el títol de l\'entrada del diari';
+$string['description'] = 'Una única entrada del teu diari (mira Contingut ➞ Diari)';
 $string['title'] = 'Entrada al diari';

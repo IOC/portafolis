@@ -1,0 +1,8 @@
+<!-- @llicència http://www.gnu.org/copyleft/gpl.html GNU GPL versió 3 o posterior -->
+<!-- @copyright Per obtenir informació sobre els drets d'autor sobre Mahara, consulta el fitxer README distribuït amb aquest programari. -->
+<h1>Connector d'autenticació</h1>
+<p>Aquí pots triar com s'autenticaran els membres d'aquesta institució al lloc. Les institucions tenen lligat almenys un mètode d'autenticació.</p>
+<p>El connector d'autenticació <strong>interna</strong> comprova a la base de dades del lloc els noms d'usuari i les contrasenyes. Les persones han de tenir un compte perquè això funcioni, cosa que es pot fer permetent el registre mitjançant el formulari de registre o utilitzant <a href="add.php">Afegeix una persona</a> o <a href="uploadcsv. php">Afegeix persones per pàgines CSV</a>.</p>
+<p>El mètode d'autenticació <strong>cap</strong> permet entrar a qualsevol persona. La gent pot triar qualsevol nom d'usuari i contrasenya. Això només s'ha d'utilitzar per fer proves!</p>
+<p>Els altres mètodes d'autenticació generalment s'autentiquen amb una font externa, com ara un servidor LDAP o una aplicació remota. Tenen la seva pròpia configuració, que pots configurar en una finestra emergent quan les afegeixis. Alguns mètodes estan desactivats perquè falten les extensions PHP necessàries o no es pot establir la connexió de sortida amb les fonts externes. Per exemple, el connector d'autenticació Persona necessita l'extensió PHP cURL i la connexió HTTPS a <em>verifier.login.persona.org</em>.</p>
+<p>Una de les opcions que normalment comparteixen és si es poden crear comptes automàticament al lloc quan una persona inicia sessió per primera vegada (a diferència dels comptes creats prèviament per l'administrador, als quals la gent pot iniciar sessió).</ p>

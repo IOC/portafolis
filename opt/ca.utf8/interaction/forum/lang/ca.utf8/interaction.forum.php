@@ -2,76 +2,118 @@
 
 defined('INTERNAL') || die();
 
-$string['Body'] = 'Cos';
+$string['Body'] = 'Missatge';
 $string['Close'] = 'Tanca';
 $string['Closed'] = 'Tancat';
-$string['Count'] = 'Compta';
+$string['Count'] = 'Compte';
 $string['Key'] = 'Clau';
 $string['Moderators'] = 'Moderadors';
 $string['Moveto'] = 'Mou a';
 $string['Open'] = 'Obre';
-$string['Order'] = 'Ordena';
-$string['Post'] = 'Envia l\'entrada';
-$string['Poster'] = 'Autor de l\'entrada';
-$string['Posts'] = 'Entrades';
+$string['Order'] = 'Ordre';
+$string['Post'] = 'Publicació';
+$string['Poster'] = 'Cartell';
+$string['Posts'] = 'Publicacions';
 $string['Re:'] = 'Re: ';
 $string['Reply'] = 'Respon';
 $string['Sticky'] = 'Enganxós';
-$string['Subject'] = 'Assumpte';
-$string['Subscribe'] = 'Subscriu-me';
+$string['Subject'] = 'Assignatura';
+$string['Subscribe'] = 'Subscriu-te';
 $string['Subscribed'] = 'Subscrit';
 $string['Topic'] = 'Tema';
 $string['Topics'] = 'Temes';
-$string['Unsticky'] = 'No enganxosos';
-$string['Unsubscribe'] = 'Anul·la la subscripció';
-$string['activetopicsdescription'] = 'Temes actualitzats darrerament als vostres grups.';
-$string['addpostsuccess'] = 'S\'ha afegit correctament l\'entrada';
-$string['addtitle'] = 'Crea nou fòrum';
-$string['addtopic'] = 'Afegeix un tema nou';
-$string['addtopicsuccess'] = 'S\'ha afegit correctament el nou tema';
-$string['allposts'] = 'Totes les entrades';
-$string['autosubscribeusers'] = 'Voleu subscriure automàticament als usuaris?';
-$string['autosubscribeusersdescription'] = 'Escolliu si els usuaris del grup quedaran subscrits automàticament a aquest fòrum';
-$string['cantaddposttoforum'] = 'No esteu autoritzat per escriure en aquest fòrum';
-$string['cantaddposttotopic'] = 'No esteu autoritzat per escriure en aquest tema';
-$string['cantaddtopic'] = 'No esteu autoritzat per afegir temes en aquest fòrum';
-$string['cantdeletepost'] = 'No esteu autoritzat per esborrar entrades en aquest fòrum';
-$string['cantdeletethispost'] = 'No esteu autoritzat per esborrar aquesta entrada';
-$string['cantdeletetopic'] = 'No esteu autoritzat per esborrar temes en aquest fòrum';
-$string['canteditpost'] = 'No esteu autoritzat per editar aquesta entrada';
-$string['cantedittopic'] = 'No esteu autoritzat per editar aquest tema';
+$string['Unsticky'] = 'Desenganxat';
+$string['Unsubscribe'] = 'Cancel·la subscripció';
+$string['activetopicsdescription'] = 'Temes actualitzats darrerament als teus grups.';
+$string['addpostsuccess'] = 'Publicació afegida correctament';
+$string['addtitle'] = 'Afegeix un fòrum';
+$string['addtopic'] = 'Afegeix tema';
+$string['addtopicsuccess'] = 'S\'ha afegit el tema correctament';
+$string['allowunsubscribe'] = 'Permet als membres del grup cancel·lar la subscripció';
+$string['allowunsubscribedescription'] = 'Tria si els membres del grup poden cancel·lar la subscripció als fòrums i temes';
+$string['allposts'] = 'Totes les publicacions';
+$string['approvalofposts'] = 'Aprovació de publicacions';
+$string['autosubscribeusers'] = 'Subscriu automàticament als membres del grup';
+$string['autosubscribeusersdescription'] = 'Tria si els membres del grup es subscriuran automàticament a aquest fòrum';
+$string['awaitingapproval'] = 'Esperant aprovació';
+$string['cantaddposttoforum'] = 'No tens permís per publicar en aquest fòrum';
+$string['cantaddposttotopic'] = 'No tens permís per publicar en aquest tema';
+$string['cantaddtopic'] = 'No tens permís per afegir temes a aquest fòrum';
+$string['cantapproveposts'] = 'No tens permís per aprovar missatges en aquest fòrum';
+$string['cantdeletepost'] = 'No tens permís per eliminar missatges en aquest fòrum';
+$string['cantdeletethispost'] = 'No tens permís per suprimir aquesta publicació';
+$string['cantdeletetopic'] = 'No tens permís per esborrar temes d\'aquest fòrum';
+$string['canteditpost'] = 'No tens permís per editar aquesta publicació';
+$string['cantedittopic'] = 'No teniu permís per editar aquest tema';
 $string['cantfindforum'] = 'No s\'ha trobat el fòrum amb l\'id %s';
-$string['cantfindpost'] = 'No s\'ha trobat l\'entrada amb l\'id %s';
+$string['cantfindpost'] = 'No s\'ha trobat la publicació amb l\'id %s';
 $string['cantfindtopic'] = 'No s\'ha trobat el tema amb l\'id %s';
-$string['cantmakenonobjectionable'] = 'No teniu permisos per marcar aquesta entrada com a no objectable.';
-$string['cantviewforums'] = 'No esteu autoritzat per veure els fòrums d\'aquest grup';
-$string['cantviewtopic'] = 'No esteu autoritzat per veure els temes d\'aquest fòrum';
-$string['chooseanaction'] = 'Trieu una acció';
-$string['clicksetsubject'] = 'Cliqueu per establir l\'assumpte';
-$string['closeddescription'] = 'Només els moderadors i el propietari del grup poden contestar els temes tancats';
+$string['cantmakenonobjectionable'] = 'No tens permís per marcar aquesta publicació com a no censurable.';
+$string['cantunsubscribe'] = 'No tens permís per donar-te de baixa d\'aquest fòrum';
+$string['cantviewforums'] = 'No tens permís per veure els fòrums d\'aquest grup';
+$string['cantviewtopic'] = 'No tens permís per veure els temes d\'aquest fòrum';
+$string['chooseanaction'] = 'Tria una acció';
+$string['clicksetsubject'] = 'Fes clic per definir un assumpta';
+$string['closeddescription'] = 'Els temes tancats només poden ser contestats pels moderadors i els administradors del grup';
 $string['closetopics'] = 'Tanca temes nous';
 $string['closetopicsdescription1'] = 'Tanca per defecte tots els temes nous. Només els moderadors i administradors de grup podran escriure respostes als temes tancats.';
 $string['complaint'] = 'Queixa';
-$string['createtopicusersdescription'] = 'Si trieu "Tots els membres del grup" qualsevol podrà crear temes nous i contestar als existents.  Si trieu "Moderadors i administradors del grup" només els moderadors i administradors del grup podran començar temes nous. Tanmateix, si el tema ja existeix tots els membres podran contestar-lo.';
+$string['createtopicusersdescription'] = 'Si s\'estableix a "Tots els membres del grup", qualsevol pot crear temes nous i respondre als temes existents. Si s\'estableix a "Moderadors i administradors de grups", només els moderadors i els administradors de grups poden iniciar temes nous, però un cop existeixin els temes, tots els membres del grup podran publicar-hi respostes.';
 $string['currentmoderators'] = 'Moderadors actuals';
 $string['defaultforumdescription'] = '%s fòrum de discussió general';
-$string['defaultforumtitle'] = 'Fòrum de discussió general';
+$string['defaultforumtitle'] = 'Discussió general';
 $string['deleteforum'] = 'Esborra fòrum';
-$string['deletepost'] = 'Esborra l\'entrada';
-$string['deletepostsuccess'] = 'Entrada esborrada correctament';
-$string['deletepostsure'] = 'Esteu segur que voleu esborrar l\'entrada? L\'acció no es podrà desfer';
+$string['deletepost'] = 'Suprimeix publicació';
+$string['deletepostsuccess'] = 'La publicació s\'ha suprimit correctament';
+$string['deletepostsure'] = 'Estàs segur que vols fer això? No es pot desfer.';
 $string['deletetopic'] = 'Esborra tema';
-$string['deletetopicspecific'] = 'Elimina el tema "%s"';
+$string['deletetopicspecific'] = 'Elimina tema "%s"';
 $string['deletetopicsuccess'] = 'Tema esborrat correctament';
-$string['deletetopicsure'] = 'Esteu segur que voleu esborrar el tema? L\'acció no es podrà desfer';
-$string['editpost'] = 'Edita l\'entrada';
-$string['editpostsuccess'] = 'S\'ha editat l\'entrada correctament';
-$string['editstothispost'] = 'Edicions d\'aquesta entrada:';
+$string['deletetopicsure'] = 'Estàs segur que vols fer això? No es pot desfer.';
+$string['discussiontopics'] = 'Temes de discussió';
+$string['editpost'] = 'Edita la publicació';
+$string['editpostsuccess'] = 'Publicació editada correctament';
+$string['editstothispost'] = 'Modificacions a aquesta publicació:';
 $string['edittitle'] = 'Edita el fòrum';
 $string['edittopic'] = 'Edita el tema';
 $string['edittopicspecific'] = 'Edita el tema  "%s"';
-$string['edittopicsuccess'] = 'S\'ha editat el tema correctament';
+$string['edittopicsuccess'] = 'Tema editat correctament';
+$string['forumfailunsubscribe'] = 'No tens permís per donar-te de baixa.';
+$string['forumlower'] = 'Fòrum';
 $string['forumname'] = 'Nom del fòrum';
+$string['forumpostattachmentinternal'] = '
+%s
+
+Fitxers adjunts:
+%s';
+$string['forumpostattachmenttemplate'] = 'Forum: %s (%s)
+------------------------------------------------------------------------
+
+%s
+
+------------------------------------------------------------------------
+Fitxers adjunts:
+%s
+------------------------------------------------------------------------
+Per veure i contestar aquesta entrada segueix el següent enllaç:
+%s
+
+Per anul·lar la subscripció a %s, visita:
+%s';
+$string['forumposthtmlattachmenttemplate'] = '<div style="padding: 0.5em 0; border-bottom: 1px solid #999;"><strong>Fòrum: %s (%s)</strong></div>
+
+<div style="margin: 1em 0;">%s</div>
+
+<div style="font-size: smaller; border-top: 1px solid #999;">
+<p>Fitxers adjunts:</p>
+<ul>
+%s
+</ul>
+</div>
+<div style="font-size: smaller; border-top: 1px solid #999;">
+<p><a href="%s">Respon a aquesta publicació en línia</a></p>
+<p><a href="%s">Cancel·la la subscripció d\'aquest %s</a></p>
+</div>';
 $string['forumposthtmltemplate'] = '<div style="padding: 0.5em 0; border-bottom: 1px solid #999;"><strong>Fòrum: %s (%s)</strong></div>
 
 <div style="margin: 1em 0;">%s</div>
@@ -86,106 +128,223 @@ $string['forumposttemplate'] = 'Forum: %s (%s)
 %s
 
 ------------------------------------------------------------------------
-Per veure i contestar aquesta entrada seguiu el següent enllaç:
+Per veure i contestar aquesta entrada segueix el següent enllaç:
 %s
 
-Per anul·lar la subscripció a  %s, visiteu:
+Per anul·lar la subscripció a %s, visita:
 %s';
 $string['forumsettings'] = 'Configuració del fòrum';
-$string['forumsuccessfulsubscribe'] = 'Us heu subscrit al fòrum correctament';
-$string['forumsuccessfulunsubscribe'] = 'Heu deixat d\'estar subscrit al fòrum correctament';
+$string['forumsuccessfulsubscribe'] = 'El fòrum s\'ha subscrit correctament';
+$string['forumsuccessfulunsubscribe'] = 'El fòrum s\'ha cancel·lat correctament';
 $string['gotoforums'] = 'Vés als fòrums';
 $string['groupadminlist'] = 'Administradors del grup:';
 $string['groupadmins'] = 'Administradors del grup';
-$string['indentflatindent'] = 'No esglaonis';
-$string['indentfullindent'] = 'Completament expandit';
-$string['indentmaxindent'] = 'Expandeix al màxim';
-$string['indentmode'] = 'Fòrum esglaonat';
-$string['indentmodedescription'] = 'Especifiqueu quins temes d\'aquest fòrum voleu veure esglaonats.';
-$string['lastpost'] = 'Darrera entrada';
-$string['latestforumposts'] = 'Darreres entrades del fòrum';
-$string['maxindent'] = 'Nivell màxim d\'esglaonat';
-$string['maxindentdescription'] = 'Configureu el nivell màxim d\'esglaonat per un tema. Només tindrà efecte si l\'opció <em>Fòrum esglaonat</em> s\'ha deixat a <b>Expandeix al màxim</b>';
+$string['indentflatindent'] = 'Sense sagnat';
+$string['indentfullindent'] = 'Ampliar totalment';
+$string['indentmaxindent'] = 'Ampliar al màxim';
+$string['indentmode'] = 'Mode de sagnat del fòrum';
+$string['indentmodedescription'] = 'Especifca com s\'han de sagnar els temes d\'aquest fòrum.';
+$string['lastpost'] = 'Última publicació';
+$string['latestforumposts'] = 'Últimes publicacions al fòrum';
+$string['maxindent'] = 'Nivell màxim de sagnat';
+$string['maxindentdescription'] = 'Estableix el nivell de sagnat màxim per a un tema. Això només s\'aplica si el mode de sagnat s\'ha establert com a "Amplia al màxim".';
+$string['moderatenewposts'] = 'Modera les publicacions noves';
+$string['moderatenewpostsdescription1'] = 'Les publicacions noves han de ser aprovades per un moderador o administrador del fòrum.';
 $string['moderatorsandgroupadminsonly'] = 'Només moderadors i administradors de grups';
-$string['moderatorsdescription'] = 'Els moderadors poden editar i esborrar temes i entrades. També poden obrir, tancar i fixar temes com enganxosos.';
+$string['moderatorsdescription'] = 'Els moderadors poden editar i suprimir temes i publicacions. També poden obrir, tancar, establir i desactivar temes com a enganxosos.';
 $string['moderatorslist'] = 'Moderadors:';
 $string['name'] = 'Fòrum';
 $string['nameplural'] = 'Fòrums';
-$string['newforum'] = 'Crea nou fòrum';
+$string['newforum'] = 'Nou fòrum';
 $string['newforumpostnotificationsubjectline'] = '%s';
-$string['newpost'] = 'Crea nova entrada: ';
-$string['newtopic'] = 'Crea nou tema';
-$string['noforumpostsyet'] = 'Encara no hi ha cap entrada en aquest grup';
+$string['newpost'] = 'Nova publicació: ';
+$string['newtopic'] = 'Nou tema';
+$string['noforumpostsyet'] = 'Encara no hi ha cap publicació en aquest grup';
 $string['noforums'] = 'No hi ha fòrums en aquest grup';
-$string['notifyadministrator'] = 'Notifiqueu a l\'administrador';
+$string['notifyadministrator'] = 'Avisa a l\'administrador';
+$string['notifyauthor'] = 'Notificar a l\'autor';
 $string['notopics'] = 'No hi ha temes en aquest fòrum';
-$string['objectionablecontentpost'] = '%s ha informat d\'objeccions en una entrada de fòrum al tema "%s"';
-$string['objectionablepostdeletedbody'] = '%s ha estudiat l\'entrada de %s que havia estat informada com "amb objeccions" i l\'ha esborrada.
+$string['ntopicslower'] = array(
+    0 => '%s tema',
+    1 => '%s temes',
+);
+$string['objectionablecontentpost'] = 'Contingut censurable sobre el tema del fòrum "%s" informat per %s';
+$string['objectionablecontentposthtml'] = '<div style="padding: 0.5em 0; border-bottom: 1px solid #999;">Contingut censurable sobre el tema del fòrum "%s" informat per %s
+<br>%s</div>
 
-El contingut de l\'entrada amb objeccions era:
-%s';
-$string['objectionablepostdeletedsubject'] = 'L\'entrada amb objeccions al fil de fòrum "%s" ha estat esborrada per %s.';
-$string['objectionabletopicdeletedbody'] = '%s ha estudiat el fil de fòrum de %s que havia estat informat com "amb objeccions" i l\'ha esborrat.
+<div style="margin: 1em 0;">%s</div>
 
-El contingut del fil de fòrum amb objeccions era:
+<div style="padding: 0.5em 0; border-bottom: 1px solid #999;">El contingut de la publicació censurable és:
+<br>%s</div>
+
+<div style="margin: 1em 0;">%s</div>
+
+<div style="font-size: smaller; border-top: 1px solid #999;">
+<p>La queixa es refereix a: <a href="%s">%s</a></p>
+<p>Informat per: <a href="%s">%s</a></p>
+</div>';
+$string['objectionablecontentposttext'] = 'Contingut censurable sobre el tema del fòrum "%s" informat per %s
+%s
+-------------------------------------------------- -----------------------
+
+%s
+
+-------------------------------------------------- -----------------------
+
+El contingut de la publicació censurable és:
+%s
+-------------------------------------------------- -----------------------
+
+%s
+
+-------------------------------------------------- ----------------------
+Per veure la publicació, segueix aquest enllaç:
+%s
+Per veure el perfil del periodista, segueix aquest enllaç:
 %s';
-$string['objectionabletopicdeletedsubject'] = 'El fil de fòrum amb objeccions "%s" ha estat esborrat per %s.';
-$string['postaftertimeout'] = 'Heu fet el  canvi un cop superat el temps d\'espera de % s minuts. El canvi no s\'ha pogut aplicar.';
-$string['postbyuserwasdeleted'] = 'S\'ha esborrat l\'entrada de %s';
-$string['postdelay'] = 'Retard de l\'entrada';
-$string['postdelaydescription'] = 'El temps mínim en minuts que ha de passar abans que s\\enviï un correu amb una entrada nova als subscriptors del fòrum.  L\'autor d\'una entrada encara la podrà editar durant aquest temps.';
-$string['postedin'] = '%s ha fet una entrada a %s';
-$string['postnotobjectionable'] = 'S\'ha reportat que aquesta entrada té contingut amb objeccions. Si no fos el cas podeu clicar el botó per eliminar aquest avís i notificar als altres administradors.';
-$string['postnotobjectionablebody'] = '%s ha estudiat l\'entrada de %s i l\'ha marcada com que ja no conté material amb objeccions.';
-$string['postnotobjectionablesubject'] = '%s ha determinat que l\'entrada del fòrum al tema "%s" no té objeccions';
-$string['postnotobjectionablesubmit'] = 'No té objeccions';
-$string['postnotobjectionablesuccess'] = 'L\'entrada s\'ha marcat com sense objeccions';
-$string['postobjectionable'] = 'Heu informat que aquesta entrada al fòrum té contingut amb objeccions';
-$string['postreply'] = 'Resposta a l\'entrada';
-$string['postsbyuserweredeleted'] = 'S\'han eliminat %s missatges de %s';
-$string['postsvariable'] = 'Entrades: %s';
-$string['potentialmoderators'] = 'Moderadors en potència';
+$string['objectionablepostdeletedbody'] = '%s ha mirat la publicació de %s que es va informar anteriorment com a censurable i l\'ha suprimit.
+
+L’objecció del contingut de la publicació era:
+%s';
+$string['objectionablepostdeletedsubject'] = 'Missatge objectable en el tema del fòrum "%s" va ser esborrat per %s.';
+$string['objectionabletopicdeletedbody'] = '%s ha examinat el tema per %s que s\'ha informat anteriorment com a objectable i l\'ha suprimit.
+
+El contingut objectable del tema era:
+%s';
+$string['objectionabletopicdeletedsubject'] = '%s ha suprimit el tema discutible del fòrum "%s".';
+$string['orderdescription'] = 'Tria en quina posició apareixerà aquest fòrum a la llista de fòrums';
+$string['pluginname'] = 'Fòrum';
+$string['postaftertimeout'] = 'Has enviat el canvi un cop superat el temps d\'espera de % s minuts. El canvi no s\'ha pogut aplicar.';
+$string['postapprovesuccessful'] = 'Publicació aprovada';
+$string['postbyuserwasdeleted'] = 'S\'ha suprimit una publicació de %s';
+$string['postdelay'] = 'Retard de publicació';
+$string['postdelaydescription'] = 'El temps mínim (en minuts) que ha de passar abans que es pugui enviar un missatge nou als subscriptors del fòrum. L\'autor d\'una publicació pot fer modificacions durant aquest temps.';
+$string['postedin'] = '%s publicat a %s';
+$string['postneedapprovalbody'] = '%s ha publicat al fòrum "%s" i està esperant moderació.
+
+El contingut de la publicació és:
+%s';
+$string['postneedapprovalhtml'] = '<div style="padding: 0.5em 0; border-bottom: 1px solid #999;">Una publicació nova de "%s" al fòrum "%s" necessita moderació.
+
+<div style="padding: 0.5em 0; border-bottom: 1px solid #999;">El contingut de la publicació és:
+<br>%s</div>
+
+<div style="margin: 1em 0;">%s</div>
+
+<div style="font-size: smaller; border-top: 1px solid #999;">
+<p>Publicat per: <a href="%s">%s</a></p>
+</div>';
+$string['postneedapprovalsubject'] = 'La nova publicació necessita moderació al fòrum "%s"';
+$string['postneedapprovaltext'] = 'Una publicació nova de "%s" al fòrum "%s" necessita moderació.
+%s
+-------------------------------------------------- -----------------------
+
+El contingut de la publicació és:
+%s
+-------------------------------------------------- -----------------------
+Per anar a la publicació del fòrum segueix aquest enllaç:
+%s';
+$string['postnotapprovederror'] = 'S\'ha produït un error en intentar marcar la publicació com a aprovada';
+$string['postnotobjectionable'] = 'S\'ha informat que aquesta publicació conté contingut censurable. Si no és així, pots fer clic al botó per eliminar aquest avís i notificar-ho als altres administradors.';
+$string['postnotobjectionablebody'] = '%s ha mirat la publicació per %s i l\'ha marcat com que ja no conté material censurable.';
+$string['postnotobjectionablesubject'] = 'La publicació al tema del fòrum "%s" ha estat marcada com a no censurable per %s.';
+$string['postnotobjectionablesubmit'] = 'No desagradable';
+$string['postnotobjectionablesuccess'] = 'La publicació s\'ha marcat com a no censurable.';
+$string['postobjectionable'] = 'Aquesta publicació ha estat reportada per tu com a contingut censurable.';
+$string['postreply'] = 'Resposta al missatge';
+$string['postsandreplies'] = 'Publicacions i respostes';
+$string['postsbyuserweredeleted'] = 'S\'han suprimit %s publicacions de %s';
+$string['postsvariable'] = 'Publicacions: %s';
+$string['potentialmoderators'] = 'Moderadors potencials';
 $string['re'] = 'Re: %s';
-$string['regulartopics'] = 'Temes regulars';
+$string['reasonempty'] = ' El camp Raó no pot estar buit';
+$string['regulartopics'] = 'Temes habituals';
+$string['rejectedpostbody'] = '%s ha mirat la publicació de %s esperant l\'aprovació i l\'ha suprimit.
+
+Motiu de rebuig:
+%s
+
+El contingut de la publicació era:
+%s';
+$string['rejectedposthtml'] = '<div style="padding: 0.5em 0; border-bottom: 1px solid #999;">Contingut censurable sobre el tema del fòrum "%s" informat per %s
+<br>%s</div>
+
+<div style="margin: 1em 0;">%s</div>
+
+<div style="padding: 0.5em 0; border-bottom: 1px solid #999;">El contingut de la publicació censurable és:
+<br>%s</div>
+
+<div style="margin: 1em 0;">%s</div>
+
+<div style="font-size: smaller; border-top: 1px solid #999;">
+<p>La queixa es refereix a: <a href="%s">%s</a></p>
+<p>Informat per: <a href="%s">%s</a></p>
+</div>';
+$string['rejectedpostsubject'] = 'Publicació del fòrum rebutjada al fòrum "%s"';
+$string['rejectedposttext'] = 'Publicació del fòrum rebutjada al fòrum "%s" per "%s"
+%s
+-------------------------------------------------- -----------------------
+
+%s
+
+-------------------------------------------------- -----------------------
+
+El contingut de la publicació rebutjat és:
+%s
+-------------------------------------------------- -----------------------
+
+%s
+
+-------------------------------------------------- ----------------------
+La publicació ha estat esborrada, per anar al fòrum seguiu aquest enllaç:
+%s
+Per veure el perfil del periodista, segueix aquest enllaç:
+%s';
+$string['rejectpost'] = 'Rebutja la publicació';
+$string['rejectpostsuccess'] = 'La publicació s\'ha eliminat';
+$string['replies'] = 'Respostes';
 $string['replyforumpostnotificationsubjectline'] = 'Re: %s';
 $string['replyto'] = 'Respon a: ';
-$string['reporteddetails'] = 'Detalls de l\'informe';
-$string['reportedpostdetails'] = '<b>Informat per %s a %s:</b><p>%s</p>';
+$string['reporteddetails'] = 'Detalls informats';
+$string['reportedpostdetails'] = '<strong>Informat per %s el %s:</strong><p>%s</p>';
 $string['reportobjectionablematerial'] = 'Informe';
-$string['reportpost'] = 'Informe de l\'entrada';
-$string['reportpostsuccess'] = 'S\'ha informat correctament sobre l\'entrada';
-$string['sendnow'] = 'Envieu ara un misstge';
-$string['sendnowdescription'] = 'Envieu un missatge immediatament en  lloc d\'esperar, com a mínim, %s minuts a enviar-lo.';
-$string['stickydescription'] = 'Els temes enganxosos es mostren sempre al capdamunt de la pàgina';
+$string['reportpost'] = 'Informar de la publicació';
+$string['reportpostsuccess'] = 'Publicació informada correctament';
+$string['sendnow'] = 'Envia el missatge ara';
+$string['sendnowdescription'] = 'Envia el missatge immediatament en lloc d\'esperar almenys %s minuts perquè s\'enviï.';
+$string['stickydescription'] = 'Els temes enganxosos es mostren a la part superior de totes les pàgines';
 $string['stickytopics'] = 'Temes enganxosos';
-$string['strftimerecentfullrelative'] = '%%v, %%l:%%M %%p';
+$string['strftimerecentfullrelative'] = '%%v, %%k:%%M';
 $string['strftimerecentrelative'] = '%%v, %%k:%%M';
-$string['subscribetoforum'] = 'Subscriu-me al fòrum';
-$string['subscribetotopic'] = 'Subscriu-me al tema';
-$string['timeleftnotice'] = 'Us queden  %s minuts per acabar d\'editar.';
+$string['subscribetoforum'] = 'Subscriu-te al fòrum';
+$string['subscribetotopic'] = 'Subscriu-te al tema';
+$string['timeleftnotice1'] = 'Tens <span class="num">%s</span> minuts per acabar d\'editar.';
+$string['timeleftnoticeexpired'] = 'S\'ha acabat el temps d\'edició. Els teus canvis no es desaran.';
+$string['timeleftnoticeexpiredmoderator'] = 'Els teus canvis es desaran ara amb un avís d\'edició.';
 $string['today'] = 'Avui';
-$string['topicclosedsuccess'] = 'S\'han tancat correctament els temes';
-$string['topicisclosed'] = 'Aquest tema està tancat. Només els moderadors i el propietari del grup poden donar noves respostes.';
+$string['topicclosedsuccess'] = 'Els temes s\'han tancat correctament';
+$string['topicisclosed'] = 'Aquest tema està tancat. Només els moderadors i el propietari del grup poden publicar noves respostes.';
 $string['topiclower'] = 'tema';
 $string['topicmovedsuccess'] = array(
     0 => 'S\'ha mogut el tema satisfactòriament .',
     1 => 'S\'han mogut %d temes satisfactòriament .',
 );
-$string['topicopenedsuccess'] = 'S\'han obert correctament els temes';
+$string['topicopenedsuccess'] = 'Els temes s\'han obert correctament';
 $string['topicslower'] = 'temes';
-$string['topicstickysuccess'] = 'S\'han fixat correctament els temes com enganxosos';
-$string['topicsubscribesuccess'] = 'Us heu subscrit correctament als temes';
-$string['topicsuccessfulunsubscribe'] = 'S\'ha anul·lat satisfactòriament la vostra subscripció al tema.';
-$string['topicunstickysuccess'] = 'S\'ha fixat correctament el tem com a no enganxós';
-$string['topicunsubscribesuccess'] = 'Heu deixat d\'estar subscrit als temes correctament';
-$string['topicupdatefailed'] = 'No s\'han pogut actualitzar els temes';
-$string['typenewpost'] = 'Crea una nova entrada al fòrum';
-$string['typereportpost'] = 'Contingut amb objeccions al fòrum';
-$string['unsubscribefromforum'] = 'Anul·la la subscripció per al fòrum';
-$string['unsubscribefromtopic'] = 'Anul·la la subscripció per al tema';
+$string['topicstickysuccess'] = 'Temes establerts com a enganxosos correctament';
+$string['topicsubscribesuccess'] = 'Temes subscrits correctament';
+$string['topicsuccessfulunsubscribe'] = 'Tema cancel·lat correctament';
+$string['topicunstickysuccess'] = 'Tema desactivat com a enganxós correctament';
+$string['topicunsubscribesuccess'] = 'Temes cancel·lats correctament';
+$string['topicupdatefailed'] = 'Actualització dels temes ha fallat';
+$string['typenewpost'] = 'Nou missatge al fòrum';
+$string['typepostmoderation'] = 'Moderació del fòrum';
+$string['typereportpost'] = 'Contingut censurable al fòrum';
+$string['unsubscribefromforum'] = 'Cancel·la subscripció del fòrum';
+$string['unsubscribefromtopic'] = 'Cancel·la subscripció del tema';
 $string['updateselectedtopics'] = 'Actualitza els temes seleccionats';
-$string['whocancreatetopics'] = 'Qui pot crear temes nous';
+$string['whocancreatetopics'] = 'Qui pot crear temes';
 $string['yesterday'] = 'Ahir';
-$string['youarenotsubscribedtothisforum'] = 'No esteu subscrit a aquest fòrum.';
-$string['youarenotsubscribedtothistopic'] = 'No esteu subscrit a aquest tema.';
-$string['youcannotunsubscribeotherusers'] = 'No podeu anul·lar la subscripció dels altres usuaris';
+$string['youarenotsubscribedtothisforum'] = 'No estàs subscrit a aquest fòrum';
+$string['youarenotsubscribedtothistopic'] = 'No estàs subscrit a aquest tema';
+$string['youcannotunsubscribeotherusers'] = 'No pots cancel·lar la subscripció dels altres';

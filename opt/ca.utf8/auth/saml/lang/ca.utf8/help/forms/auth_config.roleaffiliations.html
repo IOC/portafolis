@@ -1,0 +1,12 @@
+<!-- @llicència http://www.gnu.org/copyleft/gpl.html GNU GPL versió 3 o posterior --> 
+<!-- @copyright Per a la informació de copyright sobre Mahara, consulta el fitxer README distribuït amb aquest programari. --> 
+<h1>Camp SAML 2.0 per a rols d'afiliació</h1>
+<p>El proveïdor d'identitat (IdP) pot transmetre informació sobre la funció d'afiliació als titulars del compte. Aquest camp funciona conjuntament amb</p>
+    <ul>
+      <li>Camp SSO per als identificadors d'afiliació</li>
+      <li>Camp SSO per a correus electrònics d'afiliació</li>
+      <li>Camp SSO per al delimitador de rols d'afiliació</li>
+    </ul>
+
+<p>Si configures això, el "Caràcter delimitador de rols" i els camps obligatoris "Mapa de rols", a la persona se li concediran els rols associats a les institucions indicades a la matriu de rols d'afiliació que s'ha passat.</p>
+<p>Per exemple, si les associacions de rols transmeses són "staffmember@institution_a" i "administrator@institution_b" i el mapa de rols per a "Personal de la institució" és "staffmember" i per a "Administrador de la institució" és "administrador", llavors serà un membre del personal de la institució a la institució_a i un administrador de la institució a la institució_b.</p>

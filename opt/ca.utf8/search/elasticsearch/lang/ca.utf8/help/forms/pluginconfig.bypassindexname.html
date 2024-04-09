@@ -1,0 +1,10 @@
+<!-- @llicència http://www.gnu.org/copyleft/gpl.html GNU GPL versió 3 o posterior -->
+<!-- @copyright Per obtenir informació sobre els drets d'autor sobre Mahara, consulta el fitxer README distribuït amb aquest programari. -->
+<h1>Ometre el nom de l'índex</h1>
+
+<p>La majoria de vegades, aquesta configuració s'ha de deixar en blanc.</p>
+<p>Si s'emplena aquesta configuració, Mahara carregarà dades d'índex noves a l'índex Elasticsearch d'aquest nom mentre encara recupera els resultats de la cerca de l'índex Elasticsearch emmagatzemat al camp "Nom de l'índex".</p>
+<p>Si vols reindexar tot el lloc en un índex nou, però no vols reduir la teva capacitat de cerca actual fins que acabi la reindexació, pots utilitzar aquest camp per apuntar el cron de reindexació a un nou índex, mentre la cerca la funcionalitat continua utilitzant l'índex antic.</p>
+<p>Una vegada que la cua estigui buida, copia el nom d'aquest índex a la variable <code>$cfg->plugin_search_elasticsearch_indexname</code> al teu config.php.</p>
+<p>Aquesta configuració no es pot canviar mitjançant la interfície web. Pots canviar-lo establint un valor al fitxer config.php per a la següent variable de configuració:</p>
+<p><code>$cfg->plugin_search_elasticsearch_bypassindexname</code>.</p>

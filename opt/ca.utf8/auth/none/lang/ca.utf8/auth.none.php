@@ -2,5 +2,5 @@
 
 defined('INTERNAL') || die();
 
-$string['description'] = 'Qualsevol es pot registrar. Useu-lo només per a proves!';
+$string['description'] = 'Qualsevol pot entrar. Això no funciona en mode de producció!';
 $string['title'] = 'Cap';

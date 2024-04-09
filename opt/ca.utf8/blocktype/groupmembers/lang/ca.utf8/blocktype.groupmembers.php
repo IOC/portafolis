@@ -2,13 +2,13 @@
 
 defined('INTERNAL') || die();
 
-$string['Latest'] = 'Darrers';
+$string['Latest'] = 'Última';
 $string['Random'] = 'Aleatori';
-$string['defaulttitledescription'] = 'Si deixeu el camp del Títol en blanc se\'n generarà un per defecte';
-$string['description'] = 'Mostra la llista de membres d\'aquest  Grup';
-$string['options_numtoshow_desc'] = 'Nombre de membres que voleu mostrar.';
-$string['options_numtoshow_title'] = 'Mostra els members';
-$string['options_order_desc'] = 'Podeu mostrar els darrers membres del grup o una selecció aleatòria.';
+$string['defaulttitledescription'] = 'Si deixes el camp del títol en blanc se\'n generarà un per defecte.';
+$string['description'] = 'Mostra la llista de membres d\'aquest grup';
+$string['options_numtoshow_desc'] = 'El nombre de membres que vols mostrar.';
+$string['options_numtoshow_title'] = 'Membres mostrats';
+$string['options_order_desc'] = 'Pots mostrar els últims membres del grup o una selecció aleatòria.';
 $string['options_order_title'] = 'Ordre';
-$string['show_all'] = 'Mostra tots el membres d\'aquest  Grup';
-$string['title'] = 'Mmembres del Grup';
+$string['show_all'] = 'Mostra tots el membres d\'aquest grup';
+$string['title'] = 'Membres del grup';
