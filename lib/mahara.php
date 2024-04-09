@@ -602,6 +602,12 @@ function get_string_location($identifier, $section, $variables, $replacefunc='fo
 
     // Then check the default location for the string in the current language
     $result = get_string_local($langstringroot . $langdirectory, $lang . '/' . $section . '.php', $identifier);
+    // PATCH IOC007
+    // ADDED
+    if ($result === false) {
+        $result = get_string_local(get_config('docroot') . $langdirectory, $lang . '/' . $section . '.php', $identifier);
+    }
+    // FI PATCH
     if ($result !== false) {
         return $replacefunc($result, $variables, $lang);
     }
