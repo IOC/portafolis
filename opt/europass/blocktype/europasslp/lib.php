@@ -5,7 +5,7 @@
  * @subpackage blocktype-europasslp
  * @author     Gregor Anzelj
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL
- * @copyright  (C) 2009-2017 Gregor Anzelj, gregor.anzelj@gmail.com
+ * @copyright  (C) 2009-2022 Gregor Anzelj, gregor.anzelj@gmail.com
  *
  */
 
@@ -24,7 +24,7 @@ class PluginBlocktypeEuropassLP extends MaharaCoreBlocktype {
     }
 
     public static function get_css_icon($blocktypename) {
-        return 'euro';
+        return 'euro-sign';
     }
 
     public static function get_categories() {
@@ -47,17 +47,18 @@ class PluginBlocktypeEuropassLP extends MaharaCoreBlocktype {
 
         $options = array(
             'embed' => true,
-            'lang' => $locale,
+            'locale' => $locale,
+            'profilepic' => $profilepic,
         );
         $html = generate_europass_html(array('elp'), $options, $owner);
         return $html;
     }
 
-    public static function has_instance_config() {
+    public static function has_instance_config(BlockInstance $instance) {
         return true;
     }
 
-    public static function instance_config_form($instance) {
+    public static function instance_config_form(Blockinstance $instance) {
         $configdata = $instance->get('configdata');
         $locale = (isset($configdata['locale']) ? $configdata['locale'] : get_config('lang'));
 
@@ -75,12 +76,12 @@ class PluginBlocktypeEuropassLP extends MaharaCoreBlocktype {
         return $values;
     }
 
-    public static function default_copy_type() {
+    public static function default_copy_type(BlockInstance $instance, View $view) {
         return 'shallow';
     }
 
     /**
-     * EuropassLP blocktype is only allowed in personal views, because 
+     * EuropassLP blocktype is only allowed in personal views, because
      * there's no such thing as group/site Europass CV
      */
     public static function allowed_in_view(View $view) {

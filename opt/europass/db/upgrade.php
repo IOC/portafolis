@@ -5,7 +5,7 @@
  * @subpackage artefact-europass
  * @author     Gregor Anzelj
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL
- * @copyright  (C) 2009-2017 Gregor Anzelj, gregor.anzelj@gmail.com
+ * @copyright  (C) 2009-2022 Gregor Anzelj, gregor.anzelj@gmail.com
  *
  */
 
@@ -227,8 +227,29 @@ function xmldb_artefact_europass_upgrade($oldversion=0) {
     }
     
     if ($oldversion < 2017020107) {
-        // Current date and time of this update
-        $current = date('Y-m-d H:i:s');
+        ini_set('max_execution_time', 600); // 600 seconds = 10 minutes
+
+        // Last IDs in the 'artefact', 'artefact_europass_otherlanguage',
+        // 'artefact_europass_languagediploma' and 'artefact_europass_languageexperience'
+        // tables before the upgrade
+        $lastid = new StdClass();
+        $lastid->artefact = 0;
+        $lastid->otherlanguage = 0;
+        $lastid->languagediploma = 0;
+        $lastid->languageexperience = 0;
+
+        if ($record = get_record_sql("SELECT id FROM {artefact} ORDER BY id DESC LIMIT 1")) {
+            $lastid->artefact = $record->id;
+        }
+        if ($record = get_record_sql("SELECT id FROM {artefact_europass_otherlanguage} ORDER BY id DESC LIMIT 1")) {
+            $lastid->otherlanguage = $record->id;
+        }
+        if ($record = get_record_sql("SELECT id FROM {artefact_europass_languagediploma} ORDER BY id DESC LIMIT 1")) {
+            $lastid->languagediploma = $record->id;
+        }
+        if ($record = get_record_sql("SELECT id FROM {artefact_europass_languageexperience} ORDER BY id DESC LIMIT 1")) {
+            $lastid->languageexperience = $record->id;
+        }
 
         // Remove unused artefacts and artefact types (previously installed!)
         // First remove references from 'view_artefact' table...
@@ -279,156 +300,151 @@ function xmldb_artefact_europass_upgrade($oldversion=0) {
         // Convert 'computerskill' artefacts to 'digitalcompetence' artefacts
         $sql = 'SELECT * FROM {artefact} WHERE artefacttype = ?';
         $artefacts = get_records_sql_array($sql, array('computerskill'));
-        foreach ($artefacts as $artefact) {
-            $data = array(
-                'artefacttype' => 'digitalcompetence',
-                'title' => get_string('digitalcompetence', 'artefact.europass'),
-            );
-            update_record('artefact', $data, array('id' => $artefact->id));
+        if ($artefacts) {
+            foreach ($artefacts as $artefact) {
+                $data = array(
+                    'artefacttype' => 'digitalcompetence',
+                    'title' => get_string('digitalcompetence', 'artefact.europass'),
+                );
+                update_record('artefact', $data, array('id' => $artefact->id));
+            }
+            execute_sql("DELETE FROM {artefact_installed_type} WHERE name = 'computerskill'");
         }
-        execute_sql("DELETE FROM {artefact_installed_type} WHERE name = 'computerskill'");
 
         // Drop 'artefact_europass_mothertongue' table, since mother tongue(s)
         // are simple artefacts and do not need aditional table. Mother tongue
         // abbreviations will be stored as 'description' in 'artefact' table.
-        $sql = "
-            SELECT a.owner, a.author, mt.language AS lang
-            FROM {artefact} a LEFT JOIN {artefact_europass_mothertongue} mt ON mt.artefact = a.id
-            WHERE a.artefacttype = 'mothertongue'";
+        $sql = "SELECT * FROM {artefact_europass_mothertongue}";
         $languages = get_records_sql_array($sql);
-        foreach ($languages as $language) {
-            $a = new ArtefactTypeMothertongue();
-            $a->set('description', $language->lang);
-            $a->set('owner', $language->owner);
-            $a->set('author', $language->author);
-            $a->commit();
+
+        if ($languages) {
+            foreach ($languages as $language) {
+                $data = array(
+                    'id' => $language->artefact,
+                    'description' => $language->language
+                );
+                update_record('artefact', (object)$data);
+            }
         }
+
+        // Drop 'artefact_europass_mothertongue' table 
         $table = new XMLDBTable('artefact_europass_mothertongue');
         if (table_exists($table)) {
             drop_table($table);
         }
 
-        // Delete orphan references from view_artefact
-        execute_sql("DELETE va.*
-                    FROM {artefact} a
-                    JOIN {view_artefact} va ON va.artefact=a.id
-                    WHERE a.artefacttype = ?
-                    AND a.ctime < ?", array('mothertongue', $current));
-        // Delete all old 'mothertongue' artefacts
-        delete_records_select('artefact', 'artefacttype = ? AND ctime < ?', array('mothertongue', $current));
-
-
-        // Rename table 'artefact_europass_languagediploma' to 'artefact_europass_certificate'.
-        $table = new XMLDBTable('artefact_europass_languagediploma');
-        rename_table($table, 'artefact_europass_certificate');
-
-
-        // Get existing data about other languages, that meansthe following:
+        // Get existing data about other languages, that means the following:
         // 'otherlanguage', 'languagediploma' and 'languageexperience' artefacts
         $sql = "
             SELECT l.*, a.author AS author, a.owner AS owner
             FROM {artefact_europass_otherlanguage} l LEFT JOIN {artefact} a ON l.artefact = a.id
             WHERE a.artefacttype = 'otherlanguage'";
         $languages = get_records_sql_array($sql);
-        foreach ($languages as $language) {
-            $langid = $language->id;
-            $c = get_records_sql_array("SELECT * FROM {artefact_europass_certificate} WHERE languageid = $langid");
-            $language->certificates = $c;
-            $e = get_records_sql_array("SELECT * FROM {artefact_europass_languageexperience} WHERE languageid = $langid");
-            $language->experiences = $e;
-        }
-
-        // Delete all 'languagediploma' artefacts and
-        // empty table {artefact_europass_certificate}
-        $ids = get_column('artefact_europass_certificate', 'artefact');
-        execute_sql("DELETE FROM {artefact_europass_certificate}");
-        if (!empty($ids)) {
-            execute_sql("DELETE FROM {view_artefact} WHERE artefact IN (" . join(',', $ids) . ")");
-            execute_sql("DELETE FROM {artefact} WHERE id IN (" . join(',', $ids) . ")");
-        }
-
-        // Delete all 'languageexperience' artefacts and
-        // empty table {artefact_europass_languageexperience}
-        $ids = get_column('artefact_europass_languageexperience', 'artefact');
-        execute_sql("DELETE FROM {artefact_europass_languageexperience}");
-        if (!empty($ids)) {
-            execute_sql("DELETE FROM {view_artefact} WHERE artefact IN (" . join(',', $ids) . ")");
-            execute_sql("DELETE FROM {artefact} WHERE id IN (" . join(',', $ids) . ")");
-        }
-
-        // Delete all 'otherlanguage' artefacts
-        $ids = get_column('artefact', 'id', 'artefacttype', 'otherlanguage');
-        execute_sql("DELETE FROM {artefact_europass_otherlanguage}");
-        if (!empty($ids)) {
-            execute_sql("DELETE FROM {view_artefact} WHERE artefact IN (" . join(',', $ids) . ")");
-            execute_sql("DELETE FROM {artefact} WHERE id IN (" . join(',', $ids) . ")");
+        
+        if ($languages) {
+            foreach ($languages as $language) {
+                $langid = $language->id;
+                $c = get_records_sql_array("SELECT * FROM {artefact_europass_languagediploma} WHERE languageid = $langid");
+                $language->certificates = $c;
+                $e = get_records_sql_array("SELECT * FROM {artefact_europass_languageexperience} WHERE languageid = $langid");
+                $language->experiences = $e;
+            }
         }
 
         // Create new 'otherlanguage' artefacts
-        foreach ($languages as $language) {
-            $a = new ArtefactTypeOtherlanguage();
-            $a->set('owner', $language->owner);
-            $a->set('author', $language->author);
-            $a->set('container', 1);
-            $a->set('description', $language->language);
-            $a->commit();
-            // Add data to supporting table
-            $lang = new StdClass();
-            $lang->artefact = $a->get('id');
-            $lang->language = $language->language;
-            $lang->listening = $language->listening;
-            $lang->reading = $language->reading;
-            $lang->spokeninteraction = $language->spokeninteraction;
-            $lang->spokenproduction = $language->spokenproduction;
-            $lang->writing = $language->writing;
-            $lang->displayorder = $language->displayorder;
-            $langid = insert_record('artefact_europass_otherlanguage', $lang, 'id', true);
+        $pairs = array();
+        if ($languages) {
+            foreach ($languages as $language) {
+                $a = new ArtefactTypeOtherlanguage();
+                $a->set('owner', $language->owner);
+                $a->set('author', $language->author);
+                $a->set('container', 1);
+                $a->set('description', $language->language);
+                $a->commit();
+                $pairs[$language->artefact] = $a->get('id');
+                // Add data to supporting table
+                $lang = new StdClass();
+                $lang->artefact = $a->get('id');
+                $lang->language = $language->language;
+                $lang->listening = $language->listening;
+                $lang->reading = $language->reading;
+                $lang->spokeninteraction = $language->spokeninteraction;
+                $lang->spokenproduction = $language->spokenproduction;
+                $lang->writing = $language->writing;
+                $lang->displayorder = $language->displayorder;
+                $langid = insert_record('artefact_europass_otherlanguage', $lang, 'id', true);
 
-            // Create 'languagediploma' artefacts
-            if (!empty($language->certificates)) {
-                foreach ($language->certificates as $cert) {
-                    $c = new ArtefactTypeLanguagediploma();
-                    $c->set('owner', $language->owner);
-                    $c->set('author', $language->author);
-                    $c->set('parent', $a->get('id'));
-                    $c->commit();
-                    // Add data to supporting table
-                    $data = new StdClass();
-                    $data->artefact = $c->get('id');
-                    $data->languageid = $langid; // will be removed later, bound with foreign key
-                    $data->certificate = $cert->certificate;
-                    $data->awardingbody = $cert->awardingbody;
-                    $data->certificatedate = strtotime($cert->certificatedate);
-                    $data->europeanlevel = $cert->europeanlevel;
-                    $data->displayorder = $cert->displayorder;
-                    insert_record('artefact_europass_certificate', $data);
+                // Create 'languagediploma' artefacts
+                if (!empty($language->certificates)) {
+                    foreach ($language->certificates as $cert) {
+                        $c = new ArtefactTypeLanguagediploma();
+                        $c->set('owner', $language->owner);
+                        $c->set('author', $language->author);
+                        $c->set('parent', $a->get('id'));
+                        $c->commit();
+                        // Add data to supporting table
+                        $data = new StdClass();
+                        $data->artefact = $c->get('id');
+                        $data->languageid = $langid; // will be removed later, bound with foreign key
+                        $data->certificate = $cert->certificate;
+                        $data->awardingbody = $cert->awardingbody;
+                        $data->certificatedate = strtotime($cert->certificatedate);
+                        $data->europeanlevel = $cert->europeanlevel;
+                        $data->displayorder = $cert->displayorder;
+                        insert_record('artefact_europass_languagediploma', $data);
+                    }
                 }
-            }
 
-            // Create 'languageexperience' artefacts
-            if (!empty($language->experiences)) {
-                foreach ($language->experiences as $exp) {
-                    $e = new ArtefactTypeLanguageexperience();
-                    $e->set('owner', $language->owner);
-                    $e->set('author', $language->author);
-                    $e->set('parent', $a->get('id'));
-                    $e->commit();
-                    // Add data to supporting table
-                    $data = new StdClass();
-                    $data->artefact = $e->get('id');
-                    $data->languageid = $langid; // will be removed later, bound with foreign key
-                    $data->startdate = strtotime($exp->startdate);
-                    $data->enddate = strtotime($exp->enddate);
-                    $data->description = $exp->description;
-                    $data->displayorder = $exp->displayorder;
-                    insert_record('artefact_europass_languageexperience', $data);
+                // Create 'languageexperience' artefacts
+                if (!empty($language->experiences)) {
+                    foreach ($language->experiences as $exp) {
+                        $e = new ArtefactTypeLanguageexperience();
+                        $e->set('owner', $language->owner);
+                        $e->set('author', $language->author);
+                        $e->set('parent', $a->get('id'));
+                        $e->commit();
+                        // Add data to supporting table
+                        $data = new StdClass();
+                        $data->artefact = $e->get('id');
+                        $data->languageid = $langid; // will be removed later, bound with foreign key
+                        $data->startdate = strtotime($exp->startdate);
+                        $data->enddate = strtotime($exp->enddate);
+                        $data->description = $exp->description;
+                        $data->displayorder = $exp->displayorder;
+                        insert_record('artefact_europass_languageexperience', $data);
+                    }
                 }
             }
         }
 
-        // Drop foreign key from 'artefact_europass_certificate' table, so it
+        // Update old ids of existing 'otherlanguage' artefacts
+        // to their new ids in 'view_artefact' table...
+        if (!empty($pairs)) {
+            $ids = array_keys($pairs);
+            $sql = "SELECT * FROM {view_artefact} WHERE artefact IN (" . join(',', $ids) . ")";
+            $artefacts = get_records_sql_array($sql);
+            foreach ($artefacts as $artefact) {
+                $data = array(
+                    'id' => $artefact->id,
+                    'artefact' => $pairs[$artefact->artefact]
+                );
+                update_record('view_artefact', (object)$data);
+            }
+        }
+
+        // Delete all old 'languagediploma' artefacts
+        execute_sql("DELETE FROM {artefact_europass_languagediploma} WHERE id <= " . $lastid->languagediploma);
+        execute_sql("DELETE FROM {artefact} WHERE artefacttype = 'languagediploma' AND id <= " . $lastid->artefact);
+        // Delete all old 'languageexperience' artefacts
+        execute_sql("DELETE FROM {artefact_europass_languageexperience} WHERE id <= " . $lastid->languageexperience);
+        execute_sql("DELETE FROM {artefact} WHERE artefacttype = 'languageexperience' AND id <= " . $lastid->artefact);
+        // Delete all old 'otherlanguage' artefacts
+        execute_sql("DELETE FROM {artefact_europass_otherlanguage} WHERE id <= " . $lastid->otherlanguage);
+        execute_sql("DELETE FROM {artefact} WHERE artefacttype = 'otherlanguage' AND id <= " . $lastid->artefact);
+
+        // Drop foreign key from 'artefact_europass_languagediploma' table, so it
         // can be compatible with 'otherlanguage' and 'digitalcompetence' artefacts.
-        $table = new XMLDBTable('artefact_europass_certificate');
+        $table = new XMLDBTable('artefact_europass_languagediploma');
         $key = new XMLDBKey('languagefk');
         $key->setAttributes(XMLDB_KEY_FOREIGN, array('languageid'), 'artefact_europass_otherlanguage', array('id'));
         drop_key($table, $key);
@@ -452,6 +468,11 @@ function xmldb_artefact_europass_upgrade($oldversion=0) {
         if (is_postgres()) {
             execute_sql('ALTER TABLE {artefact_europass_languageexperience} RENAME COLUMN description TO experience');
         }
+
+        // Rename table 'artefact_europass_languagediploma' to 'artefact_europass_certificate'.
+        $table = new XMLDBTable('artefact_europass_languagediploma');
+        rename_table($table, 'artefact_europass_certificate');
+
     }
 
     return $status;

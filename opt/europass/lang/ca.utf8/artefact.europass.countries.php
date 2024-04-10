@@ -5,7 +5,7 @@
  * @subpackage artefact-europass
  * @author     Gregor Anzelj
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL
- * @copyright  (C) 2009-2017 Gregor Anzelj, gregor.anzelj@gmail.com
+ * @copyright  (C) 2009-2022 Gregor Anzelj, gregor.anzelj@gmail.com
  *
  */
 
@@ -52,7 +52,6 @@ $string['country.cm'] = 'Cameroon';
 $string['country.cn'] = 'China';
 $string['country.co'] = 'Colombia';
 $string['country.cr'] = 'Costa Rica';
-$string['country.ct'] = 'Catalunya';
 $string['country.cu'] = 'Cuba';
 $string['country.cv'] = 'Cape Verde';
 $string['country.cy'] = 'Cyprus';
