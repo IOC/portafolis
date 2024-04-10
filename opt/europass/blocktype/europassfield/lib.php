@@ -5,7 +5,7 @@
  * @subpackage blocktype-mylanguages
  * @author     Gregor Anzelj
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL
- * @copyright  (C) 2009-2017 Gregor Anzelj, gregor.anzelj@gmail.com
+ * @copyright  (C) 2009-2022 Gregor Anzelj, gregor.anzelj@gmail.com
  *
  */
 
@@ -24,7 +24,7 @@ class PluginBlocktypeEuropassfield extends MaharaCoreBlocktype {
     }
 
     public static function get_css_icon($blocktypename) {
-        return 'euro';
+        return 'euro-sign';
     }
 
     public static function get_categories() {
@@ -67,20 +67,21 @@ class PluginBlocktypeEuropassfield extends MaharaCoreBlocktype {
             if (in_array($artefact, $artefacts)) {
                 if ($artefactid = get_field('artefact', 'id', 'artefacttype', $artefact, 'owner', $owner)) {
                     $a = artefact_instance_from_id($artefactid);
-                    $data = $a->render_self();
+                    $data = $a->render_self(array());
                     $smarty = smarty_core();
                     $smarty->assign('data', $data);
                     $result = $smarty->fetch('artefact:europass:blocktypes/europassfield.tpl');
                 }
             }
             if ($artefact == 'mothertongue') {
-                $data = get_mother_tongues(false, null, $owner);
+                $data = get_mother_tongues(false, get_config('lang'), $owner);
+				print_r($data);
                 $smarty = smarty_core();
                 $smarty->assign('data', $data);
                 $result = $smarty->fetch('artefact:europass:blocktypes/mothertongue.tpl');
             }
             if ($artefact == 'otherlanguage') {
-                $data = get_other_languages(false, null, $owner);
+                $data = get_other_languages(false, get_config('lang'), $owner);
                 $lang = set_default_locale(get_config('lang'));
                 $url = 'http://europass.cedefop.europa.eu/' . $lang . '/resources/european-language-levels-cefr';
                 $smarty = smarty_core();
@@ -108,11 +109,11 @@ class PluginBlocktypeEuropassfield extends MaharaCoreBlocktype {
         return '';
     }
 
-    public static function has_instance_config() {
+    public static function has_instance_config(BlockInstance $instance) {
         return true;
     }
 
-    public static function instance_config_form($instance) {
+    public static function instance_config_form(BlockInstance $instance) {
         $configdata = $instance->get('configdata');
 
         return array(
@@ -140,12 +141,12 @@ class PluginBlocktypeEuropassfield extends MaharaCoreBlocktype {
         return $values;
     }
 
-    public static function default_copy_type() {
+    public static function default_copy_type(BlockInstance $instance, View $view) {
         return 'shallow';
     }
 
     /**
-     * MyLanguages blocktype is only allowed in personal views, because 
+     * MyLanguages blocktype is only allowed in personal views, because
      * there's no such thing as group/site languages
      */
     public static function allowed_in_view(View $view) {

@@ -5,7 +5,7 @@
  * @subpackage artefact-europass
  * @author     Gregor Anzelj
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL
- * @copyright  (C) 2009-2017 Gregor Anzelj, gregor.anzelj@gmail.com
+ * @copyright  (C) 2009-2022 Gregor Anzelj, gregor.anzelj@gmail.com
  *
  * @translator Joan Queralt
  *
@@ -19,10 +19,10 @@ $string['europass'] = 'Europass';
 $string['europassartefactsaved'] = 'S\'ha desat correctament l\'Europass currículum vitae';
 $string['europassexportgenerated'] = 'Espereu mentre es genera l\'exportació...';
 
-$string['languagesaved'] = 'S\'ha desat correctament l\'idioma';
-$string['languagesavefailed'] = 'No s\'ha pogut desar l\'idioma';
-$string['languagedeleteconfirm'] = 'Esteu segur que voleu esborrar aquest idioma?';
-$string['languagedeleted'] = 'S\'ha eliminat correctament l\'idioma';
+$string['languagesaved'] = 'S\'ha desat correctament la llengua';
+$string['languagesavefailed'] = 'No s\'ha pogut desar la llengua';
+$string['languagedeleteconfirm'] = 'Esteu segur que voleu esborrar aquesta llengua?';
+$string['languagedeleted'] = 'S\'ha eliminat correctament la llengua';
 $string['languagediploma'] = 'Diploma d\'idioma';
 $string['languageexperience'] = 'Experiència lingüística';
 $string['languagediplomadeleteconfirm'] = 'Esteu segur que voleu esborrar aquest Diploma d\'idioma?';
@@ -37,26 +37,29 @@ $string['languageexperiencesavefailed'] = 'No s\'ha pogut desar l\'Experiència 
 // Export data from Mahara to Europass form...
 $string['exporteuropass'] = 'Exporta Europass';
 $string['exportstep1'] = '1 - Seleccioneu document';
-$string['attach'] = 'Adjuncions';
-$string['selectlocale'] = 'Idioma';
+$string['attach'] = 'Attachments';
+$string['selectlocale'] = 'Llengua';
 $string['exportstep2'] = '2 - Format del document';
 $string['selectdateformatdesc'] = 'Format de data usat a l\'exportació';
-$string['selectdateformatdesc2'] = 'Les dates es configuren segons l\'idioma seleccionat.';
+$string['selectdateformatdesc2'] = 'Dates are localised according to selected language.';
 $string['dateformat-numeric-medium'] = '31/1/2005';
 $string['dateformat-numeric-long'] = '31/01/2005';
-$string['dateformat-text-short'] = '31 Gen 2005';
-$string['dateformat-text-long'] = '31 Gener 2005';
+$string['dateformat-text-short'] = '31 Jan 2005';
+$string['dateformat-text-long'] = '31 January 2005';
 $string['exportfile'] = 'Fitxer';
-$string['pdf'] = 'Adobe® PDF + Europass XML';
+$string['pdf'] = 'Adobe® PDF';
 $string['doc'] = 'Microsoft® Word';
 $string['odt'] = 'OpenDocument';
 $string['html'] = 'HTML';
 $string['xml'] = 'Europass XML';
 $string['exportstep3'] = '3 - Exporta';
 $string['generateexport'] = 'Exporta';
-$string['generateexportdesc'] = 'Genereu el document Europass i descarregueu-lo al vostre ordinador.';
-$string['generaloptions'] = 'Opcions generals d\'exportació';
-$string['includelogo'] = 'Voleu incloure el logo Europass?';
+$string['generateexportdesc'] = 'Generate the Europass document and download it on your computer.';
+$string['generaloptions'] = 'General export options';
+$string['includelogo'] = 'Include Europass logo?';
+$string['template'] = 'Template';
+$string['template-classic'] = 'Classic';
+$string['template-modern-navy'] = 'Modern dark blue';
 
 // Import data from Europass XML to Mahara...
 $string['importeuropass'] = 'Importa Europass';
@@ -78,19 +81,19 @@ $string['importdate'] = 'Importeu dates en format';
 $string['europassimportexecuted'] = 'S\'han importat satisfactòriament a Mahara les dades d\'Europass XML.';
 
 // Europass ESP
-$string['skillsfolder'] = 'Passaport de competències';
-$string['skillsfolderdesc'] = 'Fitxers al document Europass de competències';
-$string['skillsfolderupload'] = 'Carrega fitxer';
-$string['skillsfolderuploadnotice'] = 'Creeu el Passaport de competències per compartir documents com ara el Passaport de llengües, el Certificat suplementari, còpies de títols o certificats, certificats d\'ocupació, etc.';
-$string['skillsfolderuploadmaxsize'] = '(Mida màxima de càrrega: 2.5 MB. Els documents carregats al Passaport de competències han de ser en format PNG, JPEG o PDF.)';
-$string['filenotaccepted'] = 'El document carregat ha de ser en format PNG, JPEG o PDF.';
-$string['fileuploadcomplete'] = 'S\'ha completat la càrrega del document.';
-$string['deletefile'] = 'Esborra el document';
-$string['deletefileconfirm'] = 'Esteu segur que voleu esborrar aquest document?';
-$string['filechangedsuccessfully'] = 'S\'ha canviat satisfactòriament el document.';
-$string['filedeletedsuccessfully'] = 'S\'ha esborrat satisfactòriament el document.';
-$string['editfile'] = 'Edita el document';
-$string['profilepicinclude'] = 'Voleu incloure la imatge del perfil?';
+$string['skillsfolder'] = 'Skills passport';
+$string['skillsfolderdesc'] = 'Files to document Europass skills';
+$string['skillsfolderupload'] = 'Upload file';
+$string['skillsfolderuploadnotice'] = 'Create your Skills passport to gather documents such as Language passport, Certificate supplement, copies of degrees or certificates, attestations of employment, etc.';
+$string['skillsfolderuploadmaxsize'] = '(Maximum upload size 2.5 MB. Documents uploaded to your Skills passport must be in PNG, JPEG or PDF format.)';
+$string['filenotaccepted'] = 'The uploaded document must be a PNG, JPEG or PDF file.';
+$string['fileuploadcomplete'] = 'Document upload complete.';
+$string['deletefile'] = 'Delete document';
+$string['deletefileconfirm'] = 'Are you sure you want to delete this document?';
+$string['filechangedsuccessfully'] = 'Document changed successfully.';
+$string['filedeletedsuccessfully'] = 'Document deleted successfully.';
+$string['editfile'] = 'Edit document';
+$string['profilepicinclude'] = 'Include profile picture?';
 
 // Included strings for labels, countries, languages and nationalities
 // ===================================================================
@@ -125,6 +128,7 @@ $string['workexperience'] = 'Experiència laboral';
 $string['education'] = 'Historial acadèmic';
 
 // Europass CV - STEP 5
+$string['languageskills'] = 'Habilitats lingüístiques';
 $string['mothertongue'] = 'Llengua materna';
 $string['otherlanguage'] = 'Altres llengües';
 
@@ -157,6 +161,7 @@ $string['otherskill'] = 'Altres habilitats i competències';
 $string['additionalinfo'] = 'Informació addicional';
 $string['category'] = 'Categoria';
 
+$string['digitalskills'] = 'Habilitats digitals';
 $string['digitalcompetence'] = 'Competència digital';
 $string['digitalcompetence-other'] = 'Altres competències informàtiques';
 $string['digitalcompetence-information'] = 'Tractament de la informació';
@@ -173,9 +178,9 @@ $string['digitalcompetence-level.C'] = 'Usuari competent (C)';
 $string['honors_awards'] = 'Premis i distincions';
 $string['publications'] = 'Publicacions';
 $string['presentations'] = 'Presentacions';
-$string['citations'] = 'Citacions';
+$string['citations'] = 'Cites';
 $string['projects'] = 'Projectes';
-$string['memberships'] = 'Pertinença a grups/associacions';
+$string['memberships'] = 'Pertinença grups/associacions';
 $string['seminars'] = 'Seminaris';
 $string['conferences'] = 'Conferències';
 $string['references'] = 'Referències';

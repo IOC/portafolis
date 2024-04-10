@@ -5,7 +5,7 @@
  * @subpackage artefact-europass
  * @author     Gregor Anzelj
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL
- * @copyright  (C) 2009-2017 Gregor Anzelj, gregor.anzelj@gmail.com
+ * @copyright  (C) 2009-2022 Gregor Anzelj, gregor.anzelj@gmail.com
  *
  */
  
@@ -20,18 +20,8 @@ define('TITLE', get_string('europass', 'artefact.europass'));
 define('SUBSECTIONHEADING', get_string('exporteuropass', 'artefact.europass'));
 safe_require('artefact', 'europass');
 
-$download = param_integer('dl', 0);
-
-if (!$download) {
-    // Unset SESSION values   
-    $SESSION->set('locale', '');
-    $SESSION->set('documenttype', '');
-    $SESSION->set('fileformat', '');
-    $SESSION->set('dateformat', '');
-    $SESSION->set('logo', '');
-    $SESSION->set('align', '');
-    $SESSION->set('profilepic', '');
-}
+require_once 'dompdf/autoload.inc.php';  
+use Dompdf\Dompdf; 
 
 
 $form = array(
@@ -41,8 +31,6 @@ $form = array(
     'pluginname' => 'europass',
     'template'   => 'form.php',
     'jsform'     => false,
-    'class'      => 'panel panel-default panel-body',
-    //'configdirs' => array(get_config('libroot') . 'form/', get_config('docroot') . 'artefact/file/form/'),
     'elements'   => array(
         'documenttype' => array(
             'type' => 'checkboxes', 
@@ -58,11 +46,6 @@ $form = array(
                     'value' => 'elp',
                     'defaultvalue' => false,
                 ),
-                array(
-                    'title' => get_string('esp-tab', 'artefact.europass'),
-                    'value' => 'esp',
-                    'defaultvalue' => false,
-                ),
             ),
         ),
         'fileformat' => array(
@@ -71,13 +54,14 @@ $form = array(
             'defaultvalue' => 'pdf',
             'options' => array(
                 'pdf'     => get_string('pdf', 'artefact.europass'),
-                'word'    => get_string('doc', 'artefact.europass'),
-                'opendoc' => get_string('odt', 'artefact.europass'),
+                //'word'    => get_string('doc', 'artefact.europass'),
+                //'opendoc' => get_string('odt', 'artefact.europass'),
                 'xml'     => get_string('xml', 'artefact.europass'),
                 'html'    => get_string('html', 'artefact.europass'),
             ),
         ),
-        'dateformat' => array(
+        /*
+		'dateformat' => array(
             'type' => 'select',
             'title' => get_string('selectdateformatdesc', 'artefact.europass'),
             'options' => array(
@@ -86,14 +70,16 @@ $form = array(
                 'text/short' => get_string('dateformat-text-short', 'artefact.europass'),
                 'text/long' => get_string('dateformat-text-long', 'artefact.europass'),
             ),
-            'description' => get_string('selectdateformatdesc2', 'artefact.europass'),
+            //'description' => get_string('selectdateformatdesc2', 'artefact.europass'),
             'defaultvalue' => 'numeric/long',
         ),
+		*/
         'locale' => array(
-            'type' => 'radio',
+            'type' => 'select',
             'title' => get_string('selectlocale', 'artefact.europass'),
-            'options' => getoptions_locales(),
-            'defaultvalue' => (isset($settings['lang']) ? hsc($settings['lang']) : set_default_locale(get_config('lang'))),
+            'options' => getoptions_full_locales(),
+            // Get first 2 characters from system language setting as the default value
+            'defaultvalue' => substr((isset($settings['lang']) ? hsc($settings['lang']) : get_config('lang')), 0, 2)
         ),
         'logo' => array(
             'type' => 'switchbox',
@@ -107,6 +93,15 @@ $form = array(
             'switchtext' => 'yesno',
             'defaultvalue' => (isset($settings['profilepic']) ? hsc($settings['profilepic']) : false),
         ),
+        'template' => array(
+            'type' => 'select',
+            'title' => get_string('template', 'artefact.europass'),
+            'options' => array(
+				'classic' => get_string('template-classic', 'artefact.europass'),
+				'modern-navy' => get_string('template-modern-navy', 'artefact.europass'),
+			),
+            'defaultvalue' => (isset($settings['template']) ? hsc($settings['template']) : 'classic'),
+        ),
         'submit' => array(
             'type' => 'submit',
             'value' => get_string('generateexport', 'artefact.europass'),
@@ -119,7 +114,7 @@ $form = pieform($form);
 
 $css = array(
     '<link rel="stylesheet" type="text/css" href="' . $THEME->get_url('static/style/style.css', false, 'artefact/europass') . '">',
-    '<link rel="stylesheet" type="text/css" href="' . $THEME->get_url('static/flags/flags.css', false, 'artefact/europass') . '">',
+    //'<link rel="stylesheet" type="text/css" href="' . $THEME->get_url('static/flags/flags.css', false, 'artefact/europass') . '">',
 );
 
 $inlinejs = <<<EOF
@@ -133,7 +128,8 @@ jQuery(document).ready(function(){
         jQuery("#europassconf").addClass("closed");
     });
     <!-- Capture click on all elements with name="documenttype[]" -->
-    jQuery("input[name='documenttype[]']").change(function(){
+    /*
+	jQuery("input[name='documenttype[]']").change(function(){
         if (jQuery("#documenttype_ecv").is(':not(:checked)')
          && jQuery("#documenttype_elp").is(':not(:checked)')
          && jQuery("#documenttype_esp").is(':not(:checked)')) {
@@ -145,6 +141,7 @@ jQuery(document).ready(function(){
             jQuery("#showconfig").show();
         }
     });
+	*/
 });
 EOF;
 
@@ -160,9 +157,10 @@ function exporteuropass_submit(Pieform $form, array $values) {
 
     unset($values['submit']);
     unset($values['sesskey']);
-    // documenttype, fileformat, dateformat, logo, locale, profilepic
+	print_r($values);
+    // documenttype, fileformat, logo, locale, profilepic
     foreach($values as $key => $value) { 
         $SESSION->set($key, $value);
     }
-    redirect('/artefact/europass/export/index.php?dl=1');
+    redirect('/artefact/europass/export/generate.php');
 }

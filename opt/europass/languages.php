@@ -5,7 +5,7 @@
  * @subpackage artefact-europass
  * @author     Gregor Anzelj
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL
- * @copyright  (C) 2009-2017 Gregor Anzelj, gregor.anzelj@gmail.com
+ * @copyright  (C) 2009-2022 Gregor Anzelj, gregor.anzelj@gmail.com
  *
  */
 
@@ -83,6 +83,7 @@ $addform = pieform(array(
 
 // Delete mother tongue(s) form
 $elements = array();
+if (is_object($mothertongue_data)) {
 foreach ($mothertongue_data as $lang) {
     $elements[$lang->description] = array(
         'type' => 'checkbox',
@@ -91,6 +92,7 @@ foreach ($mothertongue_data as $lang) {
         'description' => get_string('language.'.$lang->description, 'artefact.europass'),
         'defaultvalue' => 0,
     );
+}
 }
 $elements['submit'] = array(
     'type' => 'submit',
@@ -112,6 +114,7 @@ $css = array(
 );
 
 $smarty = smarty(array(), $css);
+setpageicon($smarty, 'icon icon-comments');
 $smarty->assign('addmothertongueform', $addform);
 $smarty->assign('delmothertongueform', $deleteform);
 $smarty->assign('mothertonguelist', language_csv_list($mothertongue_data, true));
@@ -125,7 +128,7 @@ $smarty->display('artefact:europass:languages.tpl');
 
 function addmothertongueform_submit(Pieform $form, $values) {
     global $SESSION, $USER;
-    
+
     $a = new ArtefactTypeMothertongue();
     $a->set('description', $values['description']);
     $a->set('owner', $USER->get('id'));

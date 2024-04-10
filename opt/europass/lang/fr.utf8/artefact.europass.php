@@ -5,7 +5,7 @@
  * @subpackage artefact-europass
  * @author     Gregor Anzelj
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL
- * @copyright  (C) 2009-2017 Gregor Anzelj, gregor.anzelj@gmail.com
+ * @copyright  (C) 2009-2022 Gregor Anzelj, gregor.anzelj@gmail.com
  *
  * @translator Dominique-Alain Jan
  *
@@ -47,7 +47,7 @@ $string['dateformat-numeric-long'] = '31/01/2005';
 $string['dateformat-text-short'] = '31 Jan 2005';
 $string['dateformat-text-long'] = '31 January 2005';
 $string['exportfile'] = 'Fichier';
-$string['pdf'] = 'Adobe® PDF + Europass XML';
+$string['pdf'] = 'Adobe® PDF';
 $string['doc'] = 'Microsoft® Word';
 $string['odt'] = 'OpenDocument';
 $string['html'] = 'HTML';
@@ -57,6 +57,9 @@ $string['generateexport'] = 'Exporter';
 $string['generateexportdesc'] = 'Generate the Europass document and download it on your computer.';
 $string['generaloptions'] = 'General export options';
 $string['includelogo'] = 'Include Europass logo?';
+$string['template'] = 'Template';
+$string['template-classic'] = 'Classic';
+$string['template-modern-navy'] = 'Modern dark blue';
 
 // Import data from Europass XML to Mahara...
 $string['importeuropass'] = 'Importer l\'Europass';
@@ -96,7 +99,7 @@ $string['profilepicinclude'] = 'Include profile picture?';
 // ===================================================================
 
 // Europass GUI form tabs
-$string['ecv-tab'] = 'Curriculum vitae';
+$string['ecv-tab'] = 'CV Europass';
 $string['esp-tab'] = 'Passeport de compétences';
 $string['elp-tab'] = 'Passeport de langues';
 $string['copyright'] = '© Union européenne et Conseil de l\'Europe, 2004 - ';
@@ -125,6 +128,7 @@ $string['workexperience'] = 'Expérience professionnelle';
 $string['education'] = 'Éducation et formation';
 
 // Europass CV - STEP 5
+$string['languageskills'] = 'Compétences linguistiques';
 $string['mothertongue'] = 'Langue(s) maternelle(s)';
 $string['otherlanguage'] = 'Autre(s) langue(s)';
 
@@ -157,6 +161,7 @@ $string['otherskill'] = 'Autres aptitudes et compétences';
 $string['additionalinfo'] = 'Information complémentaire';
 $string['category'] = 'Catégorie';
 
+$string['digitalskills'] = 'Compétences numériques';
 $string['digitalcompetence'] = 'Compétence numérique';
 $string['digitalcompetence-other'] = 'Autres compétences informatiques';
 $string['digitalcompetence-information'] = 'Traitement de l’information';
