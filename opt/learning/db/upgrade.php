@@ -11,6 +11,7 @@
 
 defined('INTERNAL') || die();
 
-$config = new StdClass;
-$config->version = 2022022400;
-$config->release = '22.02.0';
+function xmldb_artefact_learning_upgrade($oldversion=0) {
+
+    return true;
+}
