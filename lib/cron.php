@@ -43,10 +43,34 @@ if (php_sapi_name() != 'cli' && get_config('urlsecret') !== null) {
         die_info(get_string('accessdeniednourlsecret', 'error'));
     }
 }
+
 //PATCH IOC006
 if (ini_get('max_execution_time')) {
     set_time_limit(3600);
 }
+
+// Actualitzar valor Publickey Campus
+$parsedPortalwwwroot = parse_url(get_config('wwwroot'));
+$baseUrl = $parsedPortalwwwroot['scheme'] . "://" . $parsedPortalwwwroot['host'];
+$moodle_url = $baseUrl.'/campus';
+$moodleKeyUrl = $moodle_url . '/mnet/publickey.php';
+// Inicialitzar cURL
+$ch = curl_init();
+// Configurar opcions de cURL
+curl_setopt($ch, CURLOPT_URL, $moodleKeyUrl);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+// Ejecutar la solicitud
+$campusPublicKey = curl_exec($ch);
+// Tancar cURL
+curl_close($ch);
+$certinfo = openssl_x509_parse($campusPublicKey);
+$dataExpire = $certinfo['validTo_time_t'];
+$dataInstitution = new stdClass();
+$dataInstitution->publickeyexpires = $dataExpire;
+$dataInstitution->publickey = $campusPublicKey;
+$where = array('wwwroot' => $moodle_url);
+update_record('host', $dataInstitution, $where);
+log_info('---------- Update Public Key Moodle ----------');
 //Fi
 
 // This is here for debugging purposes, it allows us to fake the time to test
