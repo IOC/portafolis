@@ -1,0 +1,3 @@
+Version 4.00.2
+----------------------
+- Add Update public key on cron
